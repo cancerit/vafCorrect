@@ -22,6 +22,8 @@ use Getopt::Long;
 use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
 
+my $log = Log::Log4perl->get_logger(__PACKAGE__);
+
 const my $SEP => "/";
 
 my $progress_fhw;
@@ -31,7 +33,7 @@ try {
 	my ($options) = option_builder();
 	$options=Sanger::CGP::VcfCompare::VcfMergeAndPileup::get_options($options);
 	# create progress file is it doesn't exists else open existing file in append mode
-	
+	print "\n >>>>>> To view analysis progress please check  .log file created in current directory >>>>>>>>>\n";	
 	if (-e "$options->{'o'}/progress.out") {
 		open($progress_fhw, '>>', "$options->{'o'}/progress.out");
 	}
@@ -43,7 +45,7 @@ try {
 	close($progress_fhr);
 	# create tmp ini
 	if (!defined $options->{'i'} && $options->{'tn'} && $options->{'nn'}) {
-		print "Config file not defined will be created from input paramaters \n";
+		$log->debug("Config file not defined will be created from input paramaters");
 		$options= Sanger::CGP::VcfCompare::VcfMergeAndPileup::create_tmp_ini($options);
 	}  
 	# create tabix object
@@ -52,12 +54,12 @@ try {
        		$cfg = Config::IniFiles->new( -file => $options->{'i'} );
 	}
         else {
-	croak "No ini file defined or tumour normal samples specified\n";
+	$log->logcroak("No ini file defined or tumour normal samples specified on command line");
 	}
-        print "Using config file:",$options->{'i'},"\n";
-	print "Running analysis for:",$options->{'a'},"\n";
-	print "Using HDR [High Depth regions] cutoff:",$options->{'c'},"\n";
-	print "Analysis progress log will be written in: $options->{'o'}/progress.out\n";
+  $log->debug("Using config file:".$options->{'i'});
+	$log->debug("Running analysis for:".$options->{'a'});
+	$log->debug("Using HDR [High Depth regions] cutoff:".$options->{'c'});
+	$log->debug("Analysis progress log will be written in:".$options->{'o'}."/progress.out");
         
 	if(!defined $options->{'b'}) {	
 		$options->{'b'}=$cfg->val('UserData','bedfile')
@@ -72,22 +74,23 @@ try {
 	  	my @tumour_sample_names = $cfg->val($project_id, $sample_group);
 	  	my $subset_flag=0;
 	  	if ( !$options->{'m'} && !$options->{'s'} && @tumour_sample_names < 2 ) { 
-	  		warn "Single sample in group nothing to merge : @tumour_sample_names\nTo run analysis on single sample please set option --single_sample=1\n"; 
+	  		$log->warn("Single sample in group nothing to merge : @tumour_sample_names"); 
+				$log->warn("To run analysis on single sample please set option --single_sample=1"); 
 	  		next;
 	  	}
 	  	if(defined $options->{'u'}) {
 	  		$subset_flag=Sanger::CGP::VcfCompare::VcfMergeAndPileup::check_user_subset(\@tumour_sample_names,$options);
 	  	}
 	  	next if $subset_flag;
-			print "Analysing data for => $project_id: @tumour_sample_names\n";
+			$log->debug("Analysing data for =>project:".$project_id."Samples".@tumour_sample_names);
 			#get unique locations hash for all samples...
 			my ($union_of_locations_original, $data_for_all_samples,$info_tag_val,$vcf_flag,$normal_sample,$vcf_file_status,$augment_vcf)=Sanger::CGP::VcfCompare::VcfMergeAndPileup::get_unique_locations(\@tumour_sample_names,$options,$sample_group);
 			if ($vcf_flag == 0 && $options->{'a'} eq 'snp' && !defined $options->{'f'} ) {
-				print "No caveman_c vcf files for these samples, try specifying option[ -f cave_java ] \n";
+				$log->warn("No caveman_c vcf files for these samples, try specifying option[ -f cave_java ]");
 		  	next;
 		  }
 		  elsif($vcf_flag == 0 && (!$options->{'b'}|| $options->{'ao'} || $options->{'m'})) {
-		  	print "No data to analyse for these samples, no VCF or bed file specified\n";
+		  	$log->warn("No data to analyse for these samples, no VCF or bed file specified");
 		  	next;
 		  }  
 		 Sanger::CGP::VcfCompare::VcfMergeAndPileup::run_and_consolidate_mpileup(\@tumour_sample_names,$union_of_locations_original,$data_for_all_samples,$info_tag_val,$normal_sample,$outfile_name,$options,$tabix_hdr,$vcf_file_status,$progress_fhw,$augment_vcf,$sample_group);

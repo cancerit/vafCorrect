@@ -56,6 +56,7 @@ try {
 				my $resp = <STDIN>;
 				chomp $resp;
 				if($resp=~/^(1|2|3|4|5|6|7)$/) {
+					print "\n >>>>>> To view analysis progress please check .log file created in current directory >>>>>>>>>\n";	
 					Sanger::CGP::VcfCompare::VcfMergeAndPileup::run_vcfmerge($config_path,$output_dir,$resp)
 				}
 				else{

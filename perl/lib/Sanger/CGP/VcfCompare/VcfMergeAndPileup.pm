@@ -29,6 +29,10 @@ use Capture::Tiny qw(:all);
 use Try::Tiny qw(try catch finally);
 use warnings FATAL => 'all';
 
+use Log::Log4perl;
+Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
+my $log = Log::Log4perl->get_logger(__PACKAGE__);
+
 const my $LIB_MEAN_INS_SIZE => 'mean_insert_size';
 const my $LIB_SD => 'insert_size_sd';
 const my $EXECUTE_EXTERNAL => 1;
@@ -82,7 +86,7 @@ sub get_options {
 			}
 		}	
 		else{
-			print "Not a valid variant type [should be either [snp or indel]\n";	
+			$log->logcroak("Not a valid variant type [should be either [snp or indel]");	
 			exit(0); 
 		}	
  	} 		 
@@ -130,14 +134,14 @@ Inputs
 sub create_tmp_ini {
 	my ($options)=@_;
 	chomp $options->{'tn'};
-  print "$options->{'tn'}\n";
+  $log->debug("Tumour Name".$options->{'tn'});
 	my @tn_samples=split(',',$options->{'tn'});
 	my $cfg=Config::IniFiles->new();
 	my $config_path="vafConfig.ini";
   $cfg->SetFileName($config_path);
   $cfg->AddSection($options->{'pid'}); 
   $cfg->newval($options->{'pid'},$options->{'nn'},@tn_samples);
-  print "$options->{'pid'},$options->{'nn'},@tn_samples\n";
+  $log->debug("Paramaters in tmp ini files:".$options->{'pid'}.':'.$options->{'nn'}.':'.@tn_samples);
   $cfg->WriteConfig($config_path);	
   $options->{'i'}='vafConfig.ini';
   
@@ -263,7 +267,7 @@ sub check_user_subset {
 			}
 		}
 	}
-	print "No user sample in config line @$tumour_sample_names \n";
+	$log->debug("No user sample in config:".@$tumour_sample_names);
 	return 1;
 }
 
@@ -290,18 +294,18 @@ sub get_unique_locations {
 		my $vcf_file;
 	  if($options->{'vcf'}) {
 			$vcf_file=$options->{'vcf'};
-			warn "Analysing data for user provided vcf: $vcf_file\n";
+			$log->debug("Analysing data for user provided vcf: $vcf_file");
 		}		
 	  elsif(!$options->{'vcf'} && $options->{'tn'} && $options->{'nn'}) {
 			$vcf_file=$options->{'d'}.$SEP.$sample.'_vs_'.$normal_name.$options->{'e'};
 			
 		}
 		elsif($vcf_file && -e $vcf_file && !$options->{'vcf'}) {
-		  warn "Analysing data for vcf file in input folder: $vcf_file\n";
+		  $log->debug("Analysing data for vcf file in input folder: $vcf_file");
 		}
 		else {
 			$vcf_file=$options->{'d'}.$SEP.$sample.$options->{'e'};
-			warn "Analysing data for default vcf: $vcf_file\n";
+			$log->debug("Analysing data for default vcf: $vcf_file");
 		}
 		
 	  if(-e $vcf_file ) {
@@ -312,8 +316,6 @@ sub get_unique_locations {
 	  	}
 			$vcf->parse_header();	
 			($info_tag_val,$normal_sample,$updated_info_tags)=_get_old_header($vcf,$info_tag_val,$normal_sample,$tumour_count,$sample,$updated_info_tags,$options);
-			my $counter;
-			#print "Comment this counter after debug\n";
 			while ((my $x=$vcf->next_data_array()) && ($options->{'bo'}=~m/0/)) {
 			  if (!defined $options->{'t'}) { undef $info_data;}
 				else {$info_data=_parse_info($vcf,$$x[7],$updated_info_tags);}
@@ -347,7 +349,7 @@ sub get_unique_locations {
 		($unique_locations, $data_for_all_samples,$info_tag_val)=_populate_bed_locations($unique_locations,$data_for_all_samples,$sample_names,$info_tag_val,$options,$updated_info_tags,$vcf_flag);	
 	}	
 	if($vcf_flag == 0 && !$options->{'b'} && !$options->{'m'}) { return $unique_locations,$data_for_all_samples,$info_tag_val, $vcf_flag}
-	#print "get_unique_locations: Created unique VCF locations\n";
+	$log->debug("Created unique VCF locations");
 	return ($unique_locations,$data_for_all_samples,$info_tag_val,$vcf_flag,$normal_sample,$vcf_file_status,$augment_vcf);
 }
 
@@ -525,7 +527,6 @@ sub _parse_info {
 		my $info_val = $vcf->get_info_field($INFO,$tag);
 		if($info_val) {
 			$info_data{$tag}=$info_val;
-			#print "$info_val--$tag\n";
 		}
 		else {
 			$info_data{$tag}='-';
@@ -547,7 +548,7 @@ Inputs
 sub _populate_bed_locations {
 	my ($unique_locations,$data_for_all_samples,$vcf_files,$info_tag_val,$options,$updated_info_tags,$vcf_flag)=@_;
 	my $bed_file=$options->{'b'};
-	open(my $bedFH, $options->{'b'})|| warn "unable to open file $!";
+	open(my $bedFH, $options->{'b'})|| $log->logcrok("unable to open file $!");
 	my $location_counter=0;
 	my %info_tag;
 	
@@ -574,7 +575,7 @@ sub _populate_bed_locations {
 		next if $_=~/^#/;
 		my $fileds=split("\t",$_);
 		if ($fileds < 3) { 
-			print "Not a valid bed location $_ \n"; 
+			$log->debug("Not a valid bed location".$_); 
 			next;
 		}
 		my $location_key=join(":",split("\t",$_));
@@ -592,7 +593,7 @@ sub _populate_bed_locations {
 		}
 		$location_counter++;
 	}
-	print "populate_bed_locations: Added additional ( $location_counter ) locations from bed file: $bed_file\n";
+	$log->debug(" Added additional ( $location_counter ) locations from bed file:$bed_file");
 	return ($unique_locations,$data_for_all_samples,$info_tag_val);
 }
 
@@ -616,7 +617,6 @@ Inputs
 
 sub run_and_consolidate_mpileup {
 	my ($input_bam_files, $unique_locations, $data_for_all_samples,$info_tag_val,$normal_sample,$outfile_name,$options,$tabix_hdr, $vcf_file_status,$progress_fh,$augment_vcf,$sample_group)=@_;
-	#print_hash($vcf_file_status);
 	my $store_results;
 	my $sample_counter=0;
 	my ($bam_header_data,$lib_size,$aug_vcf_fh,$aug_vcf_name);
@@ -654,7 +654,7 @@ sub run_and_consolidate_mpileup {
 	my $loc_counter=0;
 	foreach my $location (sort keys %$unique_locations) {	
 	  $loc_counter++;
-	  #next if $location !~/32417907/;
+	  #next if $location !~/28608255/;
 		my (%pileup_results,$ref_seq_file,$alt_seq_file,$ref_n_alt_seq_file);
 		my($g_pu)=_get_region($location,$options->{'a'});
 		my $add_no_pass=1;
@@ -672,10 +672,9 @@ sub run_and_consolidate_mpileup {
 					     	}
 					     }
     					 if($no_pass % 10000 == 0 ) {
-					 		print "added Non passed varinat positions --> $no_pass \n"; 
-					 } 	  
+								$log->debug("Added Non passed varinat positions:$no_pass"); 
+							} 	  
 					}
-					#print "Skipped due to filter flag: $location : $unique_locations->{$location}\n";
 					next;
 			}	
 		$count++;
@@ -685,12 +684,8 @@ sub run_and_consolidate_mpileup {
 		
 		if($options->{'a'} eq 'indel') {
 			$g_pu=_get_range($bam_header_data,$normal,$g_pu,$tabix_hdr,$max_depth);
-			#print Dumper $g_pu;
-			#exit;
 			my $ref_seq = _get_dna_segment($bam_objects->{$normal},$g_pu->{'chr'},$g_pu->{'pos_5p'},$g_pu->{'pos_3p'});
 			my $reconstructed_alt_seq = _get_alt_seq($bam_objects->{$normal},$g_pu);
-			#write sequneces in a temp file...
-			#print ">alt\n$reconstructed_alt_seq\n>ref\n$ref_seq\n" if $test_mode;
 			$ref_n_alt_seq_file="$options->{'o'}/temp.ref"; 
 			open (my $ref_n_alt_FH,'>'.$ref_n_alt_seq_file);
 			print $ref_n_alt_FH ">alt\n$reconstructed_alt_seq\n>ref\n$ref_seq\n";
@@ -702,14 +697,11 @@ sub run_and_consolidate_mpileup {
 		foreach my $sample (@$input_bam_files) {
 			$sample_counter++;
 			$g_pu=_populate_hash($g_pu,$sample,$bam_header_data); # to reset the counter for counts and lib size;
-			#if($location=~/114911505/ &&  $g_pu->{'sample'} ne "PD18800b" ){next;}
-			#print "$sample_counter******************* $sample ****************************** \n";
 			if($options->{'a'} eq 'indel') {	
 				my $temp_read_file="$options->{'o'}/temp.reads";
-				open (my $Reads_FH, '>',$temp_read_file) || warn "unable to open file file $!";
+				open (my $Reads_FH, '>',$temp_read_file) || $log->logcrok("unable to open file $!");
 				$g_pu=_fetch_features($bam_objects->{$sample},$g_pu,$Reads_FH,$options);
 				$g_pu=_do_exonerate($ref_n_alt_seq_file,$temp_read_file,$g_pu);
-				#print_hash($g_pu) if $test_mode;
 				if($sample_counter eq '1' && $options->{'m'}) {
 						$g_pu->{'normal_MTR'}=$g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 						$g_pu->{'normal_WTR'}=$g_pu->{'ref_p'} + $g_pu->{'ref_n'};
@@ -738,7 +730,6 @@ sub run_and_consolidate_mpileup {
 				}
 				$pileup_results{$g_pu->{'sample'}}=$pileup_line;
 			}
-			#print_hash($g_pu) 
 		}
 		#get specific annotations from original VCF INFO field....
 		if($options->{'ao'} == 0) {
@@ -751,17 +742,12 @@ sub run_and_consolidate_mpileup {
 		
 			if($count % 100 == 0 ) {
 				if($options->{'r'}){
-					print "Group $normal: completed $count PASS variants of $total_locations total merged variant sites\n";
+					$log->debug("Normal_id:$normal: completed:$count PASS variants of $total_locations total merged variant sites");
 				}
 				else {
-					print "Group $normal: completed $count out of $total_locations total merged variant sites\n";
+					$log->debug("Normal_id:$normal: completed:$count out of $total_locations total merged variant sites");
 				}
 			}
-	  #print Dumper $g_pu;
-		#if($count >2){exit;}
-		#if($location=~/114911505/){exit;}
-		#if($location=~/68725178/ && $g_pu->{'sample'} eq "PD18800b" ){exit;}
-	
 	}# foreach location
 		
 		if($options->{'m'}) {
@@ -772,15 +758,15 @@ sub run_and_consolidate_mpileup {
 		$vcf->close();
 		close($WFH_VCF);
 		close($WFH_TSV);
-		print "run_and_consolidate_mpileup: validating VCF file\n";
+		$log->debug("Validating VCF file");
 		my($outfile_gz,$outfile_tabix)=_compress_vcf("$outfile_name.vcf",$options);
                 if ((-e $outfile_gz) && (-e $outfile_tabix)) {
-		  unlink "$outfile_name.vcf" or warn "Could not unlink $outfile_name.vcf:$!";
+		  unlink "$outfile_name.vcf" or $log->warn("Could not unlink".$outfile_name.'.vcf:'.$!);
 		}
 		validate("$outfile_gz");
 	}
 	
-	print "run_and_consolidate_mpileup: completed analysis for: $count locations \n";
+	$log->debug("Completed analysis for: $count locations");
 	print $progress_fh "$outfile_name.vcf\n";
 	return 1;
 }
@@ -838,7 +824,7 @@ sub _run_external_core {
 
   my (@prog_data, $tmp_fn);
         my $error_to_check;
-  warn ">>>>> $command\n";
+  $log->warn(">>>>> $command");
   $command = $command_prefix.$command;
         if($EXECUTE_EXTERNAL == 1) {
           try {
@@ -867,7 +853,7 @@ sub _run_external_core {
       else {
         while (my $tmp = <$process>) {
           print $FH $tmp or croak "filehandle write failed $OS_ERROR" if($FH);
-          print "<$ext_prog>\t$tmp" or croak "logging write failed $OS_ERROR" unless($quiet);
+          $log->debug("<$ext_prog>\t$tmp") or $log->logcroak("logging write failed $OS_ERROR") unless($quiet);
           unless($no_data) {
             chomp $tmp;
             push @prog_data, $tmp ;
@@ -883,7 +869,7 @@ sub _run_external_core {
       } elsif($no_croak eq 'warn') {
         my $message = q{This external process failed: }.$command;
         $message .= "\nWARNING: $_";
-        warn $message;
+        $log->warn($message);
       } elsif($no_croak eq 'check') {
         $error_to_check = $_;
       }
@@ -893,10 +879,10 @@ sub _run_external_core {
       close $FH or croak "Failed to close $tmp_fn: $OS_ERROR" if(defined $tmp_fn);
     };
         }
-        print "<<<<<\n" unless($quiet);
+        $log->debug( "<<<<<") unless($quiet);
 
         if (defined $error_to_check) {
-                croak "_run_external should be called in list context if called with no_croak=check, returning an error value" unless wantarray;
+                $log->logcroak("_run_external should be called in list context if called with no_croak=check, returning an error value") unless wantarray;
                 return (\@prog_data, $error_to_check);
         } else {
                 return (\@prog_data);
@@ -926,7 +912,7 @@ sub _write_results {
 					$aug_vcf_fh->{$sample}->close();
 				}
 			}
- print "Completed VCF writing\n";
+ $log->debug("Completed writing VCF file");
 }
  
 =head2 _create_symlink_for_normal
@@ -954,12 +940,12 @@ sub _check_normal_bam {
 		$normal=$sample_group;
 	}
 	if( -e "$input_dir/$normal.bam") {
-		print "\n Using $normal as normal sample\n";
+		$log->debug("Using $normal as normal sample");
 		$flag=1; 
 		return $normal,$flag;
 	}
 	else {
-	  print "Unable to access the normal BAM:$input_dir/$normal.bam"; 
+	  $log->debug("Unable to access Normal BAM:$input_dir/$normal.bam"); 
 	}
 	
 	return $normal,$flag;
@@ -1030,7 +1016,7 @@ sub _get_bam_header_data {
                 }
                 $sample_names{$1}++    if(/.*\tSM:([^\t]+).*/);
     }
-        warn "Multiple sample names detected " if scalar keys %sample_names > 1;
+        $log->warn("Multiple sample names detected ") if scalar keys %sample_names > 1;
 
         my @names = keys %sample_names;
     # case where MI median inser size tag is absent in BAM file [ use the insert size from bas file ]
@@ -1042,7 +1028,7 @@ sub _get_bam_header_data {
   	}
   	elsif ($lib_size == 0 )  {
   	  $lib_size=$read_len*2;
-  	  print "No insert size tag in header or no BAS file found for $key using lib size (read_len x 2):$lib_size\n";
+  	  $log->debug("No insert size tag in header or no BAS file found for $key using lib size (read_len x 2):$lib_size");
   	}
 		$bam_header_data{$key}{'lib_size'}=$lib_size;
 		if(defined $read_len) {
@@ -1063,7 +1049,7 @@ Inputs
 
 sub _get_lib_size_from_bas {
   my ($bas_file)=@_;
-	open(my $bas,'<',$bas_file) or warn "unable to open $bas_file $!\n";
+	open(my $bas,'<',$bas_file) || $log->logcrok("unable to open file $!");
 	my $index_mi=undef;
 	my $index_sd=undef;
 	my $lib_size=0;
@@ -1126,8 +1112,8 @@ sub _write_augmented_header {
 			$tmp_file=~s/(\.vcf|\.gz)//g;
 			my $aug_vcf=$options->{'o'}.'/'.$tmp_file.$options->{'oe'};
 			$aug_vcf_name->{$sample}=$aug_vcf;
-			open(my $tmp_vcf,'>',$aug_vcf)|| warn "Unable to open output file $!\n";
-			print "Augmented vcf file: $options->{'o'}/$tmp_file".$options->{'oe'}."\n";
+			open(my $tmp_vcf,'>',$aug_vcf)|| $log->logcrok("unable to open file $!");
+			$log->debug("Augmented vcf file:".$options->{'o'}."/$tmp_file.".$options->{'oe'});
 			my $vcf_aug = Vcf->new(file => $augment_vcf->{$sample});
 			$vcf_aug->parse_header();
 			#to get all the FORMAT fileds in one group 
@@ -1156,7 +1142,7 @@ sub _write_augmented_header {
     	foreach my $sample (@$input_bam_files) {
     		if ($sample ne $normal) {
     			open(my $tmp_bed,'>',"$options->{'o'}/$sample.augmented.bed");
-    			print "Augmented bed file : $options->{'o'}/$sample.augmented.bed\n";
+    			$log->debug("Augmented bed file:".$options->{'o'}."/$sample.augmented.bed");
     			print $tmp_bed join("\t",@bed_header)."\n";
     			$aug_vcf_fh->{"$sample\_bed"}=$tmp_bed;
     			
@@ -1195,21 +1181,11 @@ sub _write_vcf_header {
 	
 	# return if no VCF file found or augment only option is provided for indel data ...
 	if((!%$normal_sample && !$options->{'b'}) || ($options->{'ao'})) {
-	  # To create an augmented bed file for samples where no vcf is present
-		#open(my $WFH_TSV,'>',"$options->{'o'}/$normal.merged.bed");
-		#print "Outfile: $options->{'o'}/$normal.merged.bed\n";
-		#my @temp_cols=qw(chr pos ref alt);
-		#	foreach my $sample(@$input_bam_files){
-		#		foreach my $tag_name(@$tags){
-		#			push (@temp_cols,"$sample\_$tag_name");
-		#		}
-		#	}
-		#	print $WFH_TSV join("\t",@temp_cols)."\n";
 			return $vcf,$WFH_VCF,$WFH_TSV;
 	}
 		
-	print "Outfile: $outfile_name.vcf\n";
-	print "Outfile: $outfile_name.tsv\n";
+	$log->debug("VCF outfile:$outfile_name.vcf");
+	$log->debug("TSV outfile:$outfile_name.tsv");
 	open($WFH_VCF, '>',"$outfile_name.vcf");
 	open($WFH_TSV, '>',"$outfile_name.tsv");
 
@@ -1226,7 +1202,7 @@ sub _write_vcf_header {
 		}
 	}
 	else {
-		print "No data in info filed\n";
+		$log->debug("No data in info filed");
 	}
 	
 	foreach my $key (keys %$vcf_file_status) {
@@ -1326,8 +1302,6 @@ sub _get_NFS {
 	my $NFS=0;
 	
 	foreach my $key (keys %$flag_val) {	
-		#print "hhhhh $key--->$flag_val->{$key}\n";
-		#next if $key eq $normal;	
 		if ($flag_val->{$key} eq "PASS") 	{$passed++;}
 		elsif ($flag_val->{$key} eq "NA")	{$not_called++;}
 		else{$called++;}
@@ -1438,8 +1412,6 @@ sub _get_region {
 $g_pu={'chr'=>$chr, 'start' => $start, 'end' => $end, 'ref_seq' => $ref, 'alt_seq' => $alt,
 				'region' => "$chr:$start-$end", 'ins_flag' => $insertion_flag, 'del_flag' => $del_flag, 
 			};
-
-#print_hash($g_pu);
 $g_pu
 
 }
@@ -1495,7 +1467,6 @@ sub _get_range {
   my ($hdr_flag)=check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$tabix_hdr);
   my $spanning_seq_denom=2;
   #if location is in high depth region and has depth >1000 then hdr_flag is true
-  #print "hdr----->$hdr_flag\n" if $test_mode;
   if($hdr_flag && $max_depth > 1000){$spanning_seq_denom=4;}
   else {$hdr_flag=0;}
   $chr_len=$bam_header->{$sample}{$g_pu->{'chr'}};
@@ -1548,8 +1519,6 @@ sub _get_alt_seq {
 	if($g_pu->{'del_flag'} == 1  && $g_pu->{'ins_flag'} == 1) {
 		$tmp_start=$g_pu->{'start'} - 1;
 	}
-	
-	#print "\n left",$tmp_start-$g_pu->{'pos_5p'},"\n right", $g_pu->{'pos_3p'} - $tmp_end,"\n";
 	
 	my ($alt_left_seq)=_get_dna_segment($bam_objects,$g_pu->{'chr'},$g_pu->{'pos_5p'},$tmp_start);
 	my ($alt_right_seq)=_get_dna_segment($bam_objects,$g_pu->{'chr'},$tmp_end,$g_pu->{'pos_3p'});
@@ -1679,7 +1648,6 @@ Inputs
 
 sub _fetch_reads {
 my ($sam_object,$region,$Reads_FH)=@_;
-#print "FETCH_READS-REGION:$region\n" if $test_mode;
 my ($mate_info,%mapped_length);
 my $read_counter=0;
 		$sam_object->fetch($region, sub {
@@ -1711,7 +1679,6 @@ my $read_counter=0;
 		# fetch mate only if on another chromosome
 		if(defined $mseqid and defined $seqid and ($seqid ne $mseqid)) {
 		#if(defined $mseqid and defined $seqid ) {
-			#print 'insert size:',$mstart - $start;
 			$mate_info->{$name}="$mseqid:$mstart-$mstart";
 		}
 				
@@ -1755,7 +1722,6 @@ sub _fetch_mate_seq {
 	$sam_object->fetch($region,$callback);
 	if($read){
 		print  $Reads_FH ">$read\_0\n$mate_seq\n";
-		#print "MATEEEE >$read:$mate_seq\n";
 	}
 }
 
@@ -1771,7 +1737,6 @@ Inputs
 
 sub _fetch_unmapped_reads {
 my ($sam_object,$region,$Reads_FH)=@_;
-#print "FETCH_READS-REGION:$region\n" if $test_mode;
 my ($mate_info,%mapped_length);
 my $read_counter=0;
 		$sam_object->fetch($region, sub {
@@ -1797,7 +1762,6 @@ my $read_counter=0;
 			my $start = $a->start;
 			$read_counter++;
 			print  $Reads_FH ">$name\_$read_counter\n$qseq\n";
-			#print "$name\_$read_counter\n";
 			# fetch mate only if on another chromosome
 			if(defined $mseqid and defined $seqid and ($seqid ne $mseqid)) {
 					$mate_info->{$name}="$mseqid:$mstart-$mstart";
@@ -1849,10 +1813,8 @@ sub _do_exonerate {
 	#	print $tfh $exonerate_output;
 	#}
 	
-	#print "get_exonerate_output: $cmd\n";
 	my ($exonerate_output, $stderr, $exit) = capture {system("$cmd")};
-	if ($exit) { warn "exonerate log:\n EXIT:$exit \n EROOR:$stderr\n CMD:$cmd\n"; }
-	#print "$exonerate_output\n";
+	if ($exit) { $log->logcrok("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
 	
 	#----- parse exonerate output ------
 		
@@ -1866,7 +1828,7 @@ sub _do_exonerate {
 		my $temp_start=$t_start;
 		my $org_read=$read;
 		$read=~s/_\d+$//g;
-		if($strand eq '-') {
+		if($strand eq '-') { 
 			$t_start=$t_end ;
 			$t_end=$temp_start;
 		}
@@ -1959,26 +1921,6 @@ sub _cleanup_read_ambiguities {
 		if($alt_count_p) { $g_pu -> {'alt_p'}=keys %$alt_count_p; }
 		if($alt_count_n) { $g_pu -> {'alt_n'}=keys %$alt_count_n; }
 		if($amb_reads)	 { $g_pu -> {'amb'}=keys %$amb_reads; }
-		
-		#print  "\nREF=>P:========================".$g_pu -> {'ref_p'}."=================\n";
-		#print Dumper (%$ref_count_p);
-		#print  "\nREF=>N:========================".$g_pu -> {'ref_n'}."=================\n";
-		#print Dumper (%$ref_count_n);
-		#print  "\nALT=>P:=========================".$g_pu -> {'alt_p'}."================\n";
-		#print Dumper (%$alt_count_p);
-		#print  "\nALT=>N:==========================".$g_pu -> {'alt_n'}."===============\n";
-		#print Dumper (%$alt_count_n);
-		
-		#print "---------ALT_N---$g_pu->{'sample'} ---\n";
-		#print_hash(\%alt_count_n);
-		#print "---------ALT_P----$g_pu->{'sample'} --\n";
-		#print_hash(\%alt_count_p);
-		#print "======REF======\n";
-		#print_hash(\%ref_count_n);
-		#print "---------REF_P------\n";
-		#print_hash(\%ref_count_n);
-		#print "Ambiguous reads for: $g_pu->{'sample'}  Location -: $g_pu->{'region'}\n";
-		#print_hash(\%amb_reads);
 		
 return $g_pu;
 
@@ -2097,7 +2039,6 @@ sub _augment_vcf_file {
 						"\t$g_pu->{'normal_MTR'}\t$g_pu->{'normal_WTR'}\t$g_pu->{'normal_AMB'}\t".
 						$MTR."\t".$WTR."\t".$g_pu->{'amb'}."\n";			
 			$aug_vcf_fh->{"$g_pu->{'sample'}\_bed"}->print($bed_line);
-			#print "-----Bed line written $bed_line\n"; 
 			return;
 		}
 	  my $vcf = Vcf->new(file => $vcf_file, region => "$g_pu->{'chr'}:$g_pu->{'start'}-$g_pu->{'start'}" );
@@ -2194,7 +2135,7 @@ sub _write_final_vcf {
 		$aug_vcf_fh->{$sample}->close();
 		my ($aug_gz,$aug_tabix)=_compress_augmented_vcf($aug_vcf_name->{$sample});
                  if ((-e $aug_gz) && (-e $aug_tabix)) {
-                  unlink $aug_vcf_name->{$sample} or warn "Could not unlink $aug_vcf_name->{$sample}:$!";
+                  unlink $aug_vcf_name->{$sample} or $log->warn("Could not unlink".$aug_vcf_name->{$sample}.':'.$!);
                 }
 		return;
 }
@@ -2217,14 +2158,6 @@ Inputs
 sub _write_output {
 	my ($input_bam_files,$original_vcf_info, $NFS,$new_pileup_results,$vcf,$tags,$WFH_VCF,$normal,$WFH_TSV,$g_pu,$options)=@_;
   if ((!$vcf && !$options->{'b'})|| $options->{'ao'}) {
-  	#my @bed_line=($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'ref_seq'},$g_pu->{'alt_seq'});
-		#foreach my $sample(@$input_bam_files){
-		#	my $format_data=$new_pileup_results->{$sample};
-		#	foreach my $tag_name(@$tags){
-		#			push (@bed_line,"$format_data->{$tag_name}");
-		#		}
-		#	}
-		#print $WFH_TSV join("\t",@bed_line)."\n";
 		return 1;
 	}
   
@@ -2272,7 +2205,6 @@ Inputs
 sub check_hdr_overlap {
 	my ($chr, $zero_start, $one_end, $tabix ) = @_;
 	$chr=~s/chr//g;
-	#print "$chr, $zero_start, $one_end\n";
 	###
 	# Querying is ALWAYS half open regardless of the underlying file type
 	###
@@ -2377,7 +2309,7 @@ sub build_input_data {
 			my $resp = <STDIN>;
 			chomp $resp;
 			if((lc $resp) ne 'y') {
-				print "exiting...\n";
+				$log->warn("exiting...");
 				exit(0);
 			}
 		}
@@ -2497,7 +2429,6 @@ sub write_config {
   $cfg->SetFileName($config_path);
   $cfg->AddSection($project); 
   foreach my $id_ind(keys %{$sample_group->{$project}}) {
-		#print "$id_ind---$sample_group->{$project}{$id_ind}\n";
 		my @samples_to_analyse=split("\t",$sample_group->{$project}{$id_ind});
 		if(@samples_to_analyse >0) {
 			
@@ -2529,15 +2460,15 @@ sub write_config {
 	}
 	
 	if($single_sample_count < 1) {
-		print "Single tumour sample present nothing to merge for: $single_sample_count sample pairs\n";
+		$log->warn("Single tumour sample present nothing to merge for: $single_sample_count sample pairs");
 	}
 	if (!defined $data_in_config) {
-  	print "No data to merge for this project exit...\n";
+  	$log->warn("No data to merge for this project exit.....");
   	exit(0);
   }
-	print "No. of tumour-normal pairs in config file: $data_in_config \n";
+	$log->info("Number of tumour-normal pairs in config file: $data_in_config");
 	if (defined $unmatched_normal_count) {
-		print "No. of unmatched tumour-normal pairs: $unmatched_normal_count \n";
+		$log->info("Nunmber of unmatched tumour-normal pairs: $unmatched_normal_count");
 	}
 	#add bed file to config file
 	if(defined $options->{'b'}) {
@@ -2608,24 +2539,19 @@ sub run_vcfmerge {
 	if($resp == 1 || $resp == 4 || $resp == 5 || $resp == 7 ) {
 		print "Merging pindel vcf files:\n";
 		my $cmd="$Bin/mergeAndPileup.pl -i $config_path -d $input_dir --outDir $input_dir/pindel --variant_type indel  --vcf_from pindel -r $filter --augment 1";
-		print "COMMAND: $cmd\n";
-		system("$cmd");
-		#my ($output, $stderr, $exit) = capture {system("$cmd")};
-		#if($output) { warn "$output \n";}
-		#if($stderr) { warn "$stderr \n";}
-		#if($exit) { warn "$exit \n"; }
-				
+		$log->debug("COMMAND: $cmd");
+		system("$cmd");				
 	}
 	if($resp == 2 || $resp == 5 || $resp == 6 || $resp == 7 ) {
 		print "Merging caveman_java vcf files:\n";
 		my $cmd="$Bin/mergeAndPileup.pl -i $config_path -d $input_dir --outDir $input_dir/caveman_java --variant_type snp  --vcf_from cave_java -r $filter ";
-		print "COMMAND: $cmd\n";
+		$log->debug("COMMAND: $cmd");
 		system("$cmd");
 	}
 	if($resp == 3 || $resp == 4 || $resp == 6 || $resp == 7 ) {
 	print "Merging caveman_c vcf files:\n";
 		my $cmd="$Bin/mergeAndPileup.pl -i $config_path -d $input_dir --outDir $input_dir/caveman_c --variant_type snp  --vcf_from caveman_c -r $filter ";
-		print "COMMAND: $cmd\n";
+		$log->debug("COMMAND: $cmd");
 		system("$cmd");
 		
 	}
@@ -2650,7 +2576,7 @@ path where symlink will be created
 
 sub _create_symlink {
 	my ($file, $symlink_path)=@_;
-	if( -l $symlink_path) { warn "symlink exists, skipped symlink creation\n"; return;} 
+	if( -l $symlink_path) { $log->warn("symlink exists, skipped symlink creation"); return;} 
 	symlink $file, $symlink_path;
 }
 
