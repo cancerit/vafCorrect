@@ -2,7 +2,7 @@ package Sanger::CGP::VcfCompare;
 use strict;
 use Const::Fast qw(const);
 
-our $VERSION = '2.6.2';
+our $VERSION = '2.7.0';
 
 const my $LICENSE =>
 "#################
