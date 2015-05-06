@@ -21,7 +21,7 @@ use Data::Dumper;
 use English;
 use File::Path qw(mkpath);
 use FindBin qw($Bin);
-use List::Util qw(first reduce);
+use List::Util qw(first reduce max min);
 use Math::Round qw(round);
 use Carp;
 use Const::Fast qw(const);
@@ -32,10 +32,15 @@ use warnings FATAL => 'all';
 use Log::Log4perl;
 Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
+ 
+#open(my $new_interval,'>','test_modified_pos_new.tsv');
 
 const my $LIB_MEAN_INS_SIZE => 'mean_insert_size';
 const my $LIB_SD => 'insert_size_sd';
 const my $EXECUTE_EXTERNAL => 1;
+const my $EXONERATE_SCORE_MULTIPLIER => 5;
+const my $EXONERATE_SCORE_FACTOR => 70;
+const my $READ_LENGTH_CUTOFF => 2;
 const my $SEP => "/";
 const my $test_mode => 0;
 const my $INSERT_SIZE_FACTOR => 1;
@@ -548,7 +553,7 @@ Inputs
 sub _populate_bed_locations {
 	my ($unique_locations,$data_for_all_samples,$vcf_files,$info_tag_val,$options,$updated_info_tags,$vcf_flag)=@_;
 	my $bed_file=$options->{'b'};
-	open(my $bedFH, $options->{'b'})|| $log->logcrok("unable to open file $!");
+	open(my $bedFH, $options->{'b'})|| $log->logcroak("unable to open file $!");
 	my $location_counter=0;
 	my %info_tag;
 	
@@ -646,7 +651,6 @@ sub run_and_consolidate_mpileup {
 		 	($aug_vcf_fh,$aug_vcf_name)=_write_augmented_header($augment_vcf,$options,$input_bam_files,$normal);
 		}
 	}
-
 	my($vcf,$WFH_VCF,$WFH_TSV)=_write_vcf_header($input_bam_files,$info_tag_val,$normal,$vcf_file_status,$options,\@tags,$normal_sample,$outfile_name);
 	my $count=0;
 	my $total_locations=keys %$unique_locations;
@@ -654,8 +658,9 @@ sub run_and_consolidate_mpileup {
 	my $loc_counter=0;
 	foreach my $location (sort keys %$unique_locations) {	
 	  $loc_counter++;
-	  #next if $location !~/28608255/;
-		my (%pileup_results,$ref_seq_file,$alt_seq_file,$ref_n_alt_seq_file);
+	  #print "------$location---\n";
+	  #next if $location !~/49445525/;
+		my (%pileup_results,$ref_seq_file,$alt_seq_file,$ref_n_alt_seq_file,$ref_file,$alt_file);
 		my($g_pu)=_get_region($location,$options->{'a'});
 		my $add_no_pass=1;
 		$no_pass++;
@@ -690,7 +695,15 @@ sub run_and_consolidate_mpileup {
 			open (my $ref_n_alt_FH,'>'.$ref_n_alt_seq_file);
 			print $ref_n_alt_FH ">alt\n$reconstructed_alt_seq\n>ref\n$ref_seq\n";
 			close($ref_n_alt_FH);
+			
+			#print $new_interval "Before\t".$g_pu->{'alt_seq'}."\t".$g_pu->{'region'}."\t".$normal."\t".$g_pu->{'ins_flag'}."\t".$g_pu->{'ref_pos_5p'}."\t".$g_pu->{'ref_pos_3p'}."\t".$g_pu->{'alt_pos_3p'}."\t";
+	 
+			($g_pu)=_get_ref_5p_pos($ref_seq,$reconstructed_alt_seq,$g_pu);
+	
+			#print $new_interval "After\t".$g_pu->{'ins_flag'}."\t".$g_pu->{'ref_pos_5p'}."\t".$g_pu->{'ref_pos_3p'}."\t".$g_pu->{'alt_pos_3p'}."\n";
+			
 		}
+		
 		$sample_counter=0;
 		my $mutant_depth=0;
 		my $depth=0;
@@ -699,9 +712,9 @@ sub run_and_consolidate_mpileup {
 			$g_pu=_populate_hash($g_pu,$sample,$bam_header_data); # to reset the counter for counts and lib size;
 			if($options->{'a'} eq 'indel') {	
 				my $temp_read_file="$options->{'o'}/temp.reads";
-				open (my $Reads_FH, '>',$temp_read_file) || $log->logcrok("unable to open file $!");
+				open (my $Reads_FH, '>',$temp_read_file) || $log->logcroak("unable to open file $!");
 				$g_pu=_fetch_features($bam_objects->{$sample},$g_pu,$Reads_FH,$options);
-				$g_pu=_do_exonerate($ref_n_alt_seq_file,$temp_read_file,$g_pu);
+				$g_pu=_do_exonerate($ref_n_alt_seq_file,$temp_read_file,$g_pu,$alt_file,$ref_file);
 				if($sample_counter eq '1' && $options->{'m'}) {
 						$g_pu->{'normal_MTR'}=$g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 						$g_pu->{'normal_WTR'}=$g_pu->{'ref_p'} + $g_pu->{'ref_n'};
@@ -770,6 +783,8 @@ sub run_and_consolidate_mpileup {
 	print $progress_fh "$outfile_name.vcf\n";
 	return 1;
 }
+
+
 
 sub _compress_vcf {
   my ($annot_vcf,$options)=@_;
@@ -888,7 +903,6 @@ sub _run_external_core {
                 return (\@prog_data);
         }
 }
-
 
 
 =head2 _write_results
@@ -1049,7 +1063,7 @@ Inputs
 
 sub _get_lib_size_from_bas {
   my ($bas_file)=@_;
-	open(my $bas,'<',$bas_file) || $log->logcrok("unable to open file $!");
+	open(my $bas,'<',$bas_file) || $log->logcroak("unable to open file $!");
 	my $index_mi=undef;
 	my $index_sd=undef;
 	my $lib_size=0;
@@ -1112,7 +1126,7 @@ sub _write_augmented_header {
 			$tmp_file=~s/(\.vcf|\.gz)//g;
 			my $aug_vcf=$options->{'o'}.'/'.$tmp_file.$options->{'oe'};
 			$aug_vcf_name->{$sample}=$aug_vcf;
-			open(my $tmp_vcf,'>',$aug_vcf)|| $log->logcrok("unable to open file $!");
+			open(my $tmp_vcf,'>',$aug_vcf)|| $log->logcroak("unable to open file $!");
 			$log->debug("Augmented vcf file:".$options->{'o'}."/$tmp_file.".$options->{'oe'});
 			my $vcf_aug = Vcf->new(file => $augment_vcf->{$sample});
 			$vcf_aug->parse_header();
@@ -1361,10 +1375,6 @@ sub _get_INFO {
 			$old_info_val{$tag}=$info->{$tag};
 		}
 	}
-	#$vcf_info{'info1'}={(key=>'INFO',ID=>'NS',Number=>'1',Description=>"Number of samples analysed [Excludes designated normal sample]")}; 
-	#$vcf_info{'info2'}={(key=>'INFO',ID=>'NC',Number=>'1',Description=>"Number of samples where variant originally Called [Excludes designated normal sample]")};
-	#$vcf_info{'info3'}={(key=>'INFO',ID=>'NP',Number=>'1',Description=>"Number of samples where variant Passed the Filter [Excludes designated normal sample]")};
-	#$vcf_info{'info4'}={(key=>'INFO',ID=>'NA',Number=>'1',Description=>"Number of samples where original algorithm is run [Excludes designated normal sample]")};
 	$old_info_val{'NS'}=((split ':', $DNFS)[0]) + $no_vcf_counter;
 	$old_info_val{'NC'}=(split ':', $DNFS)[1];
 	$old_info_val{'NP'}=(split ':', $DNFS)[2];
@@ -1434,10 +1444,11 @@ sub _populate_hash {
 	$g_pu->{'amb'} = 0;  
 	$g_pu->{'sample'} = $sample; 
 	if(exists $bam_header_data->{$sample}{'read_length'}){
-		$g_pu->{'read_length'}=$bam_header_data->{$sample}{'read_length'}; 
+		$g_pu->{'read_length'}=$bam_header_data->{$sample}{'read_length'};
+		
 	}
 	else {
-		$g_pu->{'read_length'}=50;
+		$g_pu->{'read_length'}=100;
 	}
 	if(exists $bam_header_data->{$sample}{'lib_size'}){
 		$g_pu->{'lib_size'}=$bam_header_data->{$sample}{'lib_size'};
@@ -1445,7 +1456,8 @@ sub _populate_hash {
 	else {
 		$g_pu->{'lib_size'}=100;
 	} 
-	                 
+	# exonerate score is 5 per base , we allow max 4 mismatches * 9 = 36 score units, 4 bases * 5 for readlength = 20 score units to be safe side added another 14 score units
+	$g_pu->{'exonerate_score_cutoff'} = (($g_pu->{'read_length'}) * $EXONERATE_SCORE_MULTIPLIER) - $EXONERATE_SCORE_FACTOR;	                 
   $g_pu;
 }
 
@@ -1630,10 +1642,11 @@ sub _fetch_features {
 	if(!$g_pu->{'hdr'} && $options->{'r'}){
 		_fetch_unmapped_reads($sam_object,"$g_pu->{'chr'}:$g_pu->{'pos_5p'}-$g_pu->{'pos_3p'}",$Reads_FH);
 	}
-
 close($Reads_FH);
 $g_pu;
 }
+
+
 
 =head2 _fetch_reads
 fetch reads
@@ -1657,6 +1670,7 @@ my $read_counter=0;
 		# & bitwise comparison
 		## Ignore reads if they match the following flags:
 		#Brass/ReadSelection.pm
+		
 		return if $flags & $NOT_PRIMARY_ALIGN;
 		return if $flags & $VENDER_FAIL;
 		return if $flags & $UNMAPPED;
@@ -1667,16 +1681,16 @@ my $read_counter=0;
 		#my $cigar  = $a->cigar_str;;
 		my $mseqid = $a->mate_seq_id;
 		my $seqid = $a->seq_id;
-		
-		#target gives read seq as it comes from sequencing machine
-			my $qseq = $a->target->dna();
-			my $name=$a->display_name;
-			#my $strand = $a->strand;
-			my $mstart = $a->mate_start;
-			my $start = $a->start;
-			$read_counter++;
-			print  $Reads_FH ">$name\_$read_counter\n$qseq\n";
-		# fetch mate only if on another chromosome
+		#target gives read seq as it comes from sequencing machine i.e softclipped bases included
+		my $qseq = $a->target->dna();
+		return if $qseq =~m/[nN]/;
+		my $name=$a->display_name;
+		#my $strand = $a->strand;
+		my $mstart = $a->mate_start;
+		my $start = $a->start;
+		$read_counter++;
+		print  $Reads_FH ">$name\_$read_counter\n$qseq\n";
+	# fetch mate only if on another chromosome
 		if(defined $mseqid and defined $seqid and ($seqid ne $mseqid)) {
 		#if(defined $mseqid and defined $seqid ) {
 			$mate_info->{$name}="$mseqid:$mstart-$mstart";
@@ -1713,8 +1727,10 @@ sub _fetch_mate_seq {
 	  return if $flags & $UNMAPPED;
 		return if $flags & $SUPP_ALIGNMENT;
 		if ($readname eq $a->display_name) {
+			my $tmp_seq=$a->target->dna();
+			return if $tmp_seq=~m/[nN]/;
 			$read=$a->display_name;
-			$mate_seq=$a->target->dna();
+			$mate_seq=$tmp_seq;
 			return;
 		}
 	};
@@ -1752,10 +1768,12 @@ my $read_counter=0;
 		return if $flags & $SUPP_ALIGNMENT;
 		# only consider reads from wider range where mate is unmapped 
 		if ($flags & $UNMAPPED) {
+			my $qseq = $a->target->dna();
+			return if $qseq=~m/[nN]/;
 			my $mseqid = $a->mate_seq_id;
 			my $seqid = $a->seq_id;
 			#target gives read seq as it comes from sequencing machine
-			my $qseq = $a->target->dna();
+			
 			my $name=$a->display_name;
 			#my $strand = $a->strand;
 			my $mstart = $a->mate_start;
@@ -1788,8 +1806,15 @@ Inputs
 =cut
 
 sub _do_exonerate {
-	my($ref_seq_file,$temp_read_file,$g_pu)=@_;
+	my($ref_seq_file,$temp_read_file,$g_pu,$alt_file,$ref_file)=@_;
 	my ($ref_count_p, $ref_count_n, $alt_count_p, $alt_count_n, $read_track_alt, $read_track_ref, $amb_reads);
+	
+	#print $new_interval "Before\t".$g_pu->{'alt_seq'}."\t".$g_pu->{'region'}."\t".$g_pu->{'sample'}."\t".$g_pu->{'ins_flag'}."\t".$g_pu->{'ref_pos_5p'}."\t".$g_pu->{'ref_pos_3p'}."\t".$g_pu->{'alt_pos_3p'}."\t";
+	 
+	#($g_pu)=_get_ref_5p_pos($alt_file,$ref_file,$g_pu);
+	
+	#print $new_interval "After\t".$g_pu->{'ins_flag'}."\t".$g_pu->{'ref_pos_5p'}."\t".$g_pu->{'ref_pos_3p'}."\t".$g_pu->{'alt_pos_3p'}."\n";
+
 	
 	# -E | --exhaustive <boolean>
   #Specify whether or not exhaustive alignment should be used.  By default, this is FALSE, and alignment heuristics will be used.  If it is set to TRUE, an exhaus‐
@@ -1798,29 +1823,29 @@ sub _do_exonerate {
   # using exhaustive OFF as it is fast and gives identical answer 
   
   my $cmd="exonerate -E 0 -S 0".
-	" --score 300 --percent 95 --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3 ".
+	" --score $g_pu->{'exonerate_score_cutoff'} --percent 95 --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
 	" --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
 	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
 	#for testing only
 	#if($test_mode)
 	#{
 	#my $cmd2="exonerate -E 0 -S 0".
-	#	" --score 300 --percent 95 --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3 ".
+	#	" --score $g_pu->{'exonerate_score_cutoff'} --percent 95 --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
 	#	" --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
-	#	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %qS %tab %tae %tS\n' ";
-	#	my ($exonerate_output, $stderr, $exit) = capture {system("$cmd2")};
-	#	open (my $tfh, '>',"exonerate_results_E0.out");
-	#	print $tfh $exonerate_output;
-	#}
+	#	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
+	#	my ($exonerate_output1, $stderr1, $exit1) = capture {system("$cmd2")};
+	#open (my $tfh1, '>',"exonerate_results_Alignment.out");
+	#print $tfh1 $exonerate_output1;
+	#my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd")};
+	
+ # }
 	
 	my ($exonerate_output, $stderr, $exit) = capture {system("$cmd")};
-	if ($exit) { $log->logcrok("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
-	
+	if ($exit) { $log->logcroak("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
 	#----- parse exonerate output ------
-		
 	foreach my $line((split("\n", $exonerate_output))) {
 		my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand)=(split ' ', $line);
-		if ($match_len < ($g_pu->{'read_length'} - 2)) {
+		if ($match_len < ($g_pu->{'read_length'} - $READ_LENGTH_CUTOFF)) {
 		 next;
 		}
 		my $strand=$t_strand;
@@ -1828,17 +1853,14 @@ sub _do_exonerate {
 		my $temp_start=$t_start;
 		my $org_read=$read;
 		$read=~s/_\d+$//g;
-		if($strand eq '-') { 
-			$t_start=$t_end ;
-			$t_end=$temp_start;
-		}
-		
+		if($strand eq '-') { $t_start=$t_end ; $t_end=$temp_start;}
 		if( $target eq 'ref') {	
-			# ref_pos stores the varinat interval in relative to subset created using gnomic seq	
-			if( ($t_start < $g_pu->{'ref_pos_5p'} &&  $t_end >$g_pu->{'ref_pos_5p'}) || ($t_start < $g_pu->{'ref_pos_3p'} &&  $t_end >$g_pu->{'ref_pos_3p'}) ) {
+			# ref_pos stores the varinat interval relative to subset created using gnomic seq	
+			if( ($t_start < $g_pu->{'ref_pos_5p'} &&  $t_end >$g_pu->{'ref_pos_5p'}) || ($t_start < $g_pu->{'ref_pos_3p'} &&  $t_end >$g_pu->{'ref_pos_3p'}) ) 
+			{
 				$read_track_ref->{$org_read}++;
 				if($strand eq '+') {
-				#store diff to check the 
+				#store diff to check the distance of variant pos from either end of the read
 					$ref_count_p->{$read} = abs( ($g_pu->{'ref_pos_5p'} - $t_start) - ($t_end - $g_pu->{'ref_pos_3p'}) )
 				} 
 				else {
@@ -1846,7 +1868,9 @@ sub _do_exonerate {
 				}
 			}			
 		}
-		elsif( ($t_start < $g_pu->{'ref_pos_5p'} &&  $t_end >$g_pu->{'ref_pos_5p'} ) || ($t_start < $g_pu->{'alt_pos_3p'} &&  $t_end >$g_pu->{'alt_pos_3p'}) )  {
+		# checks overlap...
+		elsif( ($t_start < $g_pu->{'ref_pos_5p'} &&  $t_end >$g_pu->{'ref_pos_5p'} ) || ($t_start < $g_pu->{'alt_pos_3p'} &&  $t_end >$g_pu->{'alt_pos_3p'}) )  
+		{
 			$read_track_alt->{$org_read}++;
 			if($strand eq '+') {
 				$alt_count_p->{$read} = abs( ($g_pu->{'ref_pos_5p'} - $t_start) - ($t_end - $g_pu->{'alt_pos_3p'}) );
@@ -1859,8 +1883,43 @@ sub _do_exonerate {
 	
 $g_pu=_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n); 
 
+
+#print_hash($g_pu);
+
 return $g_pu;
 
+
+}
+
+
+=head2 _get_ref_5p_pos
+get updated 5p positions
+Inputs
+=over 2
+=item g_pu -- stores relative positions of variant region  
+=item alt_file —alt seq
+=item ref_file -ref seq
+=back
+=cut
+
+sub _get_ref_5p_pos {
+	my ($ref_seq,$reconstructed_alt_seq,$g_pu) = @_;		
+			my $new_pos;
+			my $exclusive_OR=$ref_seq^$reconstructed_alt_seq;
+			
+			if($exclusive_OR =~ /[^\0]/g) {
+				$new_pos=$-[0]; #gives offset of the beginning of last successful match
+				$g_pu->{'new_pos'}=$new_pos;
+			}	
+		if( ($g_pu->{'ins_flag'}) && ($new_pos != $g_pu->{'ref_pos_5p'}) ){
+				my $insert_length = ($g_pu->{'alt_pos_3p'} - $g_pu->{'ref_pos_5p'});
+				# get run over after insert string due to match with reference bases
+				$g_pu->{'insert_mod'}=($new_pos - $g_pu->{'ref_pos_5p'}) % $insert_length;
+				$g_pu->{'alt_pos_3p'}=$new_pos + ($insert_length) - $g_pu->{'insert_mod'};
+				$g_pu->{'ref_pos_5p'}=$new_pos;
+				$g_pu->{'ref_pos_3p'}=$new_pos;
+		}
+		$g_pu;
 }
 
 =head2 _cleaup_read_ambiguities
@@ -1921,6 +1980,8 @@ sub _cleanup_read_ambiguities {
 		if($alt_count_p) { $g_pu -> {'alt_p'}=keys %$alt_count_p; }
 		if($alt_count_n) { $g_pu -> {'alt_n'}=keys %$alt_count_n; }
 		if($amb_reads)	 { $g_pu -> {'amb'}=keys %$amb_reads; }
+		
+		#print Dumper $amb_reads;
 		
 return $g_pu;
 
@@ -2775,6 +2836,7 @@ return ($log_key,$process_log);
 
 sub print_hash {
 	my $hash=shift;
+	#print "---------------Printing data---------------\n";
 	foreach my $key (sort keys %$hash) {
 		if(defined($hash->{$key}))
 		{	
