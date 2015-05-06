@@ -33,7 +33,7 @@ use Log::Log4perl;
 Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
  
-#open(my $new_interval,'>>','test_modified_pos_new.tsv');
+#open(my $new_interval,'>','test_modified_pos_new.tsv');
 
 const my $LIB_MEAN_INS_SIZE => 'mean_insert_size';
 const my $LIB_SD => 'insert_size_sd';
@@ -659,7 +659,7 @@ sub run_and_consolidate_mpileup {
 	foreach my $location (sort keys %$unique_locations) {	
 	  $loc_counter++;
 	  #print "------$location---\n";
-	  #next if $location !~/2569108/;
+	  #next if $location !~/49445525/;
 		my (%pileup_results,$ref_seq_file,$alt_seq_file,$ref_n_alt_seq_file,$ref_file,$alt_file);
 		my($g_pu)=_get_region($location,$options->{'a'});
 		my $add_no_pass=1;
@@ -1827,30 +1827,18 @@ sub _do_exonerate {
 	" --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
 	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
 	#for testing only
-#	if($test_mode)
-#	{
-#	my $cmd2="exonerate -E 0 -S 0".
-#		" --score $g_pu->{'exonerate_score_cutoff'} --percent 95 --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
-#		" --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
-#		" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
-#	
-#		my ($exonerate_output1, $stderr1, $exit1) = capture {system("$cmd2")};
-#	open (my $tfh1, '>',"exonerate_results_Alignment.out");
-#	print $tfh1 $exonerate_output1;
-#	my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd")};
-#	open (my $tfh2, '>',"exonerate_results_vulgar.out");
-#	print $tfh2 $exonerate_output2;
-#	
-#my $cmd3="exonerate -E 0 -S 0".
-#	" --score $g_pu->{'exonerate_score_cutoff'} --percent 95 --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
-#	" --querytype dna --targettype dna --query ref.txt   --target alt.txt".
-#	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";	
-#	print $cmd3;
-#	#my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd3")};
-	#open (my $tfh2, '>',"exonerate_results_vulgar.out");
-	#print $tfh2 $exonerate_output2;
+	#if($test_mode)
+	#{
+	#my $cmd2="exonerate -E 0 -S 0".
+	#	" --score $g_pu->{'exonerate_score_cutoff'} --percent 95 --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
+	#	" --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
+	#	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
+	#	my ($exonerate_output1, $stderr1, $exit1) = capture {system("$cmd2")};
+	#open (my $tfh1, '>',"exonerate_results_Alignment.out");
+	#print $tfh1 $exonerate_output1;
+	#my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd")};
 	
-#}
+ # }
 	
 	my ($exonerate_output, $stderr, $exit) = capture {system("$cmd")};
 	if ($exit) { $log->logcroak("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
@@ -1865,8 +1853,7 @@ sub _do_exonerate {
 		my $temp_start=$t_start;
 		my $org_read=$read;
 		$read=~s/_\d+$//g;
-		if($strand eq '-') { $t_start=$t_end ; $t_end=$temp_start;	}
-		
+		if($strand eq '-') { $t_start=$t_end ; $t_end=$temp_start;}
 		if( $target eq 'ref') {	
 			# ref_pos stores the varinat interval relative to subset created using gnomic seq	
 			if( ($t_start < $g_pu->{'ref_pos_5p'} &&  $t_end >$g_pu->{'ref_pos_5p'}) || ($t_start < $g_pu->{'ref_pos_3p'} &&  $t_end >$g_pu->{'ref_pos_3p'}) ) 
@@ -1896,7 +1883,11 @@ sub _do_exonerate {
 	
 $g_pu=_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n); 
 
+
+#print_hash($g_pu);
+
 return $g_pu;
+
 
 }
 
@@ -1913,18 +1904,20 @@ Inputs
 
 sub _get_ref_5p_pos {
 	my ($ref_seq,$reconstructed_alt_seq,$g_pu) = @_;		
-		my $org_ref_5p=$g_pu->{'ref_pos_5p'};
-		my $org_ref_3p=$g_pu->{'ref_pos_3p'};
-		my $org_alt_3p=$g_pu->{'alt_pos_3p'};
 			my $new_pos;
 			my $exclusive_OR=$ref_seq^$reconstructed_alt_seq;
+			
 			if($exclusive_OR =~ /[^\0]/g) {
 				$new_pos=$-[0]; #gives offset of the beginning of last successful match
+				$g_pu->{'new_pos'}=$new_pos;
 			}	
-		if( ($g_pu->{'ins_flag'}) && ($new_pos != $org_ref_5p) ){
-				$g_pu->{'ref_pos_5p'}=$new_pos - ($org_alt_3p - $org_ref_5p);
-				$g_pu->{'alt_pos_3p'}=$g_pu->{'ref_pos_5p'} + ($org_alt_3p - $org_ref_5p);
-				$g_pu->{'ref_pos_3p'}=$g_pu->{'ref_pos_5p'};
+		if( ($g_pu->{'ins_flag'}) && ($new_pos != $g_pu->{'ref_pos_5p'}) ){
+				my $insert_length = ($g_pu->{'alt_pos_3p'} - $g_pu->{'ref_pos_5p'});
+				# get run over after insert string due to match with reference bases
+				$g_pu->{'insert_mod'}=($new_pos - $g_pu->{'ref_pos_5p'}) % $insert_length;
+				$g_pu->{'alt_pos_3p'}=$new_pos + ($insert_length) - $g_pu->{'insert_mod'};
+				$g_pu->{'ref_pos_5p'}=$new_pos;
+				$g_pu->{'ref_pos_3p'}=$new_pos;
 		}
 		$g_pu;
 }
@@ -2843,6 +2836,7 @@ return ($log_key,$process_log);
 
 sub print_hash {
 	my $hash=shift;
+	#print "---------------Printing data---------------\n";
 	foreach my $key (sort keys %$hash) {
 		if(defined($hash->{$key}))
 		{	
