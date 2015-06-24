@@ -30,6 +30,9 @@ use Const::Fast qw(const);
 use Data::Dumper;
 
 const my $ref_dir => '/nfs/cancer_ref01';
+const my $ref_dir_x10 => '/lustre/scratch112/sanger/cgppipe/canpipe/live/ref';
+
+
 try {
   my ($options) = option_builder();
   my $project=$options->{'p'};
@@ -41,7 +44,7 @@ try {
   undef $conn;
   $base->clear_connection;
   my ($sample_group,$normal_samples, $species, $build,$symlinked_files)= Sanger::CGP::VcfCompare::VcfMergeAndPileup::generate_raw_output($options, $to_process);
-  my($config_path,$output_dir)=Sanger::CGP::VcfCompare::VcfMergeAndPileup::write_config($options, $sample_group, $normal_samples, $project ,$species, $build,$ref_dir, $symlinked_files);
+  my($config_path,$output_dir)=Sanger::CGP::VcfCompare::VcfMergeAndPileup::write_config($options, $sample_group, $normal_samples, $project ,$species, $build,$ref_dir,$ref_dir_x10,$symlinked_files);
   if($config_path) {
 		print "Would you like to merge VCF files? if YES please specify vcf file type: \n".
 		 "[1] Pindel \n".
