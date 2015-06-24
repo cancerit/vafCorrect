@@ -731,6 +731,7 @@ sub run_and_consolidate_mpileup {
 			# for snp data...
 			elsif ($options->{'a'} eq 'snp'){
 				$g_pu=_get_pileup($bam_objects->{$sample},$g_pu);
+				#print Dumper $g_pu;
 			}
 			if($options->{'ao'} == 0) {
 				my($pileup_line)=_format_pileup_line($original_flag,$g_pu,$options);
@@ -752,7 +753,7 @@ sub run_and_consolidate_mpileup {
 			$depth=0;
 			$mutant_depth=0;
 		 }
-		
+		  #if($count >0) {exit;}			
 			if($count % 100 == 0 ) {
 				if($options->{'r'}){
 					$log->debug("Normal_id:$normal: completed:$count PASS variants of $total_locations total merged variant sites");
@@ -1583,31 +1584,40 @@ sub _get_pileup {
 									foreach my $p (@{$pu}) {
 										next if($p->is_del || $p->is_refskip);
 										my $a = $p->alignment;
-										next if($a->unmapped);
-										#next if($g_pu_mapq && $a->qual < $g_pu_mapq);
-										#if($g_pu_baseq) {
-										#	my $fa = Bio::DB::Bam::AlignWrapper->new($a, $bam_object);
-										#	my $qual = ($fa->qscore)[$p->qpos];
-											#next if($qual <= $g_pu_baseq);
-										#}
-										# get the base at this pos
-										#my $refbase = $bam_object->segment($seqid,$pos,$pos)->dna;
-										my $qbase  = substr($a->qseq, $p->qpos, 1);
-										my $strand = $a->strand;
-										next if $qbase =~ /[nN]/; #in case of insertion ....
-										#$g_pu->{'depth'}++; # commented as for paired end it is calculated twice
-										if($refbase eq $qbase && $strand > 0) {
-											$g_pu->{'ref_p'}++;
-										}
-										elsif($refbase eq $qbase && $strand < 0) {
-											$g_pu->{'ref_n'}++;
-										}
-										elsif($refbase ne $qbase && $strand > 0) {
-											$g_pu->{'alt_p'}++;
-										}
-										elsif($refbase ne $qbase && $strand < 0) {
-											$g_pu->{'alt_n'}++;
-										}
+										
+										my $flags = $a->flag;
+										# & bitwise comparison
+										## Ignore reads if they match the following flags:
+										#Brass/ReadSelection.pm
+		
+										next if $flags & $NOT_PRIMARY_ALIGN;
+										next if $flags & $VENDER_FAIL;
+										next if $flags & $UNMAPPED;
+									
+											#next if($g_pu_mapq && $a->qual < $g_pu_mapq);
+											#if($g_pu_baseq) {
+											#	my $fa = Bio::DB::Bam::AlignWrapper->new($a, $bam_object);
+											#	my $qual = ($fa->qscore)[$p->qpos];
+												#next if($qual <= $g_pu_baseq);
+											#}
+											# get the base at this pos
+											#my $refbase = $bam_object->segment($seqid,$pos,$pos)->dna;
+											my $qbase  = substr($a->qseq, $p->qpos, 1);
+											my $strand = $a->strand;
+											next if $qbase =~ /[nN]/; #in case of insertion ....
+											#$g_pu->{'depth'}++; # commented as for paired end it is calculated twice
+											if($refbase eq $qbase && $strand > 0) {
+												$g_pu->{'ref_p'}++;
+											}
+											elsif($refbase eq $qbase && $strand < 0) {
+												$g_pu->{'ref_n'}++;
+											}
+											elsif($refbase ne $qbase && $strand > 0) {
+												$g_pu->{'alt_p'}++;
+											}
+											elsif($refbase ne $qbase && $strand < 0) {
+												$g_pu->{'alt_n'}++;
+											}
 
 									}
 		});
@@ -2297,7 +2307,7 @@ sub load_sql_config {
   my ($conn) = @_;
 $conn->addQuery('nst::NL::getProjectBamAndVcf', q{
 select cs.id_sample cs_id_sample, cs.id_ind, ip.id_int_project, sip.sample_synonym, LOWER(s.species) SPECIES, ipat.build, ipat.design, ipat.sw, sipa.attr_value treat_as_tumour
-, max(decode(ar.result_type, 7, ar.result)) BAM
+, max(decode(ar.result_type, 247, ar.result,decode(ar.result_type,7,ar.result))) BAM
 , max(decode(ar.result_type, 16, ar.result)) BAI
 , max(decode(ar.result_type,140, ar.result)) CAVE
 , max(decode(ar.result_type,141, ar.result)) CAVE_IDX
@@ -2331,7 +2341,7 @@ and sipa.attr_type = 12
 and ip.id_int_project = ar.id_int_project
 and sip.id_sample_cosmic = ar.id_field
 and ar.is_current = 1
-and ar.result_type in (7,16,140,141,183,184,132,133,27,28)
+and ar.result_type in (7,247,16,140,141,183,184,132,133,27,28)
 and ip.id_int_project = ?
 group by ip.id_int_project, sip.sample_synonym, s.species, ipat.build, ipat.design, ipat.sw, sipa.attr_value,cs.id_sample,cs.id_ind
 order by 1,2
@@ -2479,7 +2489,7 @@ Inputs
 
 
 sub write_config {
-  my ($options, $sample_group, $normal_samples, $project, $species, $build, $ref_dir,$symlinked_files)=@_;
+  my ($options, $sample_group, $normal_samples, $project, $species, $build, $ref_dir,$ref_dir_x10,$symlinked_files)=@_;
 	my ($group_name,$unmatched_normal_count, $data_in_config)='';
 	my ($file_types)=_get_file_types();
 	#my $data_in_config=0;
@@ -2537,7 +2547,7 @@ sub write_config {
 		$cfg->newval('UserData','bedfile',$options->{'b'});
 	}
 	#create symlink for genome build
-	$cfg=_symlink_genome_build($species,$build,$cfg,$root_path,$ref_dir);
+	$cfg=_symlink_genome_build($species,$build,$cfg,$root_path,$ref_dir,$ref_dir_x10);
   $cfg->RewriteConfig();
   
   $config_path,$root_path;
@@ -2556,11 +2566,18 @@ Inputs
 =cut
 
 sub _symlink_genome_build {
-	my ($species,$build,$cfg,$root_path,$ref_dir)=@_;
+	my ($species,$build,$cfg,$root_path,$ref_dir,$ref_dir_x10)=@_;
 	my $genome_fasta="$root_path/genome.fa";
 	my $genome_index="$root_path/genome.fa.fai";
-	_create_symlink("$ref_dir/$species/$build/genome.fa", $genome_fasta);
-	_create_symlink("$ref_dir/$species/$build/genome.fa.fai", $genome_index);
+	my $ref_fasta="$ref_dir/$species/$build/genome.fa";
+	my $ref_index="$ref_dir/$species/$build/genome.fa.fai";
+	if(! -e $ref_fasta) {
+		$ref_fasta="$ref_dir_x10/$species/$build/genome.fa";
+		$ref_index="$ref_dir_x10/$species/$build/genome.fa.fai";
+	}
+	
+	_create_symlink($ref_fasta, $genome_fasta);
+	_create_symlink($ref_index, $genome_index);
 	$cfg->AddSection('genome_build'); 
   $cfg->newval('genome_build', 'genome', $species);
   $cfg->newval('genome_build', 'build', $build);
