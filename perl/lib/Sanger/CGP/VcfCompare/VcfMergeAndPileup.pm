@@ -512,6 +512,18 @@ sub _custom_header_lines {
 		$vcf_format->{'AMB'}={(key=>'FORMAT',ID=>'AMB', Number=>'1',Type=>'String',Description=>"Reads mapping on both the alleles with same specificity")};
 	}
 	
+	if ($options->{'a'} eq 'snp') {
+		$vcf_format->{'FAZ'}={(key=>'FORMAT',ID=>'FAZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a A for this position, forward strand")};
+		$vcf_format->{'FCZ'}={(key=>'FORMAT',ID=>'FCZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a C for this position, forward strand")};
+		$vcf_format->{'FGZ'}={(key=>'FORMAT',ID=>'FGZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a G for this position, forward strand")};
+		$vcf_format->{'FTZ'}={(key=>'FORMAT',ID=>'FTZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a T for this position, forward strand")};
+		$vcf_format->{'RAZ'}={(key=>'FORMAT',ID=>'RAZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a A for this position, reverse strand")};
+		$vcf_format->{'RCZ'}={(key=>'FORMAT',ID=>'RCZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a C for this position, reverse strand")};
+		$vcf_format->{'RGZ'}={(key=>'FORMAT',ID=>'RGZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a G for this position, reverse strand")};
+		$vcf_format->{'RTZ'}={(key=>'FORMAT',ID=>'RTZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a T for this position, reverse strand")};	
+	}
+	
+	
 	$vcf_filter,$vcf_info,$vcf_format;
 }
 
@@ -641,7 +653,7 @@ sub run_and_consolidate_mpileup {
 		print $progress_fh "WARNING!! No normal sample BAM found in the input directory skipping analysis for this group @$input_bam_files\n";
 		return;
 	}
-	my @tags=qw(MTR WTR DEP MDR WDR OFS);
+	my @tags=qw(FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR WTR DEP MDR WDR OFS);
 	my($bam_objects,$bas_files)=_get_bam_object($input_bam_files,$options);
 	
 	if($options->{'a'} eq 'indel') {
@@ -1438,10 +1450,21 @@ Inputs
 
 sub _populate_hash {
   my ($g_pu,$sample,$bam_header_data) = @_;
+  
   $g_pu->{'ref_p'} = 0;
 	$g_pu->{'ref_n'} = 0;
 	$g_pu->{'alt_p'} = 0;
 	$g_pu->{'alt_n'} = 0;
+	
+	$g_pu->{'FAZ'} = 0;
+	$g_pu->{'FCZ'} = 0;
+	$g_pu->{'FGZ'} = 0;
+	$g_pu->{'FTZ'} = 0;
+	$g_pu->{'RAZ'} = 0;
+	$g_pu->{'RCZ'} = 0;
+	$g_pu->{'RGZ'} = 0;
+	$g_pu->{'RTZ'} = 0;
+	 
 	$g_pu->{'amb'} = 0;  
 	$g_pu->{'sample'} = $sample; 
 	if(exists $bam_header_data->{$sample}{'read_length'}){
@@ -1594,30 +1617,43 @@ sub _get_pileup {
 										next if $flags & $VENDER_FAIL;
 										next if $flags & $UNMAPPED;
 									
-											#next if($g_pu_mapq && $a->qual < $g_pu_mapq);
-											#if($g_pu_baseq) {
-											#	my $fa = Bio::DB::Bam::AlignWrapper->new($a, $bam_object);
-											#	my $qual = ($fa->qscore)[$p->qpos];
-												#next if($qual <= $g_pu_baseq);
-											#}
-											# get the base at this pos
-											#my $refbase = $bam_object->segment($seqid,$pos,$pos)->dna;
-											my $qbase  = substr($a->qseq, $p->qpos, 1);
-											my $strand = $a->strand;
-											next if $qbase =~ /[nN]/; #in case of insertion ....
-											#$g_pu->{'depth'}++; # commented as for paired end it is calculated twice
-											if($refbase eq $qbase && $strand > 0) {
-												$g_pu->{'ref_p'}++;
-											}
-											elsif($refbase eq $qbase && $strand < 0) {
-												$g_pu->{'ref_n'}++;
-											}
-											elsif($refbase ne $qbase && $strand > 0) {
-												$g_pu->{'alt_p'}++;
-											}
-											elsif($refbase ne $qbase && $strand < 0) {
-												$g_pu->{'alt_n'}++;
-											}
+										#next if($g_pu_mapq && $a->qual < $g_pu_mapq);
+										#if($g_pu_baseq) {
+										#	my $fa = Bio::DB::Bam::AlignWrapper->new($a, $bam_object);
+										#	my $qual = ($fa->qscore)[$p->qpos];
+											#next if($qual <= $g_pu_baseq);
+										#}
+										# get the base at this pos
+										#my $refbase = $bam_object->segment($seqid,$pos,$pos)->dna;
+										my $qbase  = substr($a->qseq, $p->qpos, 1);
+										my $strand = $a->strand;
+										next if $qbase =~ /[nN]/; #in case of insertion ....
+										#$g_pu->{'depth'}++; # commented as for paired end it is calculated twice
+										my $key;
+										if($refbase eq $qbase && $strand > 0) {
+											$g_pu->{'ref_p'}++;
+											$key='F'.$qbase.'Z';
+										}
+										elsif($refbase eq $qbase && $strand < 0) {
+											$g_pu->{'ref_n'}++;
+											$key='R'.$qbase.'Z';
+										}
+										elsif(($g_pu->{'alt_seq'} eq $qbase) && $strand > 0) {
+											$g_pu->{'alt_p'}++;
+											$key='F'.$qbase.'Z';
+										}
+										elsif(($g_pu->{'alt_seq'} eq $qbase) && $strand < 0) {
+											$g_pu->{'alt_n'}++;
+											$key='R'.$qbase.'Z';
+										}
+										elsif ($strand > 0 ) {
+											$key='F'.$qbase.'Z';
+										}
+										elsif ($strand < 0 ) {
+											$key='R'.$qbase.'Z';
+										}
+										
+										$g_pu->{$key}++;
 
 									}
 		});
@@ -2045,12 +2081,21 @@ sub _format_pileup_line {
 	{ $WDR=3; }
 	
 	if($options->{'a'} ne 'indel') {
-	$pileup_results={ 'MTR'=>$MTR,
-										'WTR'=>$WTR,
-										'DEP'=>$DEP,
-										'MDR'=>$MDR,
-										'WDR'=>$WDR,
-										'OFS'=>$VCF_OFS,
+	$pileup_results={ 
+										'FAZ' =>$g_pu->{'FAZ'},
+										'FCZ' =>$g_pu->{'FCZ'},
+										'FGZ' =>$g_pu->{'FGZ'},
+										'FTZ' =>$g_pu->{'FTZ'},
+										'RAZ' =>$g_pu->{'RAZ'},
+										'RCZ' =>$g_pu->{'RCZ'},
+										'RGZ' =>$g_pu->{'RGZ'},
+										'RTZ' =>$g_pu->{'RTZ'},
+										'MTR'	=>$MTR,
+										'WTR'	=>$WTR,
+										'DEP'	=>$DEP,
+										'MDR'	=>$MDR,
+										'WDR'	=>$WDR,
+										'OFS'	=>$VCF_OFS,
 										};
 	}
 	
