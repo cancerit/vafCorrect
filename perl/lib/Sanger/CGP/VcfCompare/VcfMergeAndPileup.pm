@@ -2354,6 +2354,7 @@ $conn->addQuery('nst::NL::getProjectBamAndVcf', q{
 select cs.id_sample cs_id_sample, cs.id_ind, ip.id_int_project, sip.sample_synonym, LOWER(s.species) SPECIES, ipat.build, ipat.design, ipat.sw, sipa.attr_value treat_as_tumour
 , max(decode(ar.result_type, 247, ar.result,decode(ar.result_type,7,ar.result))) BAM
 , max(decode(ar.result_type, 16, ar.result)) BAI
+, max(decode(ar.result_type, 250, ar.result)) BAS
 , max(decode(ar.result_type,140, ar.result)) CAVE
 , max(decode(ar.result_type,141, ar.result)) CAVE_IDX
 , max(decode(ar.result_type,183, ar.result)) CAVE_C
@@ -2386,7 +2387,7 @@ and sipa.attr_type = 12
 and ip.id_int_project = ar.id_int_project
 and sip.id_sample_cosmic = ar.id_field
 and ar.is_current = 1
-and ar.result_type in (7,247,16,140,141,183,184,132,133,27,28)
+and ar.result_type in (7,247,16,250,140,141,183,184,132,133,27,28)
 and ip.id_int_project = ?
 group by ip.id_int_project, sip.sample_synonym, s.species, ipat.build, ipat.design, ipat.sw, sipa.attr_value,cs.id_sample,cs.id_ind
 order by 1,2
@@ -2505,6 +2506,7 @@ Inputs
 sub _get_file_types {
 	my %file_types=('BAM' => 'bam',
 	                'BAI' => 'bam.bai',
+	                'BAS' => 'bam.bas',
 	                'CAVE' => 'cave.annot.vcf.gz',
 	                'CAVE_IDX' => 'cave.annot.vcf.gz.tbi',
 	                'CAVE_C' => 'caveman_c.annot.vcf.gz',
