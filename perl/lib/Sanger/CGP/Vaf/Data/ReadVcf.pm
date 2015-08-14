@@ -41,7 +41,16 @@ sub getUniqueLocations {
 	my ($self)=@_;
 	$self->_checkData($self->getTumourBam,$self->getVcfFile);
 	$self->_getData();
-	my($data_for_all_samples,$unique_locations,$info_tag_val,$normal_sample,$updated_info_tags)=$self->_mergeVcf($self->{'vcf'});
+	my($data_for_all_samples,$unique_locations,$info_tag_val,$normal_sample,$updated_info_tags)=$self->_mergeVcf();
+	
+	if(defined $self->{'_b'} ) {
+		($unique_locations, $data_for_all_samples,$info_tag_val)=$self->_populate_bed_locations($unique_locations,$data_for_all_samples,$info_tag_val,$updated_info_tags);		
+	}	
+	if(!defined $self->{'_bo'} ) { 
+		print "WARNING!!! more than one normal sample detected for this group \n".print_hash($normal_sample)."\n" if scalar keys %$normal_sample > 1;
+		$self->_setNormal($normal_sample);	
+	}	
+
 	return($data_for_all_samples,$unique_locations,$info_tag_val,$normal_sample,$updated_info_tags);
 }
 
@@ -89,7 +98,7 @@ sub _mergeVcf {
 	my $vcf_normal_sample=undef;
 	my $info_data=undef;
 	my $unique_locations=undef;
-		
+	
 	foreach my $sample (keys %{$self->{'vcf'}}) {
 		$tumour_count++;
 		if(-e $self->{'vcf'}{$sample}) {	
@@ -127,13 +136,6 @@ sub _mergeVcf {
 		}
  }
 	# do bed or bed only analysis
-	if(defined $self->{'_b'} ) {
-		($unique_locations, $data_for_all_samples,$info_tag_val)=$self->_populate_bed_locations($unique_locations,$data_for_all_samples,$info_tag_val,$updated_info_tags);		
-	}	
-	if(!defined $self->{'_bo'} ) { 
-		print "WARNING!!! more than one normal sample detected for this group \n".print_hash($vcf_normal_sample)."\n" if scalar keys %$vcf_normal_sample > 1;
-		$self->_setNormal($vcf_normal_sample);	
-	}	
 	return ($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags);
 }
 
@@ -199,7 +201,6 @@ sub _getOriginalHeader {
 		foreach my $key (sort keys %$vcf_format) {
 			push(@$info_tag_val,$vcf_format->{$key});
 		}
-		
 	}
 	#add samples from old header
 	my $header_sample=$vcf->get_header_line(key=>'SAMPLE');
@@ -427,7 +428,7 @@ sub _setNormal {
 	my($self,$vcf_normal)=@_;
 	foreach my $key (keys %$vcf_normal) {
 		if($key eq $self->getNormalName) {
-			$log->debug(" User provided normal sample matching with VCF normal");
+			$log->debug(" User provided normal sample matches with VCF normal");
 		}
 		elsif(defined $self->{'_vn'}){
 			$self->setNormal($key);
@@ -445,7 +446,7 @@ sub processLocations {
 	my($aug_vcf_fh,$aug_vcf_name)=$self->_write_augmented_header();
 	my($vcf,$WFH_VCF,$WFH_TSV)=$self->_write_vcf_header($info_tag_val);
 	
-	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 'bamObj' => $bam_objects, 
+	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
 		'location' 		=> undef,
 		'varLine' 		=> undef,
 		'varType' 		=> $self->{'_a'},
@@ -455,18 +456,17 @@ sub processLocations {
 		'normalName'	=> $self->getNormalName,
 		'vcfStatus' 	=> $self->{'_vcf'},
 		'noVcf'    		=> $self->{'noVcf'},
+		'outDir'			=> $self->getOutputDir,
+		'passedOnly'  => $self->{'_r'},
 		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$self->{'_c'}.'.ONHG19_sorted.bed.gz')
 		);
 		
 	my $store_results=undef;
 	
 	foreach my $location (sort keys %$unique_locations) {
-		
 		$variant->setLocation($location);
 		$variant->setVarLine($unique_locations->{$location});
-		
 		my($g_pu)=$variant->formatVarinat();
-		
 		#process only passed varinats		
 		if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
 			if(defined $self->{'_ao'} || defined $self->{'_m'}) {
@@ -477,26 +477,53 @@ sub processLocations {
 			}
 		}
 		
-   my ($old_info_val,$NFS,$flag_val,$max_depth)=$variant->getVcfFields($data_for_all_samples);
+    my ($old_info_val,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
    
+    if ($self->{'_a'} eq 'indel') {
+			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
+    }
    
-   
-   $g_pu=$variant->getRange($bam_header_data,$g_pu,$max_depth);
+  	foreach my $sample (@{$self->getAllSampleNames}) {
+   		print "------$sample\n";
+			#$sample_counter++;
+			$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
+			if($self->{'_a'} eq 'indel') {	
+				$g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
+				if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
+					$g_pu=$variant->addNormalCount($g_pu);
+				}
+				elsif($self->{'_m'} && $data_for_all_samples->{$sample}{$location}) {
+					$store_results=$variant->_storeResults($store_results,$g_pu,$sample);
+				}
+			}
+			else{
+				$g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
+				print Dumper $g_pu;
+			}
+			if(!defined $options->{'ao'} ) {
+				$variant->formatResults($original_flag,$g_pu);
+			}
+			if($options->{'ao'} == 0) {
+				my($pileup_line)=_format_pileup_line($original_flag,$g_pu,$options);
+				#counter where depth is found
+				if($g_pu->{'sample'} ne "$normal" && $pileup_line->{'MTR'} > 0 ) {
+						$mutant_depth++;
+				}
+				if($g_pu->{'sample'} ne "$normal" && $pileup_line->{'DEP'} > 0 ) {
+						$depth++;
+				}
+				$pileup_results{$g_pu->{'sample'}}=$pileup_line;
+			}		
 		
-   $varinat->createExonerateInput();
-   
-   my $ref_seq = _get_dna_segment($bam_objects->{$normal},$g_pu->{'chr'},$g_pu->{'pos_5p'},$g_pu->{'pos_3p'});
-			my $reconstructed_alt_seq = _get_alt_seq($bam_objects->{$normal},$g_pu);
-			$ref_n_alt_seq_file="$options->{'o'}/temp.ref"; 
-			open (my $ref_n_alt_FH,'>'.$ref_n_alt_seq_file);
-			print $ref_n_alt_FH ">alt\n$reconstructed_alt_seq\n>ref\n$ref_seq\n";
-			close($ref_n_alt_FH);
 			
-			#print $new_interval "Before\t".$g_pu->{'alt_seq'}."\t".$g_pu->{'region'}."\t".$normal."\t".$g_pu->{'ins_flag'}."\t".$g_pu->{'ref_pos_5p'}."\t".$g_pu->{'ref_pos_3p'}."\t".$g_pu->{'alt_pos_3p'}."\t";
-	 
-			($g_pu)=_get_ref_5p_pos($ref_seq,$reconstructed_alt_seq,$g_pu);
-  
-	}
+			
+			
+  	}# sample	...	
+   
+   exit;
+   
+    
+	}# location ...
 	
 		
 }
@@ -868,6 +895,7 @@ sub _get_header_lines {
 return $header;
 
 }
+
 
 
 
