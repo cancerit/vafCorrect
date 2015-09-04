@@ -504,7 +504,7 @@ sub processLocations {
 				$variant->formatResults($original_flag,$g_pu);
 			}
 			if($options->{'ao'} == 0) {
-				my($pileup_line)=_format_pileup_line($original_flag,$g_pu,$options);
+				my($pileup_line)=$self->_format_pileup_line($original_flag,$g_pu,$options);
 				#counter where depth is found
 				if($g_pu->{'sample'} ne "$normal" && $pileup_line->{'MTR'} > 0 ) {
 						$mutant_depth++;
@@ -519,6 +519,11 @@ sub processLocations {
 			
 			
   	}# sample	...	
+  	
+  	
+  	
+  	
+  	
    
    exit;
    
