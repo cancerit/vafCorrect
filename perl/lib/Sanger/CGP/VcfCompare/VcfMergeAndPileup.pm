@@ -253,7 +253,7 @@ $progress_flag;
 }
 
 =head2 check_user_subset
-restrict analysis for use defined samples group
+restrict analysis for use defined sample group
 Inputs
 =over 2
 =item tumour_sample_names - array of sample names
@@ -2393,7 +2393,12 @@ group by ip.id_int_project, sip.sample_synonym, s.species, ipat.build, ipat.desi
 order by 1,2
 });
 
+
 }
+
+
+
+
 =head2 build_input_data
 parse sql results 
 Inputs
@@ -2407,12 +2412,14 @@ Inputs
 sub build_input_data {
   my ($options, $conn) = @_;
   my $project_id=$options->{'p'};
-		my $all_data = $conn->executeArrHashRef('nst::NL::getProjectBamAndVcf',$project_id);
+  	my $all_data = $conn->executeArrHashRef('nst::NL::getProjectBamAndVcf',$project_id);
+  			
 		my @retained_data;
 		my $total_records = 0;
 		for my $curr(@{$all_data}) {
 			$total_records++;
-			next if(defined $options->{'p'} && ! first { $curr->{'ID_INT_PROJECT'} == $_ } $options->{'p'});
+			next if(defined $options->{'u'} && (! first { $curr->{'SAMPLE_SYNONYM'} eq $_ } split(',',$options->{'u'})) && ($curr->{'TREAT_AS_TUMOUR'} eq 'Y') );
+			next if(defined $options->{'p'} && ! first { $curr->{'ID_INT_PROJECT'} == $_ } $options->{'p'} );
 			if(@retained_data > 0) {
 				croak "There are multiple species in your requested analysis.\n" if($curr->{'SPECIES'} ne $retained_data[-1]->{'SPECIES'});
 				croak "There are multiple builds in your requested analysis.\n" if($curr->{'BUILD'} ne $retained_data[-1]->{'BUILD'});
