@@ -440,11 +440,14 @@ sub _setNormal {
 
 sub processLocations {
 	my($self,$data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags)=@_;
+	
+	my %pileup_results;
 		
 	my($bam_objects,$bas_files)=$self->_get_bam_object();
 	my($bam_header_data,$lib_size)=$self->_get_bam_header_data($bam_objects,$bas_files);
 	my($aug_vcf_fh,$aug_vcf_name)=$self->_write_augmented_header();
 	my($vcf,$WFH_VCF,$WFH_TSV)=$self->_write_vcf_header($info_tag_val);
+	
 	
 	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
 		'location' 		=> undef,
@@ -482,7 +485,8 @@ sub processLocations {
     if ($self->{'_a'} eq 'indel') {
 			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
     }
-   
+    my $mutant_depth=0;
+    my $depth=0;
   	foreach my $sample (@{$self->getAllSampleNames}) {
    		print "------$sample\n";
 			#$sample_counter++;
@@ -500,22 +504,20 @@ sub processLocations {
 				$g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
 				print Dumper $g_pu;
 			}
-			if(!defined $options->{'ao'} ) {
+			if(!defined $self->{'_ao'} ) {
 				$variant->formatResults($original_flag,$g_pu);
 			}
-			if($options->{'ao'} == 0) {
-				my($pileup_line)=$self->_format_pileup_line($original_flag,$g_pu,$options);
+			if($self->{'_ao'} == 0) {
+				my($pileup_line)=$self->_format_pileup_line($original_flag,$g_pu);
 				#counter where depth is found
-				if($g_pu->{'sample'} ne "$normal" && $pileup_line->{'MTR'} > 0 ) {
+				if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'MTR'} > 0 ) {
 						$mutant_depth++;
 				}
-				if($g_pu->{'sample'} ne "$normal" && $pileup_line->{'DEP'} > 0 ) {
+				if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'DEP'} > 0 ) {
 						$depth++;
 				}
 				$pileup_results{$g_pu->{'sample'}}=$pileup_line;
-			}		
-		
-			
+			}					
 			
 			
   	}# sample	...	
@@ -902,6 +904,85 @@ return $header;
 }
 
 
+
+=head2 _format_pileup_line
+format pileup/ exonerate results as per VCF specifications
+=over 2
+=item original_flag -orignal flag values
+=item g_pu - hash containing results and sample specific info for give location
+=back
+=cut
+
+sub _format_pileup_line {
+	my ($self,$original_flag,$g_pu)=@_;
+	my $VCF_OFS;	
+	my $pileup_results;
+	if(defined $original_flag->{$g_pu->{'sample'}}) {
+		$VCF_OFS=$original_flag->{$g_pu->{'sample'}};
+	}
+	else {
+		$VCF_OFS='NA';
+	}
+	
+	my $MTR = $g_pu->{'alt_p'} + $g_pu->{'alt_n'};
+	my $WTR = $g_pu->{'ref_p'} + $g_pu->{'ref_n'};
+	my $DEP = $MTR + $WTR + $g_pu->{'amb'};
+	
+	## determine read direction
+	my $MDR =0;
+	# only +ve reads 
+	if($g_pu->{'alt_p'} > 0 && $g_pu->{'alt_n'} == 0 ) 
+	{ $MDR=1; }
+	# only -ve reads
+	elsif($g_pu->{'alt_p'} == 0 && $g_pu->{'alt_n'} > 0 ) 
+	{ $MDR=2; }
+	# +ve & -ve
+	elsif($g_pu->{'alt_p'} > 0 && $g_pu->{'alt_n'} > 0 )
+	 { $MDR=3; }
+ 
+	my $WDR=0;
+	# only +ve
+	if($g_pu->{'ref_p'} > 0 && $g_pu->{'ref_n'} == 0 )
+	{ $WDR=1; }
+	# only -ve
+	elsif($g_pu->{'ref_p'} == 0 && $g_pu->{'ref_n'} > 0 ) 
+	{ $WDR=2; }
+	# +ve & -ve
+	elsif($g_pu->{'ref_p'} > 0 && $g_pu->{'ref_n'} > 0 ) 
+	{ $WDR=3; }
+	
+	if($self->{'_a'} ne 'indel') {
+	$pileup_results={ 
+										'FAZ' =>$g_pu->{'FAZ'},
+										'FCZ' =>$g_pu->{'FCZ'},
+										'FGZ' =>$g_pu->{'FGZ'},
+										'FTZ' =>$g_pu->{'FTZ'},
+										'RAZ' =>$g_pu->{'RAZ'},
+										'RCZ' =>$g_pu->{'RCZ'},
+										'RGZ' =>$g_pu->{'RGZ'},
+										'RTZ' =>$g_pu->{'RTZ'},
+										'MTR'	=>$MTR,
+										'WTR'	=>$WTR,
+										'DEP'	=>$DEP,
+										'MDR'	=>$MDR,
+										'WDR'	=>$WDR,
+										'OFS'	=>$VCF_OFS,
+										};
+	}
+	
+	else {
+	$pileup_results={ 'MTR'=>$MTR,
+										'WTR'=>$WTR,
+										'DEP'=>$DEP,
+										'MDR'=>$MDR,
+										'WDR'=>$WDR,
+										'OFS'=>$VCF_OFS,
+										'AMB'=>$g_pu->{'amb'}
+										};
+	}
+		
+$pileup_results;	
+}
 
 
 

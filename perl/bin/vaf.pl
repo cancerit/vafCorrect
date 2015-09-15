@@ -89,7 +89,7 @@ sub option_builder {
 	pod2usage(q{'-tb' toumour sample bam files must be provided}) unless (defined $options{'tb'});
 	pod2usage(q{'-nb' normal sample bam file must be provided}) unless (defined $options{'nb'});
 	pod2usage(q{'-vcf' Input vcf file name must be provided}) unless (defined $options{'vcf'} || defined $options{'bo'});
-	pod2usage(q{'-b' bed file must be specified }) unless (! defined $options{'vcf'} || !defined $options{'bo'});
+	pod2usage(q{'-b' bed file must be specified }) unless (!defined $options{'vcf'} || !defined $options{'bo'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
 	mkpath($options{'o'});
