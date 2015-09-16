@@ -18,6 +18,8 @@ use FindBin qw($Bin);
 use List::Util qw(first reduce max min);
 use warnings FATAL => 'all';
 use Capture::Tiny qw(:all);
+use Carp;
+use Try::Tiny qw(try catch finally);
 
 use Bio::DB::Sam;
 use Bio::DB::Sam::Constants;
@@ -446,14 +448,13 @@ sub processLocations {
 	my($bam_objects,$bas_files)=$self->_get_bam_object();
 	my($bam_header_data,$lib_size)=$self->_get_bam_header_data($bam_objects,$bas_files);
 	my($aug_vcf_fh,$aug_vcf_name)=$self->_write_augmented_header();
-	my($vcf,$WFH_VCF,$WFH_TSV)=$self->_write_vcf_header($info_tag_val);
-	
+	my($vcf,$WFH_VCF,$WFH_TSV,$outfile_name)=$self->_write_vcf_header($info_tag_val);
 	
 	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
 		'location' 		=> undef,
 		'varLine' 		=> undef,
 		'varType' 		=> $self->{'_a'},
-		'libsize' 		=> $lib_size,
+		'libSize' 		=> $lib_size,
 		'samples' 		=> $self->getAllSampleNames,
 		'tumourName'	=> $self->getTumourName,
 		'normalName'	=> $self->getNormalName,
@@ -465,8 +466,10 @@ sub processLocations {
 		);
 		
 	my $store_results=undef;
-	
+	my @tags=qw(FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR WTR DEP MDR WDR OFS);
+	my $count=0;
 	foreach my $location (sort keys %$unique_locations) {
+		$count++;
 		$variant->setLocation($location);
 		$variant->setVarLine($unique_locations->{$location});
 		my($g_pu)=$variant->formatVarinat();
@@ -479,17 +482,16 @@ sub processLocations {
 				next;
 			}
 		}
-		
-    my ($old_info_val,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
-   
+    my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
     if ($self->{'_a'} eq 'indel') {
+    	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
 			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
     }
     my $mutant_depth=0;
     my $depth=0;
+    
   	foreach my $sample (@{$self->getAllSampleNames}) {
-   		print "------$sample\n";
-			#$sample_counter++;
+   		#$sample_counter++;
 			$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
 			if($self->{'_a'} eq 'indel') {	
 				$g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
@@ -502,39 +504,61 @@ sub processLocations {
 			}
 			else{
 				$g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
-				print Dumper $g_pu;
+				#print Dumper $g_pu;
 			}
+			
 			if(!defined $self->{'_ao'} ) {
-				$variant->formatResults($original_flag,$g_pu);
-			}
-			if($self->{'_ao'} == 0) {
-				my($pileup_line)=$self->_format_pileup_line($original_flag,$g_pu);
-				#counter where depth is found
+				my($pileup_line)=$variant->formatResults($original_flag,$g_pu);
+				# Mutant read depth found at this location
 				if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'MTR'} > 0 ) {
 						$mutant_depth++;
 				}
+				# read depth found at this location 
 				if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'DEP'} > 0 ) {
 						$depth++;
 				}
 				$pileup_results{$g_pu->{'sample'}}=$pileup_line;
-			}					
-			
-			
-  	}# sample	...	
+			}			
+  	}# Done with all the samples ...	
   	
-  	
-  	
-  	
-  	
+  	#print Dumper %pileup_results;
+  	#get specific annotations from original VCF INFO field....
+		if(!defined $self->{'_ao'} ) {
+			$original_vcf_info->{'ND'} =	$depth;
+			$original_vcf_info->{'NVD'} =	$mutant_depth;	
+			$self->_writeOutput($original_vcf_info,$NFS,\%pileup_results,\@tags,$WFH_VCF,$WFH_TSV,$g_pu,$vcf);
+			$depth=0;
+			$mutant_depth=0;
+		 }
+		  #if($count >0) {exit;}			
+			if($count % 100 == 0 ) {
+				if($self->{'_r'}){
+					$log->debug("Normal_id:".$self->getNormalName.": completed:$count PASS variants of total merged variant sites");
+				}
+				else {
+					$log->debug("Normal_id:".$self->getNormalName.": completed:$count out of total merged variant sites");
+				}
+			} 	
    
-   exit;
-   
-    
 	}# location ...
-	
+		if($self->{'_m'}) {
+		 	$self->_writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
+		}
 		
+		if ($vcf) {
+			$vcf->close();
+			close($WFH_VCF);
+			close($WFH_TSV);
+			$log->debug("Validating VCF file");
+			my($outfile_gz,$outfile_tabix)=$self->_compressVcf("$outfile_name.vcf");
+			if ((-e $outfile_gz) && (-e $outfile_tabix)) {
+				unlink "$outfile_name.vcf" or $log->warn("Could not unlink".$outfile_name.'.vcf:'.$!);
+			}
+	}
+	$log->debug("Completed analysis for: $count locations");
+	#print $progress_fh "$outfile_name.vcf\n";
+	return 1;
 }
-
 
 =head2 _get_bam_object
 create bam object using Bio::DB::Sam
@@ -625,7 +649,7 @@ sub _get_bam_header_data {
 			$bam_header_data{$key}{'read_length'}=$read_len;
 		}
 	}
-	
+		
 	return(\%bam_header_data,$lib_size);
 }
 
@@ -795,7 +819,7 @@ sub _write_vcf_header {
 		}
 	}
 	else {
-		$log->debug("No data in info filed");
+		$log->debug("No data in info Field");
 	}
 	
 	if(!defined $self->{'_vcf'}) {
@@ -836,7 +860,7 @@ sub _write_vcf_header {
 	}   
 	print $WFH_TSV "@$header\n".join("\t",@$temp_cols)."\n";
 			
-	return ($vcf,$WFH_VCF,$WFH_TSV);
+	return ($vcf,$WFH_VCF,$WFH_TSV,$outfile_name);
 }
 
 
@@ -905,88 +929,335 @@ return $header;
 
 
 
-=head2 _format_pileup_line
-format pileup/ exonerate results as per VCF specifications
+=head2 _write_output
+Write output to file
+Inputs
 =over 2
-=item original_flag -orignal flag values
-=item g_pu - hash containing results and sample specific info for give location
+=item location -variant position
+=item input_bam_files -type array :stores sample names
+=item original_vcf_info - original VCF data
+=item NFS - New Filter status
+=item new_pileup_results --pileup/exonerate results for given position
+=item vcf -VCF object
+=item tags -custom tags
+=item WFH -Write file handler
 =back
 =cut
 
-sub _format_pileup_line {
-	my ($self,$original_flag,$g_pu)=@_;
-	my $VCF_OFS;	
-	my $pileup_results;
-	if(defined $original_flag->{$g_pu->{'sample'}}) {
-		$VCF_OFS=$original_flag->{$g_pu->{'sample'}};
+sub _writeOutput {
+	my ($self,$original_vcf_info,$NFS,$new_pileup_results,$tags,$WFH_VCF,$WFH_TSV,$g_pu,$vcf)=@_;
+  if ((!$vcf && !$self->{'_b'})|| $self->{'_ao'}) {
+		return 1;
 	}
-	else {
-		$VCF_OFS='NA';
-	}
-	
-	my $MTR = $g_pu->{'alt_p'} + $g_pu->{'alt_n'};
-	my $WTR = $g_pu->{'ref_p'} + $g_pu->{'ref_n'};
-	my $DEP = $MTR + $WTR + $g_pu->{'amb'};
-	
-	## determine read direction
-	my $MDR =0;
-	# only +ve reads 
-	if($g_pu->{'alt_p'} > 0 && $g_pu->{'alt_n'} == 0 ) 
-	{ $MDR=1; }
-	# only -ve reads
-	elsif($g_pu->{'alt_p'} == 0 && $g_pu->{'alt_n'} > 0 ) 
-	{ $MDR=2; }
-	# +ve & -ve
-	elsif($g_pu->{'alt_p'} > 0 && $g_pu->{'alt_n'} > 0 )
-	 { $MDR=3; }
- 
-	my $WDR=0;
-	# only +ve
-	if($g_pu->{'ref_p'} > 0 && $g_pu->{'ref_n'} == 0 )
-	{ $WDR=1; }
-	# only -ve
-	elsif($g_pu->{'ref_p'} == 0 && $g_pu->{'ref_n'} > 0 ) 
-	{ $WDR=2; }
-	# +ve & -ve
-	elsif($g_pu->{'ref_p'} > 0 && $g_pu->{'ref_n'} > 0 ) 
-	{ $WDR=3; }
-	
-	if($self->{'_a'} ne 'indel') {
-	$pileup_results={ 
-										'FAZ' =>$g_pu->{'FAZ'},
-										'FCZ' =>$g_pu->{'FCZ'},
-										'FGZ' =>$g_pu->{'FGZ'},
-										'FTZ' =>$g_pu->{'FTZ'},
-										'RAZ' =>$g_pu->{'RAZ'},
-										'RCZ' =>$g_pu->{'RCZ'},
-										'RGZ' =>$g_pu->{'RGZ'},
-										'RTZ' =>$g_pu->{'RTZ'},
-										'MTR'	=>$MTR,
-										'WTR'	=>$WTR,
-										'DEP'	=>$DEP,
-										'MDR'	=>$MDR,
-										'WDR'	=>$WDR,
-										'OFS'	=>$VCF_OFS,
-										};
+  
+  if (!defined $original_vcf_info) {$original_vcf_info=['.'];}
+  my $out;
+	$out->{CHROM}  = $g_pu->{'chr'};
+	$out->{POS}    = $g_pu->{'start'};
+	$out->{ID}     = '.';
+	$out->{ALT}    = [$g_pu->{'alt_seq'}];
+	$out->{REF}    = $g_pu->{'ref_seq'};
+	$out->{QUAL}   = '.';
+	$out->{FILTER} = [$NFS];
+	## check if field is in header if not use add_info_field...
+	$out->{INFO}   = $original_vcf_info;
+	$out->{FORMAT} = [@$tags];
+	foreach my $sample (@{$self->getAllSampleNames}) {
+	  $out->{gtypes}{$sample} = $new_pileup_results->{$sample};
 	}
 	
-	else {
-	$pileup_results={ 'MTR'=>$MTR,
-										'WTR'=>$WTR,
-										'DEP'=>$DEP,
-										'MDR'=>$MDR,
-										'WDR'=>$WDR,
-										'OFS'=>$VCF_OFS,
-										'AMB'=>$g_pu->{'amb'}
-										};
-	}
-		
-$pileup_results;	
+	$vcf->format_genotype_strings($out);
+	
+	# write to VCF at very end.....
+	
+	print $WFH_VCF $vcf->format_line($out);
+	
+	my ($line)=$self->_parse_info_line($vcf->format_line($out),$original_vcf_info);
+	
+	# write to TSV at very end.....
+	
+	print $WFH_TSV $self->getNormalName."\t".join("\t",@$line)."\n";
+	
+return 1;
 }
 
 
+=head2 _parse_info_line
+parse info line to generate tab sep outfile
+Inputs
+=over 2
+=item vcf_line vcf --line to be parsed
+=item original_vcf_info --VCF info field
+=item samples --samples considered for this analysis group
+=back
+=cut
 
 
+sub _parse_info_line {
+	my ($self,$vcf_line,$original_vcf_info)=@_;
+   # info field prep
+		chomp $vcf_line;
+    my @data = split "\t", $vcf_line ;
+
+    my (@record,@info_data);
+
+    # basic variant data
+
+    push(@record,$data[2],$data[0],$data[1],$data[3],$data[4],$data[5],$data[6]);
+
+    foreach my $e (split ';',$data[7]){
+      push @info_data, [split '=', $e];
+    }
+
+    # annotation fields
+    my $vdseen = 0;
+    foreach my $d (@info_data){
+      if($d->[0] eq 'VD'){
+        $vdseen = 1;
+        my @anno_data = split('\|',$d->[1]);
+
+        foreach my $i(0..4){
+          if(defined $anno_data[$i]){
+            push(@record,$anno_data[$i]);
+          } else {
+            push(@record,'-');
+          }
+        }
+      }
+    }
+
+    if($vdseen == 0){
+      push(@record,'-','-','-','-','-');
+    }
+
+    my $vtseen = 0;
+
+		if($vtseen == 0){
+      my $ref = $data[3];
+      my $alt = $data[4];
+      if(length($ref) > 0 && length($alt) > 0){
+        if(length($ref) == 1){
+          if(length($alt) > 1){
+            push(@record,'Ins');
+          } else {
+            push(@record,'Sub');
+          }
+        } else {
+          if(length($alt) == 1){
+            push(@record,'Del');
+          } else {
+            push(@record,'Complex');
+          }
+        }
+      } else {
+        push(@record,'-');
+      }
+
+    }
+
+    if($vdseen == 1){
+      my $vcseen = 0;
+      foreach my $d (@info_data){
+        if($d->[0] eq 'VC'){
+          $vcseen = 1;
+          push(@record,$d->[1]);
+        }
+      }
+      if($vcseen == 0){
+        push(@record,'-');
+      }
+    } else {
+      push(@record,'-');
+    }
+
+foreach my $info_key (sort keys %$original_vcf_info){
+				next if ($info_key eq 'VT' || $info_key eq 'VC');
+				if(defined $original_vcf_info->{$info_key}){
+         	push(@record,$original_vcf_info->{$info_key});
+        }
+        else{
+        	push(@record,'-');
+        }
+    }
+# print FORMAT field values for each sample
+
+my $i=9; # format field starts from 9
+foreach my $sample(@{$self->getAllSampleNames}) {
+	push(@record,split(':',$data[$i]));
+	$i++;
+}    
+
+\@record;
+
+}
+
+
+=head2 _writeResults
+Write augmented vcf file
+Inputs
+=over 2
+=item input_dir
+user provided input dir
+=item normal_sample -normal sample hash
+=item conn -database connection object
+=back
+=cut
+
+sub _writeResults {
+ my ($self, $aug_vcf_fh, $store_results,$aug_vcf_name)= @_;
+			foreach my $sample (keys %{$self->{'vcf'}}) {
+					$self->_writeFinalVcf($self->{'vcf'}{$sample},$aug_vcf_fh,$sample,$store_results,$aug_vcf_name);
+					$aug_vcf_fh->{$sample}->close();
+				}
+ $log->debug("Completed writing VCF file");
+}
+
+=head2 _writeFinalVcf
+Write augmented vcf file
+Inputs
+=over 2
+=item input_dir
+user provided input dir
+=item normal_sample -normal sample hash
+=item conn -database connection object
+=back
+=cut
+
+
+sub _writeFinalVcf {
+	  my ($self,$vcf_file,$aug_vcf_fh,$sample,$store_results,$aug_vcf_name)=@_;
+	  
+	  if ($aug_vcf_fh->{"$sample\_bed"}) {
+	      foreach my $key (keys %{$store_results->{"$sample\_bed"}}) {
+	   			my $bed_line=$store_results->{"$sample\_bed"}{$key};		
+					$aug_vcf_fh->{"$sample\_bed"}->print($bed_line);
+				}
+	  }
+	  my $vcf = Vcf->new(file => $vcf_file);
+		$vcf->parse_header();	
+		while (my $x = $vcf->next_data_hash()) {
+			my $location="$$x{'CHROM'}:$$x{'POS'}:$$x{'REF'}:@{$$x{'ALT'}}[0]";
+			my $result_line=$store_results->{$sample}{$location};
+			if ($store_results->{$sample}{$location}) { 
+				$vcf->add_format_field($x,'MTR');
+				$vcf->add_format_field($x,'WTR');
+				$vcf->add_format_field($x,'AMB');
+		
+				$$x{gtypes}{'TUMOUR'}{'MTR'}=$result_line->{'tMTR'};
+				$$x{gtypes}{'TUMOUR'}{'WTR'}=$result_line->{'tWTR'};
+				$$x{gtypes}{'TUMOUR'}{'AMB'}=$result_line->{'tAMB'};
+		
+				$$x{gtypes}{'NORMAL'}{'MTR'}=$result_line->{'nMTR'};
+				$$x{gtypes}{'NORMAL'}{'WTR'}=$result_line->{'nWTR'};
+				$$x{gtypes}{'NORMAL'}{'AMB'}=$result_line->{'nAMB'};
+				$aug_vcf_fh->{$sample}->print($vcf->format_line($x));
+			}
+	}
+		$vcf->close();
+		$aug_vcf_fh->{$sample}->close();
+		my ($aug_gz,$aug_tabix)=$self->_compressVcf($aug_vcf_name->{$sample});
+		# remove raw vcf file after tabix indexing
+    if ((-e $aug_gz) && (-e $aug_tabix)) {
+    	unlink $aug_vcf_name->{$sample} or $log->warn("Could not unlink".$aug_vcf_name->{$sample}.':'.$!);
+    }
+		return;
+}
+
+sub _compressVcf {
+  my ($self,$annot_vcf)=@_;
+  my $annot_gz = $annot_vcf.'.gz';
+  my $command="vcf-sort ".$annot_vcf;
+  $command .= '| bgzip -c >'.$annot_gz;
+  $self->_runExternal($command, 'bgzip', undef, 1, 1); # croakable, quiet, no data
+	$command = 'tabix -p vcf '.$annot_gz;
+  $self->_runExternal($command, 'tabix', undef, 1, 1); # croakable, quiet, no data
+  my $annot_tabix = "$annot_gz.tbi";
+  croak "Tabix index does not appear to exist" unless(-e $annot_tabix);
+  $command='vcf-validator -u '.$annot_gz;
+  $self->_runExternal($command, 'vcf-validator', undef, 1, 1); # croakable, quiet, no data
+  return ($annot_gz, $annot_tabix);
+}
+
+
+sub _runExternal {
+        my ($self,$command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary) = @_;
+        croak "Filehandle must be defined for binary output." if($binary && !$FH);
+        return $self->_run_external_core(q{-|}, $command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary);
+}
+
+sub _run_external_core {
+  my ($self,$open_type, $command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary) = @_;
+  # ensure that commands containing pipes give appropriate errors
+  $ENV{SHELL} = '/bin/bash'; # have to ensure bash is in use
+  my $command_prefix = q{};
+  $command_prefix = 'set -o pipefail; ' if($command =~ m/[|]/); # add pipefail to command if pipes are detected
+
+  my (@prog_data, $tmp_fn);
+        my $error_to_check;
+  $log->warn(">>>>> $command");
+  $command = $command_prefix.$command;
+        if($Sanger::CGP::Vaf::VafConstants::EXECUTE_EXTERNAL == 1) {
+          try {
+      if(defined $FH && ref \$FH eq 'SCALAR') {
+        $tmp_fn = $FH;
+        undef $FH;
+        open $FH, '>', $tmp_fn or croak "Failed to create $tmp_fn: $OS_ERROR";
+      }
+      my ($pid, $process);
+      if($open_type eq q{2>&1}) {
+        $pid = open $process, $command.' 2>&1 |' or croak 'Could not fork: '.$OS_ERROR;
+      }
+      else {
+        $pid = open $process, q{-|}, $command or croak 'Could not fork: '.$OS_ERROR;
+      }
+      croak 'Failed to fork for: '.$command unless($pid);
+      if($binary) {
+        binmode $FH;
+        binmode $process;
+        my $buffer;
+        my $buffer_max = 64*1024; # 64k
+        while(read ($process, $buffer, $buffer_max) ){
+          print $FH $buffer or croak "filehandle write failed $OS_ERROR";
+        }
+      }
+      else {
+        while (my $tmp = <$process>) {
+          print $FH $tmp or croak "filehandle write failed $OS_ERROR" if($FH);
+          $log->debug("<$ext_prog>\t$tmp") or $log->logcroak("logging write failed $OS_ERROR") unless($quiet);
+          unless($no_data) {
+            chomp $tmp;
+            push @prog_data, $tmp ;
+          }
+        }
+      }
+      close $process or croak "Error closing pipe from $ext_prog";
+    } catch {
+      unless($no_croak) {
+        my $message = q{This external process failed: }.$command;
+      $message .= "\nERROR: $_";
+        croak $message;
+      } elsif($no_croak eq 'warn') {
+        my $message = q{This external process failed: }.$command;
+        $message .= "\nWARNING: $_";
+        $log->warn($message);
+      } elsif($no_croak eq 'check') {
+        $error_to_check = $_;
+      }
+      # else just ignore the error
+    }
+    finally {
+      close $FH or croak "Failed to close $tmp_fn: $OS_ERROR" if(defined $tmp_fn);
+    };
+        }
+        $log->debug( "<<<<<") unless($quiet);
+
+        if (defined $error_to_check) {
+                $log->logcroak("_run_external should be called in list context if called with no_croak=check, returning an error value") unless wantarray;
+                return (\@prog_data, $error_to_check);
+        } else {
+                return (\@prog_data);
+        }
+}
 
 
 

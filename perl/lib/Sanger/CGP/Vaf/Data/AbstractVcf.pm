@@ -80,6 +80,9 @@ sub getVcfFile {
 
 sub getTumourBam {
 	my @arr=split(',',shift->{'_tb'});
+	# removes trailing and leading spaces
+	@arr=trim(@arr);
+	#print Dumper @arr;
 	return \@arr;
 }
 
@@ -97,6 +100,7 @@ sub getAllSampleNames {
  my($self)=shift;
  my $allSampleNames=$self->getTumourName;
  unshift(@$allSampleNames,$self->getNormalName);
+ 
  $self->{'allSamples'}=$allSampleNames;
 }
 
@@ -150,6 +154,18 @@ sub getMessages {
 
 sub _clearMessages {
 	shift->{_msg} = undef;
+}
+
+
+
+
+sub trim {
+    @_ = $_ if not @_ and defined wantarray;
+    @_ = @_ if defined wantarray;
+ 
+    for (@_ ? @_ : $_) { s/^\s+//, s/\s+$// }
+ 
+    return wantarray ? @_ : $_[0] if defined wantarray;
 }
 
 

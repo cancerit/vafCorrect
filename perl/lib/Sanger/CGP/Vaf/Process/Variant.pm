@@ -19,8 +19,10 @@ use List::Util qw(first reduce max min);
 use warnings FATAL => 'all';
 use Capture::Tiny qw(:all);
 
+use Math::Round qw(round);
 use Bio::DB::Sam;
 use Bio::DB::Sam::Constants;
+
 use Sanger::CGP::Vaf::VafConstants;
 
 use Log::Log4perl;
@@ -269,8 +271,8 @@ sub _getINFO {
 
 sub createExonerateInput {
 	my($self,$bam,$bam_header,$depth,$g_pu)=@_;
-	
-	$g_pu=$self->_getRange($bam_header,$depth,$g_pu);
+	#print Dumper $bam_header;
+	$g_pu=$self->_getRange($bam_header,$g_pu,$depth);
 	my($ref_seq)=$self->_get_dna_segment($bam,$g_pu->{'chr'},$g_pu->{'pos_5p'},$g_pu->{'pos_3p'});
 	my($alt_seq)=$self->_get_alt_seq($bam,$g_pu);
 	$g_pu=$self->_get_ref_5p_pos($ref_seq,$alt_seq,$g_pu);
@@ -298,15 +300,15 @@ sub _getRange {
   return if $self->getVarType ne 'indel';
   
   my ($left_pos,$right_pos,$chr_len,$spanned_region);
+ 
+  my $lib_size=$self->{'_libSize'};
   
-  my $lib_size=$bam_header->{$self->{'_normalSample'}}{'lib_size'};
-  
-  my ($hdr_flag)=$self->check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$self->{'_tabix_hdr'});
+  my ($hdr_flag)=$self->_check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$self->{'_tabix_hdr'});
   my $spanning_seq_denom=$Sanger::CGP::Vaf::VafConstants::SPANNING_SEQ_DENOMINATOR;
   #if location is in high depth region and has depth >1000 then hdr_flag is true
   if($hdr_flag && $max_depth > 1000){$spanning_seq_denom=4;}
   else {$hdr_flag=0;}
-  $chr_len=$bam_header->{$self->{'_normalSample'}}{$g_pu->{'chr'}};
+  $chr_len=$bam_header->{$self->{'_normalName'}}{$g_pu->{'chr'}};
   if(defined $lib_size && defined $chr_len) {
   	$spanned_region = round(($lib_size *  $Sanger::CGP::Vaf::VafConstants::INSERT_SIZE_FACTOR )/$spanning_seq_denom);
   	#$spanned_region=round($spanned_region);
@@ -332,6 +334,37 @@ sub _getRange {
 
 	return $g_pu;
 }
+
+=head2 
+checks overlap with high depth regions
+Inputs
+=over 2
+=item chr -chromosome number
+=item zero_start start coordiante
+=item one_end -end coordinate
+=tabix - tabix object of bed file containing UCSC high depth regions
+=back
+=cut
+sub _check_hdr_overlap {
+	my ($self, $chr, $zero_start, $one_end, $tabix ) = @_;
+	$chr=~s/chr//g;
+	###
+	# Querying is ALWAYS half open regardless of the underlying file type
+	###
+		my $i=0;
+		my $res = $tabix->query("chr$chr", $zero_start, $one_end);
+		if(defined $res->get) {
+			#if uncomment if want to loop over the hdr regions
+			#while(my $record = $tabix->read($res)){
+				# the returned data is the ORIGINAL string from the file
+				#print "$i : $record\n";
+			#}
+			$i=1;
+			return $i;
+		}
+	$i;	
+}
+
 
 
 =head2 _get_dna_segment
@@ -376,8 +409,8 @@ sub _get_alt_seq {
 		$tmp_start=$g_pu->{'start'} - 1;
 	}
 	
-	my ($alt_left_seq)=_get_dna_segment($bam_objects,$g_pu->{'chr'},$g_pu->{'pos_5p'},$tmp_start);
-	my ($alt_right_seq)=_get_dna_segment($bam_objects,$g_pu->{'chr'},$tmp_end,$g_pu->{'pos_3p'});
+	my ($alt_left_seq)=$self->_get_dna_segment($bam_objects,$g_pu->{'chr'},$g_pu->{'pos_5p'},$tmp_start);
+	my ($alt_right_seq)=$self->_get_dna_segment($bam_objects,$g_pu->{'chr'},$tmp_end,$g_pu->{'pos_3p'});
 	#indel[insertion] add alt between two segments...
 	my $reconstructed_alt_seq;
 	
@@ -489,9 +522,7 @@ sub getIndelResults {
 	my($self,$bam,$g_pu)=@_;
 	open (my $Reads_FH, '>',$self->{'_outDir'}.'/temp.reads') || $log->logcroak("unable to open file $!");
 	$g_pu=$self->_fetch_features($bam,$g_pu,$Reads_FH);
-	$g_pu=_do_exonerate($self->{'_outDir'}.'/temp.ref',$self->{'_outDir'}.'/temp.reads',$g_pu);
-	
-	
+	$g_pu=$self->_do_exonerate($self->{'_outDir'}.'/temp.ref',$self->{'_outDir'}.'/temp.reads',$g_pu);
 	return $g_pu;
 }
 
@@ -916,5 +947,89 @@ sub getPileup {
 	
 	return $g_pu;	
 }
+
+
+
+=head2 _format_pileup_line
+format pileup/ exonerate results as per VCF specifications
+=over 2
+=item original_flag -orignal flag values
+=item g_pu - hash containing results and sample specific info for give location
+=back
+=cut
+
+sub formatResults {
+	my ($self,$original_flag,$g_pu)=@_;
+	my $VCF_OFS;	
+	my $pileup_results;
+	if(defined $original_flag->{$g_pu->{'sample'}}) {
+		$VCF_OFS=$original_flag->{$g_pu->{'sample'}};
+	}
+	else {
+		$VCF_OFS='NA';
+	}
+	
+	my $MTR = $g_pu->{'alt_p'} + $g_pu->{'alt_n'};
+	my $WTR = $g_pu->{'ref_p'} + $g_pu->{'ref_n'};
+	my $DEP = $MTR + $WTR + $g_pu->{'amb'};
+	
+	## determine read direction
+	my $MDR =0;
+	# only +ve reads 
+	if($g_pu->{'alt_p'} > 0 && $g_pu->{'alt_n'} == 0 ) 
+	{ $MDR=1; }
+	# only -ve reads
+	elsif($g_pu->{'alt_p'} == 0 && $g_pu->{'alt_n'} > 0 ) 
+	{ $MDR=2; }
+	# +ve & -ve
+	elsif($g_pu->{'alt_p'} > 0 && $g_pu->{'alt_n'} > 0 )
+	 { $MDR=3; }
+ 
+	my $WDR=0;
+	# only +ve
+	if($g_pu->{'ref_p'} > 0 && $g_pu->{'ref_n'} == 0 )
+	{ $WDR=1; }
+	# only -ve
+	elsif($g_pu->{'ref_p'} == 0 && $g_pu->{'ref_n'} > 0 ) 
+	{ $WDR=2; }
+	# +ve & -ve
+	elsif($g_pu->{'ref_p'} > 0 && $g_pu->{'ref_n'} > 0 ) 
+	{ $WDR=3; }
+	
+	if($self->getVarType ne 'indel') {
+	$pileup_results={ 
+										'FAZ' =>$g_pu->{'FAZ'},
+										'FCZ' =>$g_pu->{'FCZ'},
+										'FGZ' =>$g_pu->{'FGZ'},
+										'FTZ' =>$g_pu->{'FTZ'},
+										'RAZ' =>$g_pu->{'RAZ'},
+										'RCZ' =>$g_pu->{'RCZ'},
+										'RGZ' =>$g_pu->{'RGZ'},
+										'RTZ' =>$g_pu->{'RTZ'},
+										'MTR'	=>$MTR,
+										'WTR'	=>$WTR,
+										'DEP'	=>$DEP,
+										'MDR'	=>$MDR,
+										'WDR'	=>$WDR,
+										'OFS'	=>$VCF_OFS,
+										};
+	}
+	
+	else {
+	$pileup_results={ 'MTR'=>$MTR,
+										'WTR'=>$WTR,
+										'DEP'=>$DEP,
+										'MDR'=>$MDR,
+										'WDR'=>$WDR,
+										'OFS'=>$VCF_OFS,
+										'AMB'=>$g_pu->{'amb'}
+										};
+	}
+		
+$pileup_results;	
+}
+
+
+
 
 
