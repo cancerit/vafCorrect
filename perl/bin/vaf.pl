@@ -35,10 +35,43 @@ const my $SEP => "/";
 
 try {
 	my ($options) = option_builder();
+	
 	my $vcf = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
-	my($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags)=$vcf->getUniqueLocations();
+	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf->getVcfHeaderData();
+	my($variant,$merged_vcf,$WFH_VCF,$WFH_TSV,$outfile_name,$bam_header_data,$bam_objects,$aug_vcf_fh,$aug_vcf_name)=$vcf->prepareVcfOutFiles($info_tag_val);
+	my($bed_locations)=$vcf->getBedHash();
+	
+	my ($chromosomes)=$vcf->getChromosomes();
+	my $store_results=undef;
+
+	foreach my $chr_location (@$chromosomes) {
+		my($data_for_all_samples,$unique_locations)=$vcf->getMergedLocations($chr_location,$updated_info_tags,$vcf_file_obj);
+		if(defined $options->{'b'} ){
+			($bed_locations)=$vcf->filterBedLocations($unique_locations,$bed_locations);	
+		}	
+		$store_results=$vcf->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$merged_vcf,$WFH_VCF,$WFH_TSV,$store_results);
+		$log->debug("Completed analysis for: $chr_location ");
+	}
+	
+	if(defined $bed_locations) {
+		my($data_for_all_samples,$unique_locations)=$vcf->populateBedLocations($bed_locations,$updated_info_tags);
+		($store_results)=$vcf->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$merged_vcf,$WFH_VCF,$WFH_TSV,$store_results);
+	}
+	
+  if(defined $store_results && defined $options->{'m'}) {
+    	$vcf->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
+  }
+  if(defined $merged_vcf){
+			$merged_vcf->close();
+			close($WFH_VCF); 
+			close($WFH_TSV);
+			$log->debug("Compressing and Validating VCF file");
+			my($outfile_gz,$outfile_tabix)=$vcf->compressVcf("$outfile_name.vcf");
+  }
+	#my($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags)=$vcf->getUniqueLocations();
+	
 	#to do ... add chromosome based analysis of vcf file merging	
-	$vcf->processLocations($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags);
+	#$vcf->processLocations($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags);
 }
 	
 catch {
@@ -177,7 +210,7 @@ mergeAndPileup.pl [-h] -i -d -a [-t -b -e -c -r -g -f -o -v]
    --restrict_flag (-r)  restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
    --vcf_from      (-f)  specify vcf source [ only used with varinat_type snp (default cave_c [specify-: cave_c or cave_java]  [ WTSI only ]
    --augment       (-m)  Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
-   --augment_only  (-ao) Augment pindel file [ do not  merge input files and add non passed varinats in output file ] (default 0: augment and merge )
+   --augment_only  (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
    --depth         (-p)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --id_int_project(-pid) Internal project id 
    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)

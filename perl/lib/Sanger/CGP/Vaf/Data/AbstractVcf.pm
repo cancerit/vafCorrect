@@ -60,7 +60,7 @@ sub _init {
 	$self->{'options'}=$options;
 	foreach my $k (keys %$options) {
 		if( defined $options->{$k}) {
-			$self->{"_$k"}=$options->{$k};
+			$self->{"_$k"}=$options->{$k};		
 		}
 	}	
 }

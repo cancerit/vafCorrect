@@ -440,23 +440,33 @@ Inputs
 sub _get_ref_5p_pos {
 	my ($self,$ref_seq,$reconstructed_alt_seq,$g_pu) = @_;		
 			my $new_pos;
-			
 			my $exclusive_OR=$ref_seq^$reconstructed_alt_seq;
-			
+		
 			if($exclusive_OR =~ /[^\0]/g) {
 				$new_pos=$-[0]; #gives offset of the beginning of last successful match
 				$g_pu->{'new_pos'}=$new_pos;
 			}	
 		if( ($g_pu->{'ins_flag'}) && ($new_pos != $g_pu->{'ref_pos_5p'}) ){
 				my $insert_length = ($g_pu->{'alt_pos_3p'} - $g_pu->{'ref_pos_5p'});
+				
+				# added for testing....
+				$g_pu->{'old_5p'}=$g_pu->{'ref_pos_5p'};
+				$g_pu->{'old_3p'}=$g_pu->{'ref_pos_3p'};
+				#-----
 				# get run over after insert string due to match with reference bases
 				$g_pu->{'insert_mod'}=($new_pos - $g_pu->{'ref_pos_5p'}) % $insert_length;
 				$g_pu->{'alt_pos_3p'}=$new_pos + ($insert_length) - $g_pu->{'insert_mod'};
 				$g_pu->{'ref_pos_5p'}=$new_pos;
 				$g_pu->{'ref_pos_3p'}=$new_pos;
+				
+				# added for testing....
+				$g_pu->{'new_5p'}=$g_pu->{'ref_pos_5p'};
+				$g_pu->{'new_3p'}=$g_pu->{'ref_pos_3p'};
+				#-----	
+
 		}
-		
-	return $g_pu;
+	
+		return $g_pu,;
 }
 
 =head2 populateHash
