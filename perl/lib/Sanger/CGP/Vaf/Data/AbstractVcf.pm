@@ -81,8 +81,7 @@ sub getVcfFile {
 sub getTumourBam {
 	my @arr=split(',',shift->{'_tb'});
 	# removes trailing and leading spaces
-	@arr=trim(@arr);
-	#print Dumper @arr;
+	#@arr=trim(@arr);
 	return \@arr;
 }
 

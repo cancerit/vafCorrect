@@ -8,7 +8,6 @@ BEGIN {
 
 };
 
-$main::SQL_LIB_LOC = '.'; # this suppresses warnings about uninitialised values
 use strict;
 use Tabix;
 use Vcf;
@@ -39,6 +38,11 @@ sub _localInit {
 	
 } 
 
+
+
+
+
+
 sub getChromosomes {
 	my($self)=shift;
 	my $chromosomes;
@@ -46,7 +50,7 @@ sub getChromosomes {
 	while (<$fai_fh>) {
 		next if ($_=~/^#/);
 		my($chr,$pos)=(split "\t", $_)[0,1];
-		push(@$chromosomes,"$chr:1-$pos");
+		push(@$chromosomes,$chr);
 	}
 	return $chromosomes;
 }
@@ -90,6 +94,29 @@ my ($self)=@_;
 }
 
 
+
+sub getProgress {
+	my($self)=shift;
+	
+	#print "\n >>>>>> To view analysis progress please check  vcfcommons.log file created in current directory >>>>>>>>>\n";
+	my $progress_fhw=undef;
+	
+	my $file_name=$self->{'_o'}.'/progress.out';
+	if (-e $file_name)
+	{
+		open $progress_fhw, '>>', $file_name;
+	}
+	else{
+		open $progress_fhw, '>', $file_name;
+	}
+	
+	open my $progress_fhr, '<', $file_name;
+	my @progress_data=<$progress_fhr>;
+	close($progress_fhr);
+	
+	return($progress_fhw,\@progress_data);
+}
+
 sub _populateBedHeader {
 	my ($self,$info_tag_val)=@_;
 	my $bed_file=$self->{'_b'};
@@ -116,14 +143,56 @@ sub _populateBedHeader {
 }
 
 
+sub writeFinalFileHeaders {
+	my($self,$info_tag_val)=@_;
+	
+	my $WFH_VCF=undef;
+	my $WFH_TSV=undef;
+	
+	# return if no VCF file found or augment only option is provided for indel data ...
+	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || (defined $self->{'_ao'})); 
+	my $vcf=$self->_getVCFObject($info_tag_val);
+	my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0]."_consolidated_".$self->{'_a'};	
+	$log->debug("VCF outfile:$outfile_name.vcf");
+	$log->debug("TSV outfile:$outfile_name.tsv");
+	open($WFH_VCF, '>',"$outfile_name.vcf");
+	open($WFH_TSV, '>',"$outfile_name.tsv");
+	
+	print $WFH_VCF $vcf->format_header();	
+  # writing results in tab separated format
+	my $tmp_file=$self->{'_o'}.'/temp.vcf';
+	open(my $tmp_vcf,'>',$tmp_file);
+	print $tmp_vcf $vcf->format_header();
+	close($tmp_vcf);
+	my($col_names,$header,$format_col)=$self->_get_tab_sep_header($tmp_file);
+	my $temp_cols=$col_names->{'cols'};
+	
+	my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
+	if($self->{'_a'} eq 'indel') {
+		$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS
+	}
+	
+	foreach my $sample(@{$self->getAllSampleNames}){
+		foreach my $tag_name(@$tags){
+			push ($temp_cols,"$sample\_$tag_name");
+		}
+	}   
+	print $WFH_TSV "@$header\n".join("\t",@$temp_cols)."\n";
+	$vcf->close();
+	close $WFH_VCF;
+	close $WFH_TSV;
+	return ($outfile_name);
+}
 
-# prepare VCF files to write  
-sub prepareVcfOutFiles {
+
+
+
+# get variant object 
+
+sub getVarinatObject {
 	my($self,$info_tag_val)=@_;
 	my($bam_objects,$bas_files)=$self->_get_bam_object();
 	my($bam_header_data,$lib_size)=$self->_get_bam_header_data($bam_objects,$bas_files);
-	my($aug_vcf_fh,$aug_vcf_name)=$self->_write_augmented_header();
-	my($merged_vcf,$WFH_VCF,$WFH_TSV,$outfile_name)=$self->_write_vcf_header($info_tag_val);
 	
 	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
 		'location' 		=> undef,
@@ -140,7 +209,7 @@ sub prepareVcfOutFiles {
 		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$self->{'_c'}.'.ONHG19_sorted.bed.gz')
 		);
 		
- return($variant,$merged_vcf,$WFH_VCF,$WFH_TSV,$outfile_name,$bam_header_data,$bam_objects,$aug_vcf_fh,$aug_vcf_name);
+ return($variant,$bam_header_data,$bam_objects);
 }
 
 sub getMergedLocations {
@@ -156,8 +225,8 @@ sub getMergedLocations {
 			my $count=0;
 			while (my $x=$vcf->next_data_array()) {
 				# test
-				last if $count > 2;
-				$count++;
+				#last if $count > 10;
+				#$count++;
 				##
 				if(defined $self->{'_t'}){
 					$info_data=$self->_getInfo($vcf,$$x[7],$updated_info_tags);
@@ -658,30 +727,40 @@ sub _setNormal {
 
 
 sub processMergedLocations {
-	my($self,$data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$merged_vcf,$WFH_VCF,$WFH_TSV,$store_results)=@_;
+	my($self,$data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data)=@_;
 	my $pileup_results=undef;
-	my @tags=qw(FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR WTR DEP MDR WDR OFS);
 	my $count=0;
+	my $total_locations=keys %$unique_locations;
+	my $chr_results=undef;
+	
+	foreach my $progress_line(@$progress_data) {
+		chomp $progress_line;
+		if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf") {
+			$log->debug("Skipping Analysis for chr: $chr --: result file: $self->{'_tmp'}/tmp_$chr.vcf exists");
+			return;
+		}
+	}
+	
+	open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!");
+	open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!");
+  my($merged_vcf)=$self->_getVCFObject($info_tag_val);
+	
 	foreach my $location (sort keys %$unique_locations) {
 		$count++;
 		$variant->setLocation($location);
 		$variant->setVarLine($unique_locations->{$location});
 		my($g_pu)=$variant->formatVarinat();
 		#process only passed varinats	
-		#print "Before-----".$variant->getVarLine."----\n";
 		if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
 			if(defined $self->{'_ao'} || defined $self->{'_m'}) {
 				foreach my $sample (@{$self->getTumourName}) {
 					$store_results=$variant->storeResults($store_results,$g_pu,$sample);
 				}
-				next;
 			}
+			next;
 		}
-		
-		#print "After-----".$variant->getVarLine."----\n";
     my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
     if ($self->{'_a'} eq 'indel') {
-    	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
 			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
     }
     my $mutant_depth=0;
@@ -714,22 +793,43 @@ sub processMergedLocations {
 				$pileup_results->{$g_pu->{'sample'}}=$pileup_line;
 			}	
 			
-			if(exists $g_pu->{'new_5p'} && $g_pu->{'sample'} eq $self->getNormalName) {
-				$log->debug("Updated position : $location: Old[5-3p]:".$g_pu->{'old_5p'}.'-'.$g_pu->{'old_3p'}.'  New[5-3p]:'.$g_pu->{'new_5p'}.'-'.$g_pu->{'new_3p'});
-			}		
+			# feature to test location change
+			#if(exists $g_pu->{'new_5p'} && $g_pu->{'sample'} eq $self->getNormalName) {
+			#	$log->debug("Updated position : $location: Old[5-3p]:".$g_pu->{'old_5p'}.'-'.$g_pu->{'old_3p'}.'  New[5-3p]:'.$g_pu->{'new_5p'}.'-'.$g_pu->{'new_3p'});
+			#}
+					
   	}# Done with all the samples ...	
   	
   	#print Dumper %pileup_results;
   	#get specific annotations from original VCF INFO field....
 		if(!defined $self->{'_ao'} ) {
 			$original_vcf_info->{'ND'} =	$depth;
-			$original_vcf_info->{'NVD'} =	$mutant_depth;	
-			$self->_writeOutput($original_vcf_info,$NFS,$pileup_results,\@tags,$WFH_VCF,$WFH_TSV,$g_pu,$merged_vcf);
+			$original_vcf_info->{'NVD'} =	$mutant_depth;
+			# create results object ....# ToDo....
+			#$chr_results->{$count}={original_vcf_info=>$original_vcf_info, NFS=>$NFS,pileup_results=>$pileup_results,g_pu=>$g_pu};
+			
+			$self->_writeOutput($original_vcf_info,$NFS,$pileup_results,$tags,$tmp_WFH_VCF,$tmp_WFH_TSV,$g_pu,$merged_vcf);
 			$depth=0;
 			$mutant_depth=0;
 		 }
    
-	}# Done with all locations ...
+   if($count % 100 == 0) {
+   	$log->debug("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
+   }
+   
+	}# Done with all locations for a chromosome...
+	
+	# write temporary result files
+	
+	#foreach my $key (keys %$chr_results){
+  #	$self->_writeOutput($chr_results->{$key}{'original_vcf_info'},$chr_results->{$key}{'NFS'},$chr_results->{$key}{'pileup_results'},$tags,$tmp_VCF_FH,$tmp_WFH_TSV,$chr_results->{$key}{'g_pu'},$merged_vcf);
+	#}
+	$merged_vcf->close();
+	# write success file name
+	close $tmp_WFH_VCF;
+	close $tmp_WFH_TSV;
+	print $progress_fhw "$self->{'_tmp'}/tmp_$chr.vcf\n";
+	
 	return ($store_results);
 	 #print $progress_fh "$outfile_name.vcf\n";
 }
@@ -1010,7 +1110,7 @@ sub _get_read_length {
 }
 
 
-=head2 _write_augmented_header
+=head2 WriteAugmentedHeader
 write VCF header data
 Inputs
 =over 2
@@ -1019,7 +1119,7 @@ Inputs
 =back
 =cut
 
-sub _write_augmented_header {
+sub WriteAugmentedHeader {
 	my($self)=@_;
 	my $aug_vcf_fh=undef;
 	my $aug_vcf_name=undef;
@@ -1078,7 +1178,7 @@ sub _write_augmented_header {
 }
 
 
-=head2 _write_vcf_header
+=head2 getVCFObject
 write VCF header data
 Inputs
 =over 2
@@ -1090,7 +1190,46 @@ Inputs
 =cut
 
 
-sub _write_vcf_header {
+sub _getVCFObject {
+	my($self,$info_tag_val)=@_;
+	# return if no VCF file found or augment only option is provided for indel data ...
+	return if(( !defined $self->{'vcf'} && !defined $self->{'_b'}) || (defined $self->{'_ao'}));
+	my $vcf=Vcf->new();
+	my $genome_name=$self->_trim_file_path($self->getGenome);
+	my $script_name=$self->_trim_file_path($0);
+	$vcf->add_header_line({key=>'reference', value=>$genome_name}); 
+	$vcf->add_header_line({key=>'source', value=>$script_name}); 
+	$vcf->add_header_line({key=>'script_version', value=>$Sanger::CGP::Vaf::VafConstants::VERSION});
+	$vcf->add_header_line({key=>'Date', value=>scalar(localtime)});
+	if(defined $info_tag_val) {
+		foreach my $hash_val(@$info_tag_val) {
+			$vcf->add_header_line($hash_val);	
+		}
+	}
+	else {
+		$log->debug("No data in info Field");
+	}
+	
+	if(!defined $self->{'_vcf'}) {
+			my $i=0;
+			foreach my $sample (@{$self->getAllSampleNames}) {
+				if ($sample eq $self->getNormalName) {
+					my %temp=(key=>"SAMPLE",ID=>"NO_VCF_NORMAL", Description=>"NO_VCF_DATA", SampleName=>$sample);
+					$vcf->add_header_line(\%temp);
+				}
+				else {
+					$i++;
+					my %temp=(key=>"SAMPLE",ID=>"NO_VCF_TUMOUR_$i", Description=>"NO_VCF_DATA_$i", SampleName=>$sample);
+					$vcf->add_header_line(\%temp);
+				}
+		}
+	}
+	$vcf->add_columns(@{$self->getAllSampleNames});
+	return $vcf;
+}
+
+
+sub depricated_write_vcf_header {
 	my($self,$info_tag_val)=@_;
 	
 	my $vcf=undef;
@@ -1140,6 +1279,8 @@ sub _write_vcf_header {
 	}
 	
 	$vcf->add_columns(@{$self->getAllSampleNames});
+	
+	
 	print $WFH_VCF $vcf->format_header();	
 
   # writing results in tab separated format
@@ -1230,7 +1371,6 @@ return $header;
 }
 
 
-
 =head2 _write_output
 Write output to file
 Inputs
@@ -1251,7 +1391,6 @@ sub _writeOutput {
   if ((!$vcf && !$self->{'_b'})|| $self->{'_ao'}) {
 		return 1;
 	}
-  
   if (!defined $original_vcf_info) {$original_vcf_info=['.'];}
   my $out;
 	$out->{CHROM}  = $g_pu->{'chr'};
@@ -1567,6 +1706,12 @@ sub _print_hash {
 			print "$key:==>$hash->{$key}\n";	
 		}
 	}
+}
+
+sub catFiles {
+	my($self,$path,$ext,$outfile)=@_;
+	my $command='cat '.$path.'/*.'.$ext.' >>'."$outfile.$ext";
+  $self->_runExternal($command, 'cat', undef, 1, 1); # croakable, quiet, no data
 }
 
 

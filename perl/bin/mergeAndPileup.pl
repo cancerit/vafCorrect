@@ -33,7 +33,7 @@ try {
 	my ($options) = option_builder();
 	$options=Sanger::CGP::VcfCompare::VcfMergeAndPileup::get_options($options);
 	# create progress file is it doesn't exists else open existing file in append mode
-	print "\n >>>>>> To view analysis progress please check  .log file created in current directory >>>>>>>>>\n";	
+	print "\n >>>>>> To view analysis progress please check  vcfcommons.log file created in current directory >>>>>>>>>\n";	
 	if (-e "$options->{'o'}/progress.out") {
 		open($progress_fhw, '>>', "$options->{'o'}/progress.out");
 	}

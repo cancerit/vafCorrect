@@ -31,42 +31,62 @@ use Sanger::CGP::Vaf::VafConstants;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-const my $SEP => "/";
+my $store_results;
+my $chr_results;
+
+my @tags=qw(FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR WTR DEP MDR WDR OFS);
 
 try {
 	my ($options) = option_builder();
 	
+	if ($options->{'a'} eq 'indel') {
+    	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
+  }
 	my $vcf = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf->getVcfHeaderData();
-	my($variant,$merged_vcf,$WFH_VCF,$WFH_TSV,$outfile_name,$bam_header_data,$bam_objects,$aug_vcf_fh,$aug_vcf_name)=$vcf->prepareVcfOutFiles($info_tag_val);
+	my($variant,$bam_header_data,$bam_objects)=$vcf->getVarinatObject($info_tag_val);
 	my($bed_locations)=$vcf->getBedHash();
-	
 	my ($chromosomes)=$vcf->getChromosomes();
-	my $store_results=undef;
-
-	foreach my $chr_location (@$chromosomes) {
-		my($data_for_all_samples,$unique_locations)=$vcf->getMergedLocations($chr_location,$updated_info_tags,$vcf_file_obj);
+	my($progress_fhw,$progress_data)=$vcf->getProgress();
+	
+	foreach my $chr(@$chromosomes) {
+		my($data_for_all_samples,$unique_locations)=$vcf->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
 		if(defined $options->{'b'} ){
 			($bed_locations)=$vcf->filterBedLocations($unique_locations,$bed_locations);	
 		}	
-		$store_results=$vcf->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$merged_vcf,$WFH_VCF,$WFH_TSV,$store_results);
-		$log->debug("Completed analysis for: $chr_location ");
-	}
+		($store_results)=$vcf->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,\@tags,$info_tag_val,$progress_fhw,$progress_data);
+		$log->debug("Completed analysis for: $chr ");
+	}# completed all chromosomes;
 	
 	if(defined $bed_locations) {
 		my($data_for_all_samples,$unique_locations)=$vcf->populateBedLocations($bed_locations,$updated_info_tags);
-		($store_results)=$vcf->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$merged_vcf,$WFH_VCF,$WFH_TSV,$store_results);
+		($store_results)=$vcf->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',\@tags,$info_tag_val,$progress_fhw,$progress_data);	
 	}
 	
+	#
   if(defined $store_results && defined $options->{'m'}) {
+      my($aug_vcf_fh,$aug_vcf_name)=$vcf->WriteAugmentedHeader();
     	$vcf->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
   }
-  if(defined $merged_vcf){
-			$merged_vcf->close();
-			close($WFH_VCF); 
-			close($WFH_TSV);
-			$log->debug("Compressing and Validating VCF file");
-			my($outfile_gz,$outfile_tabix)=$vcf->compressVcf("$outfile_name.vcf");
+  
+  my($outfile_name_no_ext)=$vcf->writeFinalFileHeaders($info_tag_val);
+  
+  if(defined $outfile_name_no_ext){
+  	foreach my $progress_line(@$progress_data) {
+			chomp $progress_line;
+			if ($progress_line eq "$outfile_name_no_ext.vcf") {
+				$log->debug("Skipping Analysis: result file: $outfile_name_no_ext.vcf exists");
+				close $progress_fhw;
+				exit(0);
+			}
+		}
+		$vcf->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
+		$vcf->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
+		$log->debug("Compressing and Validating VCF file");
+		my($outfile_gz,$outfile_tabix)=$vcf->compressVcf("$outfile_name_no_ext.vcf");
+		print $progress_fhw "$outfile_name_no_ext.vcf\n";
+		close $progress_fhw;
+		
   }
 	#my($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags)=$vcf->getUniqueLocations();
 	
@@ -77,7 +97,6 @@ try {
 catch {
   croak "\n\n".$_."\n\n" if($_);
 };
-
 
 # get options from user
 
@@ -106,6 +125,7 @@ sub option_builder {
                 'bo|bed_only=s' => \$options{'bo'},
                 'oe|output_vcfExtension=s' => \$options{'oe'},
                 'ie|input_vcfExtension=s' => \$options{'ie'},
+                'tmp|tmpdir=s' => \$options{'tmp'},
                 'p|depth=s' => \$options{'p'},
                 'v|version'  => \$options{'v'}
 	);
@@ -127,6 +147,10 @@ sub option_builder {
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
 	mkpath($options{'o'});
+	if(!defined $options{'tmp'}) {
+		mkpath($options{'o'}.'/tmpvaf');
+		$options{'tmp'}=$options{'o'}.'/tmpvaf';
+	}
 	if(!defined $options{'e'}) { # variant extension
 		if(defined $options{'a'} and lc($options{'a'}) eq 'indel'){
 				$options{'e'}=".pindel.annot.vcf.gz";	
