@@ -265,10 +265,6 @@ sub _getINFO {
 }	
 
 
-
-
-
-
 sub createExonerateInput {
 	my($self,$bam,$bam_header,$depth,$g_pu)=@_;
 	#print Dumper $bam_header;
@@ -542,14 +538,16 @@ sub _fetch_features {
 	my ($self,$sam_object,$g_pu,$Reads_FH)=@_;
 	
 	if(($g_pu->{'end'} - $g_pu->{'start'}) < $g_pu->{'lib_size'}){
+	  $g_pu->{'long_indel'}=0;
 		$self->_fetch_reads($sam_object, "$g_pu->{'region'}",$Reads_FH);
-		$g_pu->{'long_indel'}=0;
 	}
 	else {
+	  # Fetch reads from both the breakpoints
+	  $g_pu->{'long_indel'}=1; 
 		$self->_fetch_reads($sam_object, "$g_pu->{'chr'}:$g_pu->{'start'}-$g_pu->{'start'}",$Reads_FH);
 		$self->_fetch_reads($sam_object, "$g_pu->{'chr'}:$g_pu->{'end'}-$g_pu->{'end'}",$Reads_FH);
 		#indel longer than library size set flag on 
-		$g_pu->{'long_indel'}=1;
+		
 		}
 	#only get unmapped reads if not in HDR region and while analysing only PASSED varinat
 	if(!defined $g_pu->{'hdr'} && defined $self->{'_passedOnly'}){
@@ -580,25 +578,36 @@ my $read_counter=0;
 		$sam_object->fetch($region, sub {
 		my $a = shift;
 		my $paired=0;
-		my $flags = $a->flag;
+		my $qseq = $a->target->dna();
+		
+		#my $flags = $a->flag;
 		# & bitwise comparison
 		## Ignore reads if they match the following flags:
 		#Brass/ReadSelection.pm
 		
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED;
-	  return if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
-		
+		return if $a->get_tag_values('NOT_PRIMARY');
+		return if $a->get_tag_values('SUPPLEMENTARY');
+		return if $a->get_tag_values('QC_FAILED');
+		return if $a->get_tag_values('UNMAPPED');
+		return if $qseq =~m/[nN]/;
+		#my $CIGAR=$a->cigar_str;
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
+		#eturn if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
+		#eturn if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED;
+	  ##return if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
 		#if $flags & $READ_PAIRED;
 		#my $cigar  = $a->cigar_str;;
 		my $mseqid = $a->mate_seq_id;
 		my $seqid = $a->seq_id;
 		#target gives read seq as it comes from sequencing machine i.e softclipped bases included
-		my $qseq = $a->target->dna();
-		return if $qseq =~m/[nN]/;
+		
+		#$CIGAR=~s/(\d+)M/$1/;
+		
 		my $name=$a->display_name;
+		
+		# return if (($CIGAR > $g_pu->{'read_length'}) &&  ( ($a->start < $g_pu->{'start'} &&  $a->end < $g_pu->{'start'}) || ( $a->start > $g_pu->{'end'} &&  $a->end > $g_pu->{'end'}) ) );
+				
 		#my $strand = $a->strand;
 		my $mstart = $a->mate_start;
 		my $start = $a->start;
@@ -617,6 +626,7 @@ my $read_counter=0;
 	{
 		$self->_fetch_mate_seq($sam_object,$mate_info->{$key},$key,$Reads_FH);
 	}
+	
 }
 =head2 _fetch_mate_seq
 get mate sequence
@@ -634,13 +644,17 @@ sub _fetch_mate_seq {
 	my ($read,$mate_seq);
 	my $callback= sub {
 		my $a = shift; 
-		my $flags = $a->flag;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED;
-	  return if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
 		
+		#my $flags = $a->flag;
+		
+		return if $a->get_tag_values('NOT_PRIMARY');
+		return if $a->get_tag_values('SUPPLEMENTARY');
+		return if $a->get_tag_values('QC_FAILED');
+		return if $a->get_tag_values('UNMAPPED');
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED;
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
 		if ($readname eq $a->display_name) {
 			my $tmp_seq=$a->target->dna();
 			return if $tmp_seq=~m/[nN]/;
@@ -673,16 +687,20 @@ my $read_counter=0;
 		$sam_object->fetch($region, sub {
 		my $a = shift;
 		my $paired=0;
-		my $flags = $a->flag;
+		#my $flags = $a->flag;
 		# & bitwise comparison
 		## Ignore reads if they match the following flags:
 		#Brass/ReadSelection.pm
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
-	  return if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
-		return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
+		return unless($a->get_tag_values('UNMAPPED'));
+		return if $a->get_tag_values('NOT_PRIMARY');
+		return if $a->get_tag_values('SUPPLEMENTARY');
+		return if $a->get_tag_values('QC_FAILED');
+		
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
+		#return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
 		# only consider reads from wider range where mate is unmapped 
-		if ($flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED) {
+		if ($a->get_tag_values('UNMAPPED')) {
 			my $qseq = $a->target->dna();
 			return if $qseq=~m/[nN]/;
 			my $mseqid = $a->mate_seq_id;
@@ -823,7 +841,7 @@ Inputs
 =cut
 
 sub _cleanup_read_ambiguities {
-	my ($sel,$g_pu,$read_track_alt,$read_track_ref,$alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n)=@_;
+	my ($self,$g_pu,$read_track_alt,$read_track_ref,$alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n)=@_;
 	my $amb_reads;
 	foreach my $read (sort keys %$read_track_alt) {
 			if(exists $read_track_ref->{$read}) {

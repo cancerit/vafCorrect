@@ -22,7 +22,7 @@ use Getopt::Long;
 use Data::Dumper;
 use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
-
+use List::Util qw(first);
 
 use Log::Log4perl;
 
@@ -42,49 +42,50 @@ try {
 	if ($options->{'a'} eq 'indel') {
     	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
   }
-	my $vcf = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
-	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf->getVcfHeaderData();
-	my($variant,$bam_header_data,$bam_objects)=$vcf->getVarinatObject($info_tag_val);
-	my($bed_locations)=$vcf->getBedHash();
-	my ($chromosomes)=$vcf->getChromosomes();
-	my($progress_fhw,$progress_data)=$vcf->getProgress();
+	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData();
+	my($variant,$bam_header_data,$bam_objects)=$vcf_obj->getVarinatObject($info_tag_val);
+	my($bed_locations)=$vcf_obj->getBedHash();
+	my ($chromosomes)=$vcf_obj->getChromosomes();
+	my($progress_fhw,$progress_data)=$vcf_obj->getProgress();
 	
 	foreach my $chr(@$chromosomes) {
-		my($data_for_all_samples,$unique_locations)=$vcf->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
+		next if(first{chomp $_; $_ eq $options->{'tmp'}."/tmp_$chr.vcf"} @$progress_data);
+		my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
 		if(defined $options->{'b'} ){
-			($bed_locations)=$vcf->filterBedLocations($unique_locations,$bed_locations);	
+			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);	
 		}	
-		($store_results)=$vcf->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,\@tags,$info_tag_val,$progress_fhw,$progress_data);
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,\@tags,$info_tag_val,$progress_fhw,$progress_data);
 		$log->debug("Completed analysis for: $chr ");
 	}# completed all chromosomes;
 	
 	if(defined $bed_locations) {
-		my($data_for_all_samples,$unique_locations)=$vcf->populateBedLocations($bed_locations,$updated_info_tags);
-		($store_results)=$vcf->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',\@tags,$info_tag_val,$progress_fhw,$progress_data);	
+		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',\@tags,$info_tag_val,$progress_fhw,$progress_data);	
 	}
 	
 	#
   if(defined $store_results && defined $options->{'m'}) {
-      my($aug_vcf_fh,$aug_vcf_name)=$vcf->WriteAugmentedHeader();
-    	$vcf->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
+      my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
+    	$vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
   }
   
-  my($outfile_name_no_ext)=$vcf->writeFinalFileHeaders($info_tag_val);
+  my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val);
   
   if(defined $outfile_name_no_ext){
   	foreach my $progress_line(@$progress_data) {
 			chomp $progress_line;
-			if ($progress_line eq "$outfile_name_no_ext.vcf") {
+			if ($progress_line eq "$outfile_name_no_ext.tsv") {
 				$log->debug("Skipping Analysis: result file: $outfile_name_no_ext.vcf exists");
 				close $progress_fhw;
 				exit(0);
 			}
 		}
-		$vcf->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
-		$vcf->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
+		$vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
+		$vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
 		$log->debug("Compressing and Validating VCF file");
-		my($outfile_gz,$outfile_tabix)=$vcf->compressVcf("$outfile_name_no_ext.vcf");
-		print $progress_fhw "$outfile_name_no_ext.vcf\n";
+		my($outfile_gz,$outfile_tabix)=$vcf_obj->compressVcf("$outfile_name_no_ext.vcf");
+		print $progress_fhw "$outfile_name_no_ext.tsv\n";
 		close $progress_fhw;
 		
   }
