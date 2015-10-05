@@ -747,7 +747,6 @@ sub processMergedLocations {
   my($merged_vcf)=$self->_getVCFObject($info_tag_val);
 	
 	foreach my $location (sort keys %$unique_locations) {
-		$log->debug($location);
 		$count++;
 		$variant->setLocation($location);
 		$variant->setVarLine($unique_locations->{$location});
@@ -772,7 +771,6 @@ sub processMergedLocations {
 			$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
 			if($self->{'_a'} eq 'indel') {	
 				$g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
-			
 				if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
 					$g_pu=$variant->addNormalCount($g_pu);
 				}
@@ -816,7 +814,6 @@ sub processMergedLocations {
 			$mutant_depth=0;
 		 }
    
-   	
    if($count % 100 == 0) {
    	$log->debug("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
    }

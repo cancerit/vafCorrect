@@ -22,7 +22,7 @@ use Getopt::Long;
 use Data::Dumper;
 use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
-use List::Util qw(first);
+
 
 use Log::Log4perl;
 
@@ -50,7 +50,6 @@ try {
 	my($progress_fhw,$progress_data)=$vcf_obj->getProgress();
 	
 	foreach my $chr(@$chromosomes) {
-		next if(first{chomp $_; $_ eq $options->{'tmp'}."/tmp_$chr.vcf"} @$progress_data);
 		my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
 		if(defined $options->{'b'} ){
 			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);	
