@@ -39,10 +39,6 @@ sub _localInit {
 } 
 
 
-
-
-
-
 sub getChromosomes {
 	my($self)=shift;
 	my $chromosomes;
@@ -58,7 +54,7 @@ sub getChromosomes {
 
 sub getVcfHeaderData {
 my ($self)=@_;
-	$self->_checkData($self->getTumourBam,$self->getVcfFile);
+	#$self->_checkData($self->getTumourBam,$self->getVcfFile);
 	$self->_getData();
 	my $tumour_count=0;
 	my $info_tag_val=undef;
@@ -98,7 +94,7 @@ my ($self)=@_;
 sub getProgress {
 	my($self)=shift;
 	
-	#print "\n >>>>>> To view analysis progress please check  vcfcommons.log file created in current directory >>>>>>>>>\n";
+	print "\n >>>>>> To view progress log please check  vcfcommons.log file created in current directory >>>>>>>>>\n";
 	my $progress_fhw=undef;
 	
 	my $file_name=$self->{'_o'}.'/progress.out';
@@ -124,7 +120,7 @@ sub _populateBedHeader {
 	my %info_tag;
 	$info_tag{'Interval'}='BedFile';
 	# create header for bed only locations...
-	if( !defined $self->{'_vcf'} && !defined $self->{'_ao'} ) {
+	if( !defined $self->{'vcf'} && !defined $self->{'_ao'} ) {
 		my ($vcf_filter,$vcf_info,$vcf_format)=$self->_getCustomHeader();
 			foreach my $key (sort keys %$vcf_info) {
 			push(@$info_tag_val,$vcf_info->{$key});
@@ -172,7 +168,7 @@ sub writeFinalFileHeaders {
 		$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS
 	}
 	
-	foreach my $sample(@{$self->getAllSampleNames}){
+	foreach my $sample(@{$self->{'allSamples'}}){
 		foreach my $tag_name(@$tags){
 			push ($temp_cols,"$sample\_$tag_name");
 		}
@@ -183,9 +179,6 @@ sub writeFinalFileHeaders {
 	close $WFH_TSV;
 	return ($outfile_name);
 }
-
-
-
 
 # get variant object 
 
@@ -199,10 +192,10 @@ sub getVarinatObject {
 		'varLine' 		=> undef,
 		'varType' 		=> $self->{'_a'},
 		'libSize' 		=> $lib_size,
-		'samples' 		=> $self->getAllSampleNames,
+		'samples' 		=> $self->{'allSamples'},
 		'tumourName'	=> $self->getTumourName,
 		'normalName'	=> $self->getNormalName,
-		'vcfStatus' 	=> $self->{'_vcf'},
+		'vcfStatus' 	=> $self->{'vcf'},
 		'noVcf'    		=> $self->{'noVcf'},
 		'outDir'			=> $self->getOutputDir,
 		'passedOnly'  => $self->{'_r'},
@@ -253,24 +246,6 @@ sub getMergedLocations {
 	return ($data_for_all_samples,$unique_locations);
 }
 
-sub depricated_getUniqueLocations {
-	my ($self)=@_;
-	$self->_checkData($self->getTumourBam,$self->getVcfFile);
-	$self->_getData();
-	
-	
-	my($data_for_all_samples,$unique_locations,$info_tag_val,$normal_sample,$updated_info_tags)=$self->_mergeVcf();
-	
-	if(defined $self->{'_b'} ) {
-		($unique_locations, $data_for_all_samples,$info_tag_val)=$self->_populate_bed_locations($unique_locations,$data_for_all_samples,$info_tag_val,$updated_info_tags);		
-	}	
-	if(!defined $self->{'_bo'} ) { 
-		print "WARNING!!! more than one normal sample detected for this group \n".print_hash($normal_sample)."\n" if scalar keys %$normal_sample > 1;
-		$self->_setNormal($normal_sample);	
-	}	
-
-	return($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags);
-}
 
 sub _checkData {
 	my ($self,$a,$b)=@_;
@@ -289,7 +264,7 @@ sub _getData {
 		else {
 			$log->logcroak("Unble to find TUMOUR BAM file for sample: ".$sample);
 		}
-		if(defined ${$self->getVcfFile}[$count] &&  (-e ${$self->getVcfFile}[$count]) ) {
+		if((defined ${$self->getVcfFile}[$count]) &&  ( -e ${$self->getVcfFile}[$count]) ) {
 			$self->{'vcf'}{$sample}=${$self->getVcfFile}[$count];		
 		}
 		elsif(!defined $self->{'_bo'}) {
@@ -301,61 +276,9 @@ sub _getData {
 		$log->logcroak("Unble to find NORMAL BAM file for sample");
 	}
 	$self->{'bam'}{$self->getNormalName}=$self->getNormalBam;
-}
-
-sub depricated_mergeVcf {
-	my($self)=@_;
-
-	my $read_depth=0;
-	my $tumour_count=0;
-	my $info_tag_val=undef;
-	my $updated_info_tags=undef;
-	my $data_for_all_samples=undef;
-	my $vcf_normal_sample=undef;
-	my $info_data=undef;
-	my $unique_locations=undef;
-	
-	foreach my $sample (keys %{$self->{'vcf'}}) {
-		$tumour_count++;
-		if(-e $self->{'vcf'}{$sample}) {	
 		
-			my $vcf = Vcf->new(file => $self->{'vcf'}{$sample});
-			$vcf->parse_header();	
-			$vcf->recalc_ac_an(0);
-			($info_tag_val,$vcf_normal_sample,$updated_info_tags)=$self->_getOriginalHeader($vcf,$info_tag_val,$vcf_normal_sample,$tumour_count,$sample,$updated_info_tags);
-			
-			
-			my $count=0;
-			while (my $x=$vcf->next_data_array()) {
-				# test
-				next if $count > 100;
-				$count++;
-				##
-				if(defined $self->{'_t'}){
-					$info_data=$self->_getInfo($vcf,$$x[7],$updated_info_tags);
-				}
-				#location key consists of CHR:POS:REF:ALT
-				my $location_key="$$x[0]:$$x[1]:$$x[3]:$$x[4]";
-				if(defined $self->{'_p'}) {
-					$read_depth=$self->_getReadDepth($vcf,$x);
-				}
-				$data_for_all_samples->{$sample}{$location_key}={'INFO'=>$info_data, 'FILTER'=>$$x[6],'RD'=>$read_depth };																																																																												
-				if(!exists $unique_locations->{$location_key}) {
-					$unique_locations->{$location_key}="$sample-$$x[6]";
-				}
-				else{
-					$unique_locations->{$location_key}.=':'."$sample-$$x[6]";
-				}
-			}	
-				$vcf->close();
-		}
-		else {
-		$self->{'noVcf'}{$sample}=0;
-		}
- }
-	# do bed or bed only analysis
-	return ($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags);
 }
+
 
 =head2 _getOriginalHeader
 parse VCF header and get data from old header lines
@@ -655,61 +578,6 @@ Inputs
 =item bed_file -Bed file in tab separated format chr start stop alt and ref allele
 =back
 =cut
-sub depricated_populate_bed_locations {
-	my ($self,$unique_locations,$data_for_all_samples,$info_tag_val,$updated_info_tags)=@_;
-	my $bed_file=$self->{'_b'};
-	my $bed_name=$self->_trim_file_path($bed_file);
-	open(my $bedFH, $self->{'_b'})|| $log->logcroak("unable to open file $!");
-	my $location_counter=0;
-	my %info_tag;
-	
-	$info_tag{'Interval'}='BedFile';
-	if( !defined $self->{'_vcf'} && !defined $self->{'_ao'} ) {
-		my ($vcf_filter,$vcf_info,$vcf_format)=$self->_getCustomHeader();
-			foreach my $key (sort keys %$vcf_info) {
-			push(@$info_tag_val,$vcf_info->{$key});
-		}
-		foreach my $key (sort keys %$vcf_format) {
-			push(@$info_tag_val,$vcf_format->{$key});
-		}
-		foreach my $key (sort keys %$vcf_filter) {
-			push(@$info_tag_val,$vcf_filter->{$key});
-		}
-	}
-	
-	my %bed_vcf_info=(key=>'FILTER',ID=>'BD', Description=>"Location from bed file");
-	push(@$info_tag_val,\%bed_vcf_info);
-	
-	while(<$bedFH>) {
-		chomp;
-		next if $_=~/^#/;
-		my $fileds=split("\t",$_);
-		if ($fileds < 3) { 
-			$log->debug("Not a valid bed location".$_); 
-			next;
-		}
-		my $location_key=join(":",split("\t",$_));
-		next if(exists $unique_locations->{$location_key});
-		
-		$unique_locations->{$location_key}="$bed_name-BEDFILE";
-		#create custom tag hash
-		my $temp_tag_val;
-		
-		foreach my $tag (@$updated_info_tags) { 
-			$temp_tag_val->{$tag}='-';
-		}
-		#add location key to all samples
-		foreach my $sample(keys %{$self->{'vcf'}})	{
-			$data_for_all_samples->{$sample}{$location_key}={'INFO'=>$temp_tag_val,'FILTER'=>'NA','RD'=>1 };
-		}
-		$location_counter++;
-	}
-	$log->debug(" Added additional ( $location_counter ) locations from bed file:$bed_file");
-	return ($unique_locations,$data_for_all_samples,$info_tag_val);
-}
-
-
-
 
 sub _setNormal {
 	my($self,$vcf_normal)=@_;
@@ -766,7 +634,7 @@ sub processMergedLocations {
     }
     my $mutant_depth=0;
     my $depth=0;
-  	foreach my $sample (@{$self->getAllSampleNames}) {
+  	foreach my $sample (@{$self->{'allSamples'}}) {
    		#$sample_counter++;
 			$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
 			if($self->{'_a'} eq 'indel') {	
@@ -835,133 +703,6 @@ sub processMergedLocations {
 	 #print $progress_fh "$outfile_name.vcf\n";
 }
 
-
-sub depricated_processLocations {
-	my($self,$data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags)=@_;
-	
-	my %pileup_results;
-		
-	my($bam_objects,$bas_files)=$self->_get_bam_object();
-	my($bam_header_data,$lib_size)=$self->_get_bam_header_data($bam_objects,$bas_files);
-	my($aug_vcf_fh,$aug_vcf_name)=$self->_write_augmented_header();
-	my($vcf,$WFH_VCF,$WFH_TSV,$outfile_name)=$self->_write_vcf_header($info_tag_val);
-	
-	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
-		'location' 		=> undef,
-		'varLine' 		=> undef,
-		'varType' 		=> $self->{'_a'},
-		'libSize' 		=> $lib_size,
-		'samples' 		=> $self->getAllSampleNames,
-		'tumourName'	=> $self->getTumourName,
-		'normalName'	=> $self->getNormalName,
-		'vcfStatus' 	=> $self->{'_vcf'},
-		'noVcf'    		=> $self->{'noVcf'},
-		'outDir'			=> $self->getOutputDir,
-		'passedOnly'  => $self->{'_r'},
-		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$self->{'_c'}.'.ONHG19_sorted.bed.gz')
-		);
-
-
-
-		
-	my $store_results=undef;
-	my @tags=qw(FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR WTR DEP MDR WDR OFS);
-	
-	
-	my $count=0;
-	
-	
-	foreach my $location (sort keys %$unique_locations) {
-		$count++;
-		$variant->setLocation($location);
-		$variant->setVarLine($unique_locations->{$location});
-		my($g_pu)=$variant->formatVarinat();
-		#process only passed varinats		
-		if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
-			if(defined $self->{'_ao'} || defined $self->{'_m'}) {
-				foreach my $sample (@{$self->getTumourName}) {
-					$store_results=$variant->storeResults($store_results,$g_pu,$sample);
-				}
-				next;
-			}
-		}
-    my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
-    if ($self->{'_a'} eq 'indel') {
-    	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
-			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
-    }
-    my $mutant_depth=0;
-    my $depth=0;
-    
-  	foreach my $sample (@{$self->getAllSampleNames}) {
-   		#$sample_counter++;
-			$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
-			if($self->{'_a'} eq 'indel') {	
-				$g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
-				if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
-					$g_pu=$variant->addNormalCount($g_pu);
-				}
-				elsif($self->{'_m'} && $data_for_all_samples->{$sample}{$location}) {
-					$store_results=$variant->_storeResults($store_results,$g_pu,$sample);
-				}
-			}
-			else{
-				$g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
-				#print Dumper $g_pu;
-			}
-			
-			if(!defined $self->{'_ao'} ) {
-				my($pileup_line)=$variant->formatResults($original_flag,$g_pu);
-				# Mutant read depth found at this location
-				if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'MTR'} > 0 ) {
-						$mutant_depth++;
-				}
-				# read depth found at this location 
-				if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'DEP'} > 0 ) {
-						$depth++;
-				}
-				$pileup_results{$g_pu->{'sample'}}=$pileup_line;
-			}			
-  	}# Done with all the samples ...	
-  	
-  	#print Dumper %pileup_results;
-  	#get specific annotations from original VCF INFO field....
-		if(!defined $self->{'_ao'} ) {
-			$original_vcf_info->{'ND'} =	$depth;
-			$original_vcf_info->{'NVD'} =	$mutant_depth;	
-			$self->_writeOutput($original_vcf_info,$NFS,\%pileup_results,\@tags,$WFH_VCF,$WFH_TSV,$g_pu,$vcf);
-			$depth=0;
-			$mutant_depth=0;
-		 }
-		  #if($count >0) {exit;}			
-			if($count % 100 == 0 ) {
-				if($self->{'_r'}){
-					$log->debug("Normal_id:".$self->getNormalName.": completed:$count PASS variants of total merged variant sites");
-				}
-				else {
-					$log->debug("Normal_id:".$self->getNormalName.": completed:$count out of total merged variant sites");
-				}
-			} 	
-   
-	}# location ...
-		if($self->{'_m'}) {
-		 	$self->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
-		}
-		
-		if ($vcf) {
-			$vcf->close();
-			close($WFH_VCF);
-			close($WFH_TSV);
-			$log->debug("Validating VCF file");
-			my($outfile_gz,$outfile_tabix)=$self->compressVcf("$outfile_name.vcf");
-			if ((-e $outfile_gz) && (-e $outfile_tabix)) {
-				unlink "$outfile_name.vcf" or $log->warn("Could not unlink".$outfile_name.'.vcf:'.$!);
-			}
-	}
-	$log->debug("Completed analysis for: $count locations");
-	#print $progress_fh "$outfile_name.vcf\n";
-	return 1;
-}
 
 =head2 _get_bam_object
 create bam object using Bio::DB::Sam
@@ -1125,7 +866,7 @@ sub WriteAugmentedHeader {
 	my $aug_vcf_fh=undef;
 	my $aug_vcf_name=undef;
 	
-	return if(!defined $self->{'_vcf'}); 
+	return if(!defined $self->{'vcf'}); 
 	
 	if(defined $self->{'_m'}) {
 		my $augment_vcf=$self->{'vcf'};
@@ -1211,9 +952,9 @@ sub _getVCFObject {
 		$log->debug("No data in info Field");
 	}
 	
-	if(!defined $self->{'_vcf'}) {
+	if(!defined $self->{'vcf'}) {
 			my $i=0;
-			foreach my $sample (@{$self->getAllSampleNames}) {
+			foreach my $sample (@{$self->{'allSamples'}}) {
 				if ($sample eq $self->getNormalName) {
 					my %temp=(key=>"SAMPLE",ID=>"NO_VCF_NORMAL", Description=>"NO_VCF_DATA", SampleName=>$sample);
 					$vcf->add_header_line(\%temp);
@@ -1225,88 +966,11 @@ sub _getVCFObject {
 				}
 		}
 	}
-	$vcf->add_columns(@{$self->getAllSampleNames});
+	$vcf->add_columns(@{$self->{'allSamples'}});
 	
 	return $vcf;
 }
 
-
-sub depricated_write_vcf_header {
-	my($self,$info_tag_val)=@_;
-	
-	my $vcf=undef;
-	my $WFH_VCF=undef;
-	my $WFH_TSV=undef;
-	
-	# return if no VCF file found or augment only option is provided for indel data ...
-	if(( !defined $self->{'vcf'} && !defined $self->{'_b'}) || (defined $self->{'_ao'})) {
-			return $vcf,$WFH_VCF,$WFH_TSV;
-	}
-	
-	my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0]."_consolidated_".$self->{'_a'};	
-	$log->debug("VCF outfile:$outfile_name.vcf");
-	$log->debug("TSV outfile:$outfile_name.tsv");
-	open($WFH_VCF, '>',"$outfile_name.vcf");
-	open($WFH_TSV, '>',"$outfile_name.tsv");
-
-	$vcf=Vcf->new();
-	my $genome_name=$self->_trim_file_path($self->getGenome);
-	my $script_name=$self->_trim_file_path($0);
-	$vcf->add_header_line({key=>'reference', value=>$genome_name}); 
-	$vcf->add_header_line({key=>'source', value=>$script_name}); 
-	$vcf->add_header_line({key=>'script_version', value=>$Sanger::CGP::Vaf::VafConstants::VERSION});
-	$vcf->add_header_line({key=>'Date', value=>scalar(localtime)});
-	if(defined $info_tag_val) {
-		foreach my $hash_val(@$info_tag_val) {
-			$vcf->add_header_line($hash_val);	
-		}
-	}
-	else {
-		$log->debug("No data in info Field");
-	}
-	
-	if(!defined $self->{'_vcf'}) {
-			my $i=0;
-			foreach my $sample (@{$self->getAllSampleNames}) {
-				if ($sample eq $self->getNormalName) {
-					my %temp=(key=>"SAMPLE",ID=>"NO_VCF_NORMAL", Description=>"NO_VCF_DATA", SampleName=>$sample);
-					$vcf->add_header_line(\%temp);
-				}
-				else {
-					$i++;
-					my %temp=(key=>"SAMPLE",ID=>"NO_VCF_TUMOUR_$i", Description=>"NO_VCF_DATA_$i", SampleName=>$sample);
-					$vcf->add_header_line(\%temp);
-				}
-		}
-	}
-	
-	$vcf->add_columns(@{$self->getAllSampleNames});
-	
-	
-	print $WFH_VCF $vcf->format_header();	
-
-  # writing results in tab separated format
-	my $tmp_file=$self->{'_o'}.'/temp.vcf';
-	open(my $tmp_vcf,'>',$tmp_file);
-	print $tmp_vcf $vcf->format_header();
-	close($tmp_vcf);
-	my($col_names,$header,$format_col)=$self->_get_tab_sep_header($tmp_file);
-	my $temp_cols=$col_names->{'cols'};
-	
-	my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
-	if($self->{'_a'} eq 'indel') {
-		$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS
-	}
-	
-	foreach my $sample(@{$self->getAllSampleNames}){
-		foreach my $tag_name(@$tags){
-			push ($temp_cols,"$sample\_$tag_name");
-		}
-	}   
-	print $WFH_TSV "@$header\n".join("\t",@$temp_cols)."\n";
-			
-	return ($vcf,$WFH_VCF,$WFH_TSV,$outfile_name);
-}
 
 
 =head2 _get_tab_sep_header
@@ -1405,7 +1069,7 @@ sub _writeOutput {
 	## check if field is in header if not use add_info_field...
 	$out->{INFO}   = $original_vcf_info;
 	$out->{FORMAT} = [@$tags];
-	foreach my $sample (@{$self->getAllSampleNames}) {
+	foreach my $sample (@{$self->{'allSamples'}}) {
 	  $out->{gtypes}{$sample} = $new_pileup_results->{$sample};
 	}
 	$vcf->format_genotype_strings($out);
@@ -1518,7 +1182,7 @@ foreach my $info_key (sort keys %$original_vcf_info){
 # print FORMAT field values for each sample
 
 my $i=9; # format field starts from 9
-foreach my $sample(@{$self->getAllSampleNames}) {
+foreach my $sample(@{$self->{'allSamples'}}) {
 	push(@record,split(':',$data[$i]));
 	$i++;
 }    

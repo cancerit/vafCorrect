@@ -316,6 +316,9 @@ sub _getRange {
 		if(($spanned_region < $g_pu->{'start'}) && (($chr_len - $g_pu->{'end'}) > $spanned_region)) {
 			$left_pos=$g_pu->{'start'} - $spanned_region;
 			$right_pos=$g_pu->{'end'} + $spanned_region;
+		}else{
+		 $left_pos=$g_pu->{'start'} - 50;
+		 $right_pos = $g_pu->{'end'} + 50;
 		}
 	}
 	$g_pu->{'pos_5p'}=$left_pos;

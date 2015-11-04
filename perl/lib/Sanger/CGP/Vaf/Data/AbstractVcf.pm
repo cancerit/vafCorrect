@@ -67,27 +67,26 @@ sub _init {
 
 sub _localInit: Abstract;
 
-
-
 sub getNormalBam {
-	return shift->{'_nb'};
+ 	my($self)=shift;
+	$self->{'_d'};
+	return $self->{'_d'}.'/'.$self->getNormalName.'.bam';
 }
 
 sub getVcfFile {
-	my @arr=split(',',shift->{'_vcf'});
+	my($self)=shift;
+	my @arr=map {$self->{'_d'}.'/'.$_.$self->{'_e'}} @{$self->getTumourName};
 	return \@arr;
 }
 
 sub getTumourBam {
-	my @arr=split(',',shift->{'_tb'});
-	# removes trailing and leading spaces
-	#@arr=trim(@arr);
+	my($self)=shift;
+	my @arr=map {$self->{'_d'}.'/'.$_.'.bam'} @{$self->getTumourName};
 	return \@arr;
 }
 
 sub getTumourName {
-	my @arr=split(',',shift->{'_tn'});
-	return \@arr;
+	return shift->{'_tn'};
 }
 
 
@@ -95,14 +94,13 @@ sub getNormalName {
 	return shift->{'_nn'};
 }
 
-sub getAllSampleNames {
+
+sub getAllSampleNames{
  my($self)=shift;
  my $allSampleNames=$self->getTumourName;
  unshift(@$allSampleNames,$self->getNormalName);
- 
  $self->{'allSamples'}=$allSampleNames;
 }
-
 
 sub setNormal {
 	my($self,$normal)=@_;
@@ -110,8 +108,7 @@ sub setNormal {
 	my ($file_name,$dir_name,$suffix) = fileparse($self->getNormalBam,qr/\.[^.]*/);
 	my $tmp_bam=$dir_name.$normal.$suffix;
 	if(! -e $tmp_bam ) {
-		$log->debug("Unable to find normal bam: $tmp_bam");
-		
+		$log->logcroak("Unable to find normal bam: $tmp_bam");
 	}
 	$self->{'_nb'}=$dir_name.$normal.$suffix;
 }
@@ -127,8 +124,6 @@ sub getOutputDir {
 sub getBedIntervals {
 	return shift->{'_b'};
 }
-
-
 
 #-----Legacy
 sub addMessage {
@@ -156,16 +151,6 @@ sub _clearMessages {
 }
 
 
-
-
-sub trim {
-    @_ = $_ if not @_ and defined wantarray;
-    @_ = @_ if defined wantarray;
- 
-    for (@_ ? @_ : $_) { s/^\s+//, s/\s+$// }
- 
-    return wantarray ? @_ : $_[0] if defined wantarray;
-}
 
 
 __END__

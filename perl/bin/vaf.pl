@@ -43,6 +43,8 @@ try {
     	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
   }
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+	$vcf_obj->getAllSampleNames();
+		
 	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData();
 	my($variant,$bam_header_data,$bam_objects)=$vcf_obj->getVarinatObject($info_tag_val);
 	my($bed_locations)=$vcf_obj->getBedHash();
@@ -88,10 +90,7 @@ try {
 		close $progress_fhw;
 		
   }
-	#my($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags)=$vcf->getUniqueLocations();
-	
-	#to do ... add chromosome based analysis of vcf file merging	
-	#$vcf->processLocations($data_for_all_samples,$unique_locations,$info_tag_val,$updated_info_tags);
+
 }
 	
 catch {
@@ -106,6 +105,7 @@ sub option_builder {
         &GetOptions (
                 'h|help'    => \$options{'h'},
                 't|infoTags=s' => \$options{'t'},
+                'd|inputDir=s' => \$options{'d'},
                 'b|bedIntervals=s' => \$options{'b'},
                 'e|vcfExtension=s' => \$options{'e'},
                 'c|hdr_cutoff=s' => \$options{'c'},
@@ -114,17 +114,13 @@ sub option_builder {
                 'f|vcf_from=s' => \$options{'f'},
                 'r|restrict_flag=s' => \$options{'r'},
                 'o|outDir=s'  => \$options{'o'},
-                'u|sample_names=s' => \$options{'u'},
                 'm|augment=s' => \$options{'m'},
                 'ao|augment_only=s' => \$options{'ao'},
-                'tn|tumour_name=s' => \$options{'tn'},
+                # provide at least 1 tumour samples name
+                'tn|tumour_name=s{1,}' => \@{$options{'tn'}},
                 'nn|normal_name=s' => \$options{'nn'},
-                'tb|tumour_bam=s' => \$options{'tb'},
-                'nb|normal_bam=s' => \$options{'nb'},
-                'vcf|input_vcf=s' => \$options{'vcf'},
                 'bo|bed_only=s' => \$options{'bo'},
                 'oe|output_vcfExtension=s' => \$options{'oe'},
-                'ie|input_vcfExtension=s' => \$options{'ie'},
                 'tmp|tmpdir=s' => \$options{'tmp'},
                 'p|depth=s' => \$options{'p'},
                 'v|version'  => \$options{'v'}
@@ -137,12 +133,11 @@ sub option_builder {
 		exit;
 	}
 	pod2usage(q{'-g' genome must be defined}) unless (defined $options{'g'});
+	pod2usage(q{'-d' input directory path must be defined}) unless (defined $options{'d'});
 	pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
-	pod2usage(q{'-tb' toumour sample bam file/s must be provided}) unless (defined $options{'tb'});
-	pod2usage(q{'-nb' normal sample bam file must be provided}) unless (defined $options{'nb'});
 	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
 	pod2usage(q{'-nn' normal sample name must be provided}) unless (defined $options{'nn'});
-	pod2usage(q{'-vcf' Input vcf file name must be provided}) unless (defined $options{'vcf'} || defined $options{'bo'});
+  pod2usage(q{'-e' Input vcf file extension}) unless (defined $options{'e'} || defined $options{'bo'});
 	pod2usage(q{'-b' bed file must be specified }) unless (!defined $options{'vcf'} || !defined $options{'bo'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
@@ -196,7 +191,7 @@ sub option_builder {
 		# augment vcf extesnion
 		$options{'oe'}='.vaf.vcf';
 	}
-		
+	
  \%options;
 }
 
@@ -208,18 +203,18 @@ mergeAndPileup.pl merge the variants in vcf files for a given Tumour - normal pa
 
 =head1 SYNOPSIS
 
-mergeAndPileup.pl [-h] -i -d -a [-t -b -e -c -r -g -f -o -v]
+mergeAndPileup.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
 
-  Required Options (config file, inputDir and variant_type must be defined):
+  Required Options (inputDir and variant_type must be defined):
 
-   --variant_type  (-a)   specify variant type (snp or indel) [default snp]
-   --genome        (-g)   specify genome fasta file name (default genome.fa)
-   --tumour_name   (-tn)  Toumour sample name [ list of comma separated names in same order as input files ]
-   --normal_name   (-nn)  Normal sample name
-   --tumour_name   (-tb)  Toumour sample bam files [ list of comma separated files ]
-   --normal_name   (-nb)  Normal sample bam file
-   --input_vcf    (-vcf)  Input vcf file name [Comma separated list if more than one tumour sample provided]
-   --outDir        (-o)   Output folder
+   --variant_type  (-a)  variant type (snp or indel) [default snp]
+   --inputDir      (-d)  input directory path
+   --genome        (-g)  genome fasta file name (default genome.fa)
+   --tumour_name   (-tn) Toumour sample name [ list of space separated names in same order as input files ]
+   --normal_name   (-nn) Normal sample name
+   --outDir        (-o)  Output folder
+   --vcfExtension  (-e)  vcf file extension string after the sample name (default: .caveman_c.annot.vcf.gz) 
+
 
   Optional
    --infoTags      (-t)  comma separated list of tags to be included in the vcf INFO field 
@@ -228,17 +223,15 @@ mergeAndPileup.pl [-h] -i -d -a [-t -b -e -c -r -g -f -o -v]
                          bed file can be specified in the config file after the last sample pair,
                          if specified on command line then same bed file is used for all the tumour/normal pairs,
                          bed file name in config file overrides command line argument
-   --vcfExtension  (-e)  specify the vcf file extension string after the sample name (default: caveman_c.annot.vcf.gz) 
-   --hdr_cutoff    (-c)  specify High Depth Region(HDR) cutoff  value[ avoids extreme depth regions (default: 005 i.e top 0.05% )]
+   --hdr_cutoff    (-c)  High Depth Region(HDR) cutoff  value[ avoids extreme depth regions (default: 005 i.e top 0.05% )]
                          (possible values 001,005,01,05 and 1)
    --restrict_flag (-r)  restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
-   --vcf_from      (-f)  specify vcf source [ only used with varinat_type snp (default cave_c [specify-: cave_c or cave_java]  [ WTSI only ]
+   --vcf_from      (-f)  vcf source [ only used with varinat_type snp (default cave_c [specify-: cave_c or cave_java]  [ WTSI only ]
    --augment       (-m)  Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
    --augment_only  (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
    --depth         (-p)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --id_int_project(-pid) Internal project id 
    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
-   --vcfExtension  (-oe) Specify uncompressed output vcf file extension string after the sample name (default: .vaf.vcf) only for augmented vcf files. 
    --help          (-h)  This help
    --version       (-v)  provides version information of this code
 

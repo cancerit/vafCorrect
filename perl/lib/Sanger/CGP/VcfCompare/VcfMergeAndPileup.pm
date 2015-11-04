@@ -1503,11 +1503,13 @@ sub _get_range {
   my ($left_pos,$right_pos,$chr_len,$spanned_region);
   my $lib_size=$bam_header->{$sample}{'lib_size'};
   my ($hdr_flag)=check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$tabix_hdr);
+  #my $hdr_flag=0;
   my $spanning_seq_denom=2;
   #if location is in high depth region and has depth >1000 then hdr_flag is true
   if($hdr_flag && $max_depth > 1000){$spanning_seq_denom=4;}
   else {$hdr_flag=0;}
   $chr_len=$bam_header->{$sample}{$g_pu->{'chr'}};
+  
   if(defined $lib_size && defined $chr_len) {
   	$spanned_region = round(($lib_size *  $INSERT_SIZE_FACTOR )/$spanning_seq_denom);
   	#$spanned_region=round($spanned_region);
@@ -1516,14 +1518,21 @@ sub _get_range {
 			$left_pos=$g_pu->{'start'} - $spanned_region;
 			$right_pos=$g_pu->{'end'} + $spanned_region;
 		}
+		else{
+		 $left_pos=$g_pu->{'start'} - 50;
+		 $right_pos = $g_pu->{'end'} + 50;
+		}
 	}
 
 	$g_pu->{'pos_5p'}=$left_pos;
 	$g_pu->{'pos_3p'}=$right_pos;
 	$g_pu->{'hdr'}=$hdr_flag;
-	# to get exact location of variant base and avoid borderline matching of a  
+	
+	
+	# to get exact location of variant base and avoid borderline matching of a variant
 	# added padding to reference posotion 
 	$g_pu->{'ref_pos_5p'}=($g_pu->{'start'} - $g_pu->{'pos_5p'}) + 1 ;
+
 	if($g_pu->{'ins_flag'} && !$g_pu->{'del_flag'}){
 		$g_pu->{'ref_pos_3p'}=$g_pu->{'ref_pos_5p'} + ( $g_pu->{'end'} - $g_pu->{'start'} );
 	}
@@ -1531,6 +1540,8 @@ sub _get_range {
 		$g_pu->{'ref_pos_3p'}=$g_pu->{'ref_pos_5p'} + ( $g_pu->{'end'} - $g_pu->{'start'} ) - 1;
 	}
 	$g_pu->{'alt_pos_3p'}=$g_pu->{'ref_pos_5p'} + length( $g_pu->{'alt_seq'}) -1;
+
+	#print Dumper $g_pu;
 
 	$g_pu;
 }
@@ -2577,9 +2588,9 @@ sub write_config {
 		}
 	}
 	
-	if($single_sample_count < 1) {
-		$log->warn("Single tumour sample present nothing to merge for: $single_sample_count sample pairs");
-	}
+	#if($single_sample_count < 1) {
+	#	$log->warn("Single tumour sample present nothing to merge for: $single_sample_count sample pairs");
+	#}
 	if (!defined $data_in_config) {
   	$log->warn("No data to merge for this project exit.....");
   	exit(0);
