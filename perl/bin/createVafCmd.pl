@@ -62,7 +62,7 @@ try {
 				chomp $resp;
 				if($resp=~/^(1|2|3|4|5|6|7)$/) {
 					print "\n >>>>>> To view analysis progress please check .log file created in current directory >>>>>>>>>\n";	
-					Sanger::CGP::VcfCompare::VcfMergeAndPileup::run_vcfmerge($config_path,$output_dir,$resp)
+					$vaf->runVcfmerge($config_path,$output_dir,$resp)
 				}
 				else{
 					print "exiting...\n";
@@ -138,7 +138,7 @@ createConfig.pl [-h] -p -o  [ -b -n - u -v ]
     --bedIntervals  (-b) tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
     --normal        (-n)  BOOLEAN   Only interrogate matched tumour normal pairs [Y/N default = N (all)].
                     Requires '-p'
-    --sample_names  (-u)  comma separated list of samples within same project [ e.g., PD12345a,PD12345c]
+    --sample_names  (-u)  Restrict to a list of samples within same project [ e.g., PD12345a PD12345c]
     --database_type (-db) database type [live] e.g., test or live
     --version       (-v) displays version number of this software
 
