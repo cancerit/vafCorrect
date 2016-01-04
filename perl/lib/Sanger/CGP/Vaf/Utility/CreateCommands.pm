@@ -12,16 +12,11 @@ BEGIN {
 
 $main::SQL_LIB_LOC = '.'; # this suppresses warnings about uninitialised values
 use strict;
-use Tabix;
-use Config::IniFiles;
 
-use Bio::DB::Sam::Constants;
-use Data::Dumper;
+use Config::IniFiles;
 use English;
 use File::Path qw(mkpath);
 use FindBin qw($Bin);
-use List::Util qw(first reduce max min);
-use Math::Round qw(round);
 use Carp;
 use Const::Fast qw(const);
 use Capture::Tiny qw(:all);
@@ -249,7 +244,6 @@ sub _processFiles {
   if((defined $file_ref) && $file_ref eq 'HASH') {
     foreach my $file (keys %$file_types) {
       if(defined $input_files->{$file}) {
-      	#if(defined ($input_files->{'CAVE_C'}) and (($file eq 'CAVE') or ($file eq 'CAVE_IDX'))) {next;} 
         my $sym_link=$root_path."/$sample.".$file_types->{$file};
         $self->_createSymlink($input_files->{$file}, $sym_link);
         push(@$symlinked_files,$sym_link);
@@ -372,6 +366,17 @@ sub writeConfig {
   return $cfg;
 }
 
+=head2 _get_unmatched_normal
+fetch unmatched normal sample from database 
+Inputs
+=over 2
+=item sample - tumour sample name to get unmatched normal
+=item root_path -path to create symlinks
+=item project -project name
+=item conn -sql connection object
+=back
+=cut
+
 sub _get_unmatched_normal {
 	my($self,$sample,$project,$root_path,$conn)=@_;
 	my ($file_types)=$self->_getFileTypes();
@@ -390,6 +395,14 @@ sub _get_unmatched_normal {
 	}
 }
 
+=head2 _checkSubset
+check subset of samples to analyse
+Inputs
+=over 2
+=item tumour_sample_names - tumour sample names present in config file
+=back
+=cut
+
 sub _checkSubset {
 	my ($self,$tumour_sample_names)=@_;
 	foreach my $user_sample(@{$self->{'_u'}}) {
@@ -402,7 +415,6 @@ sub _checkSubset {
 	$log->debug("No user sample in config:".@$tumour_sample_names);
 	return 1;
 }
-
 
 =head2 _symlink_genome_build
 crete symlink for genome build
@@ -435,16 +447,14 @@ sub _symlinkGenomeBuild {
   return $cfg;
 }
 
-=head2 run_vcfmerge
-run vcf merge by calling the perl script
+=head2 createVafCommands
+write VAF commands in commands.txt file
 Inputs
 =over 2
-=item config_path -config file path
-=item input_dir -input folder storing all the data
 =item resp -user response to run specific algorithm
+=item config -config ini object
 =back
 =cut
-
 
 sub createVafCommands {
 	my($self,$resp,$cfg)=@_;
@@ -484,6 +494,13 @@ sub createVafCommands {
 	}
 }
 
+=head2 _get_vaf_prm
+get user defined parameters to run VAF
+Inputs
+=over 2
+=back
+=cut
+
 sub _get_vaf_prm {
 	my($self)=@_;
 	my $options=$self->{'options'};
@@ -498,12 +515,31 @@ sub _get_vaf_prm {
 	return $vaf_options;
 }
 
+=head2 _print_cmd
+ write commands to a file
+Inputs
+=over 2
+=item vaf_options -array containg user supplied vaf paramaters
+=item normal_sample -normal sample name 
+=item tumour_samples -tumour sample names
+=item variant -variant type [indel or snp]
+=item vcf_extension -vcf file extension
+=item cmd_fh -file name to write commands
+=back
+=cut
+
 sub _print_cmd {
 	my($self, $vaf_options, $normal_sample, $tumour_samples, $varinat, $vcf_extension,$cmd_fh)=@_;
 	$normal_sample=~s/_UNM\d+//g;
-	print $cmd_fh "$Bin/vaf.pl -d $self->{'_o'} -o $self->{'_o'}/output/$normal_sample/$varinat ".
+	if(defined $self->{'_g'}) {
+		print $cmd_fh "$Bin/vaf.pl -d $self->{'_o'} -o $self->{'_o'}/output/$normal_sample/$varinat ".
+				" -g $self->{'_g'} -a $varinat -e $vcf_extension ".
+				" -nn $normal_sample -tn @$tumour_samples @$vaf_options \n";
+	}else{
+		print $cmd_fh "$Bin/vaf.pl -d $self->{'_o'} -o $self->{'_o'}/output/$normal_sample/$varinat ".
 				" -g $self->{'_o'}/genome.fa -a $varinat -e $vcf_extension ".
 				" -nn $normal_sample -tn @$tumour_samples @$vaf_options \n";
+	}
 }
 
 ##### End of create config modules ########
@@ -523,7 +559,7 @@ path where symlink will be created
 
 sub _createSymlink {
 	my ($self,$file, $symlink_path)=@_;
-	if( -l $symlink_path) { $log->warn("symlink exists, skipped symlink creation"); return;} 
+	if( -l $symlink_path) { $log->warn("symlink exists, skipping file $file"); return;} 
 	symlink $file, $symlink_path;
 }
 

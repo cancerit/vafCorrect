@@ -63,7 +63,7 @@ try {
 			print "\n >>>>>> To analyse the data please use commands from commands.txt file created in current directory >>>>>>>>>\n";	
 		}
 		else{
-			print "exiting...\n";
+			warn "Please provide valid option... exiting...\n";
 			exit(0);
 		}
 	}
@@ -123,36 +123,36 @@ __END__
 
 =head1 NAME
 
-createConfig.pl - Create config file containing tumour normal sample pairs to be merged   
+createVafCmd.pl - Create commands to run for each sample group containing tumour normal sample pairs in a given project   
 
 =head1 SYNOPSIS
 
-createConfig.pl [-h -v] -pid -o  [-g -b -u -db -t -c -r -m -ao -p -bo -vn]
+createVafCmd.pl [-h -v] -pid -o  [-g -b -u -db -t -c -r -m -ao -p -bo -vn]
 
   Required Options (project and output directory must be defined):
 
-    --project_id     (-pid) project id [e.g 888]
-    --outdir        (-o) outdir [ Path to output folder ]
+    --project_id    (-pid)project id [e.g 888]
+    --outdir        (-o)  outdir [ Path to output folder ]
   Optional
-    --genome        (-g)  genome fasta file name (default genome.fa)
-    --bedIntervals  (-b) tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
-    --sample_names  (-u) Restrict to the list of samples to analyse [ e.g., PD12345a PD12345c]
-    --database_type (-db) database type [live] e.g., test or live
-    --infoTags      (-t) comma separated list of tags to be included in the vcf INFO field 
-                        (default: VD,VW,VT,VC for Vagrent annotations)
-    --hdr_cutoff    (-c) High Depth Region(HDR) cutoff  value[ avoids extreme depth regions (default: 005 i.e top 0.05% )]
-                         (possible values 001,005,01,05 and 1)
-    --restrict_flag (-r) restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
-    --augment       (-m) Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
-    --augment_only  (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
-    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
-    --vcf_normal    (-vn) use normal sample defined in vcf header field [ default 1 ]
-    --depth         (-dp)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
-    --help          (-h)  Display this help message
-    --version       (-v) displays version number of this software
+    --genome        (-g) 	genome fasta file name (default genome.fa)
+    --bedIntervals  (-b) 	tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
+    --sample_names  (-u) 	Restrict to the list of samples to analyse [ e.g., PD12345a PD12345c]
+    --database_type (-db)	database type [live] e.g., test or live
+    --infoTags      (-t) 	comma separated list of tags to be included in the vcf INFO field 
+                         	(default: VD,VW,VT,VC for Vagrent annotations)
+    --hdr_cutoff    (-c) 	High Depth Region(HDR) cutoff  value[ avoids extreme depth regions (default: 005 i.e top 0.05% )]
+                         	(possible values 001,005,01,05 and 1)
+    --restrict_flag (-r) 	restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
+    --augment       (-m) 	Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
+    --augment_only  (-ao)	Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
+    --bed_only      (-bo)	Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
+    --vcf_normal    (-vn)	use normal sample defined in vcf header field [ default 1 ]
+    --depth         (-dp)	comma separated list of field(s) as specified in FORMAT field representing total depth at given location
+    --help          (-h) 	Display this help message
+    --version       (-v) 	displays version number of this software
 
   Examples:
     - Create commands file for following project 
-      perl createConfig.pl -pid 888 -o testdir
+      perl createVafCmd.pl -pid 888 -o testdir
 =cut
 
