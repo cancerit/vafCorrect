@@ -581,15 +581,22 @@ Inputs
 
 sub _setNormal {
 	my($self,$vcf_normal)=@_;
+	my $flag=1;
 	foreach my $key (keys %$vcf_normal) {
 		if($key eq $self->getNormalName) {
+			$flag=0;
 			$log->debug(" User provided normal sample matches with VCF normal");
 		}
 		elsif(defined $self->{'_vn'}){
+			$flag=0;
 			$self->setNormal($key);
 			$log->debug("Setting normal sample as specified in VCF header : make sure normal sample ($key) bam file is present");
 		}
 	}
+	if($flag==1 && $self->{'_vn'}){
+			$log->debug("Unable to find normal sample defined in vcf header");
+		}
+	
 }
 
 

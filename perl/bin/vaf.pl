@@ -8,8 +8,6 @@ BEGIN {
 
 use strict;
 #$main::SQL_LIB_LOC = '.'; # this suppresses warnings about uninitialised values
-#use Sanger::CGP::Config::Config qw(vcfCommons);
-#use Sanger::CGP::VcfCompare::VcfMergeAndPileup;
 
 use File::Path qw(mkpath);
 use FindBin qw($Bin);
@@ -43,6 +41,7 @@ try {
     	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
   }
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+	
 	$vcf_obj->getAllSampleNames();
 		
 	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData();
@@ -108,21 +107,22 @@ sub option_builder {
                 'd|inputDir=s' => \$options{'d'},
                 'b|bedIntervals=s' => \$options{'b'},
                 'e|vcfExtension=s' => \$options{'e'},
-                'c|hdr_cutoff=s' => \$options{'c'},
+                'c|hdr_cutoff=i' => \$options{'c'},
                 'g|genome=s' => \$options{'g'},
                 'a|variant_type=s' => \$options{'a'},
-                'f|vcf_from=s' => \$options{'f'},
-                'r|restrict_flag=s' => \$options{'r'},
+                'r|restrict_flag=i' => \$options{'r'},
                 'o|outDir=s'  => \$options{'o'},
-                'm|augment=s' => \$options{'m'},
-                'ao|augment_only=s' => \$options{'ao'},
+                'm|augment=i' => \$options{'m'},
+                'ao|augment_only=i' => \$options{'ao'},
                 # provide at least 1 tumour samples name
                 'tn|tumour_name=s{1,}' => \@{$options{'tn'}},
                 'nn|normal_name=s' => \$options{'nn'},
-                'bo|bed_only=s' => \$options{'bo'},
+                'bo|bed_only=i' => \$options{'bo'},
                 'oe|output_vcfExtension=s' => \$options{'oe'},
                 'tmp|tmpdir=s' => \$options{'tmp'},
-                'p|depth=s' => \$options{'p'},
+                'dp|depth=s' => \$options{'dp'},
+                'pid|id_int_project=s' => \$options{'pid'},
+                'vn|vcf_normal=i' => \$options{'vn'},
                 'v|version'  => \$options{'v'}
 	);
 	
@@ -137,8 +137,8 @@ sub option_builder {
 	pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
 	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
 	pod2usage(q{'-nn' normal sample name must be provided}) unless (defined $options{'nn'});
-  pod2usage(q{'-e' Input vcf file extension}) unless (defined $options{'e'} || defined $options{'bo'});
-	pod2usage(q{'-b' bed file must be specified }) unless (!defined $options{'vcf'} || !defined $options{'bo'});
+  pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'} || defined $options{'bo'});
+	pod2usage(q{'-b' bed file must be specified }) unless (!defined $options{'e'} || !defined $options{'bo'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
 	mkpath($options{'o'});
@@ -146,24 +146,15 @@ sub option_builder {
 		mkpath($options{'o'}.'/tmpvaf');
 		$options{'tmp'}=$options{'o'}.'/tmpvaf';
 	}
-	if(!defined $options{'e'}) { # variant extension
-		if(defined $options{'a'} and lc($options{'a'}) eq 'indel'){
-				$options{'e'}=".pindel.annot.vcf.gz";	
-		}
-		elsif(defined $options{'a'} and lc($options{'a'}) eq  'snp') {
-			if(defined $options{'f'} and lc($options{'f'}) eq "cave_java") {
-				$options{'e'}=".cave.annot.vcf.gz";
-				}
-			else{
-				$options{'e'}=".caveman_c.annot.vcf.gz";
-			}
-		}	
-		else{
-			$log->logcroak("Not a valid variant type [should be either [snp or indel]");	
-			exit(0); 
-		}	
- 	} 		 
-	
+	if(!defined $options{'vn'}) { $options{'vn'}=1;}
+	if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {	
+		warn "Analysing:".$options{'a'}."\n";
+	}
+	else{
+		$log->logcroak("Not a valid variant type [should be either [snp or indel]");	
+		exit(0); 
+	}	
+ 	# use annotation tags
 	if(!defined $options{'t'}) { 
 		$options{'t'}="VD,VW,VT,VC";
 	}
@@ -175,8 +166,8 @@ sub option_builder {
 	if(!defined $options{'r'}) {
 		$options{'r'}= 1;
 	}
-	if($options{'a'} eq 'indel' && !defined $options{'p'}) {
-		$options{'p'}='NR,PR';
+	if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
+		$options{'dp'}='NR,PR';
 	}
 	
 	if(!defined $options{'s'}) {
@@ -199,11 +190,11 @@ __END__
 
 =head1 NAME
 
-mergeAndPileup.pl merge the variants in vcf files for a given Tumour - normal pairs in a project  and write pileup and exonerate output for merged locations
+vaf.pl merge the variants in vcf files for a given Tumour - normal pairs in a project  and write pileup and exonerate output for merged locations
 
 =head1 SYNOPSIS
 
-mergeAndPileup.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
+vaf.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
 
   Required Options (inputDir and variant_type must be defined):
 
@@ -213,8 +204,7 @@ mergeAndPileup.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
    --tumour_name   (-tn) Toumour sample name [ list of space separated names in same order as input files ]
    --normal_name   (-nn) Normal sample name
    --outDir        (-o)  Output folder
-   --vcfExtension  (-e)  vcf file extension string after the sample name (default: .caveman_c.annot.vcf.gz) 
-
+   --vcfExtension  (-e)  vcf file extension string after the sample name - INCLUDE's dot (default: .caveman_c.annot.vcf.gz) 
 
   Optional
    --infoTags      (-t)  comma separated list of tags to be included in the vcf INFO field 
@@ -226,19 +216,19 @@ mergeAndPileup.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
    --hdr_cutoff    (-c)  High Depth Region(HDR) cutoff  value[ avoids extreme depth regions (default: 005 i.e top 0.05% )]
                          (possible values 001,005,01,05 and 1)
    --restrict_flag (-r)  restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
-   --vcf_from      (-f)  vcf source [ only used with varinat_type snp (default cave_c [specify-: cave_c or cave_java]  [ WTSI only ]
    --augment       (-m)  Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
    --augment_only  (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
-   --depth         (-p)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
-   --id_int_project(-pid) Internal project id 
+   --depth         (-dp)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
+   --id_int_project(-pid) Internal project id [WTSI only]
    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
-   --help          (-h)  This help
-   --version       (-v)  provides version information of this code
+   --vcf_normal    (-vn) use normal sample defined in vcf header field [ default 1 ]
+   --help          (-h)  Display this help message
+   --version       (-v)  provide version information for vaf
 
    Examples:
-      Merge vcf files to create single vcf containing union of variant sites and provide pileup output for each location
-      perl mergeAndPileup.pl -i exampleConfig.ini -d tmpvcfdir -o testout -a snp
-      Merge vcf files to create single vcf containing union of variant sites and provide exonerate output for each location
-      perl mergeAndPileup.pl -i exampleConfig.ini -d tmpvcfdir -o testout -a indel
+      Merge vcf files to create single vcf containing union of all the variant sites and provides pileup output for each location
+      perl vaf.pl -d tmpvcfdir -o testout -a snp -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2 
+      Merge vcf files to create single vcf containing union of all the variant sites and provides allele count for underlying location
+      perl vaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2
 =cut
 

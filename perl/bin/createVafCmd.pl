@@ -12,7 +12,7 @@ use FindBin qw($Bin);
 
 #use lib("/software/CGP/projects/vcfCommons/perl/lib");
 use Sanger::CGP::Config::Config qw(vcfCommons);
-use Sanger::CGP::VcfCompare::CreateCommands;
+use Sanger::CGP::Vaf::Utility::CreateCommands;
 
 use Sanger::CGP::Database::Conn;
 use Sanger::CGP::WholeGenome::Base;
@@ -36,19 +36,18 @@ try {
   my ($options) = option_builder();
   my $base = Sanger::CGP::WholeGenome::Base->new;
   $base->db_type($options->{'db'});
-	print "Using database $options->{'db'}\n";
+  print "Using database $options->{'db'}\n";
   my $conn = $base->connection;
   
-  my $vaf=Sanger::CGP::VcfCompare::CreateCommands->new($options);
+  my $vaf=Sanger::CGP::Vaf::Utility::CreateCommands->new($options);
   $vaf->loadSql($conn);
   my $data_to_process = $vaf->buildInputData($conn);
-  undef $conn;
   $base->clear_connection;
   my ($sample_group,$normal_samples, $species, $build,$symlinked_files)= $vaf->generateRawOutput($data_to_process);
-  my($config_path,$output_dir)=$vaf->writeConfig($sample_group,$normal_samples, $species, $build,$symlinked_files);
- 
-  if($config_path) {
-		print "Would you like to merge VCF files? if YES please specify vcf file type: \n".
+  my($cfg)=$vaf->writeConfig($sample_group,$normal_samples, $species, $build,$symlinked_files,$conn);
+  undef $conn;
+  if(defined $cfg) {
+		print "Please specify vcf file types to merge: \n".
 		 "[1] Pindel \n".
 		 "[2] caveman_java \n".
 		 "[3] caveman_c \n".
@@ -56,18 +55,17 @@ try {
 		 "[5] (1,2) \n".
 		 "[6] (2,3) \n".
 		 "[7] (all) \n".
-		 "[0] exit  \n ------:";
-		 
-				my $resp = <STDIN>;
-				chomp $resp;
-				if($resp=~/^(1|2|3|4|5|6|7)$/) {
-					print "\n >>>>>> To view analysis progress please check .log file created in current directory >>>>>>>>>\n";	
-					$vaf->runVcfmerge($config_path,$output_dir,$resp)
-				}
-				else{
-					print "exiting...\n";
-					exit(0);
-				}
+		 "[0] exit  \n------:"; 
+		my $resp = <STDIN>;
+		chomp $resp;
+		if($resp=~/^(1|2|3|4|5|6|7)$/) {
+			$vaf->createVafCommands($resp,$cfg);
+			print "\n >>>>>> To analyse the data please use commands from commands.txt file created in current directory >>>>>>>>>\n";	
+		}
+		else{
+			print "exiting...\n";
+			exit(0);
+		}
 	}
 }
 catch {
@@ -78,42 +76,47 @@ finally {
 #print "Script completed ----\n";
 };
 
-
-
 sub option_builder {
 	my ($factory) = @_;
-
-	my %opts;
-
+	my %options;
 	&GetOptions (
-					'h|help'    => \$opts{'h'},
-					'p|project=s' => \$opts{'p'},
-					'b|userBed=s' => \$opts{'b'},
-					'o|outdir=s'  => \$opts{'o'},
-					'n|normal=s'  => \$opts{'n'},
-					'db|databse_type=s'  => \$opts{'db'},
-					'u|sample_names=s{,}' => \@{$opts{'u'}},
-					'v|version'  => \$opts{'v'},
+	'h|help'    => \$options{'h'},
+	'pid|id_project_int=i' => \$options{'pid'},
+	'b|bedIntervals=s' => \$options{'b'},
+	'o|outdir=s'  => \$options{'o'},
+	'db|databse_type=s'  => \$options{'db'},
+	'u|sample_names=s{,}' => \@{$options{'u'}},
+	#additional parameters to run VAF
+	't|infoTags=s' => \$options{'t'},
+	'c|hdr_cutoff=i' => \$options{'c'},
+	'g|genome=s' => \$options{'g'},
+	'r|restrict_flag=i' => \$options{'r'},
+	'm|augment=i' => \$options{'m'},
+	'ao|augment_only=i' => \$options{'ao'},
+	# provide at least 1 tumour samples name
+	'bo|bed_only=i' => \$options{'bo'},
+	'oe|output_vcfExtension=s' => \$options{'oe'},
+	'dp|depth=s' => \$options{'dp'},
+	'vn|vcf_normal=i' => \$options{'vn'},
+	'v|version'  => \$options{'v'},
 	);
 
-  pod2usage(-message => Sanger::CGP::VcfCompare::license, -verbose => 1) if(defined $opts{'h'});
+  pod2usage(-message => Sanger::CGP::VcfCompare::license, -verbose => 1) if(defined $options{'h'});
 	
-	if(defined $opts{'v'}){
+	if(defined $options{'v'}){
 		my $version = Sanger::CGP::VcfCompare->VERSION;
 		print "$version\n";
 		exit;
 	}
-	
-	pod2usage(q{'-p' project number must be defined.}) unless(defined $opts{'p'});
-	pod2usage(q{'-o' output folder must be specified.}) unless(defined $opts{'o'}) ;
-	$opts{'db'}='live' unless(defined $opts{'db'});
-	unless(-e $opts{'o'}){
-	  mkpath($opts{'o'});
+	pod2usage(q{'-pid' Project identifier must be provided.}) unless(defined $options{'pid'});
+	pod2usage(q{'-o' Output folder must be specified.}) unless(defined $options{'o'}) ;
+	$options{'db'}='live' unless(defined $options{'db'});
+	unless(-e $options{'o'}){
+	  mkpath($options{'o'});
 	}
 	# check if directory path has / at the end other wise add it
-	$opts{'o'} .= '/' unless($opts{'o'} =~ m|/$|);
-
-	return \%opts;
+	$options{'o'} .= '/' unless($options{'o'} =~ m|/$|);
+	return \%options;
 }
 
 __END__
@@ -124,26 +127,32 @@ createConfig.pl - Create config file containing tumour normal sample pairs to be
 
 =head1 SYNOPSIS
 
-createConfig.pl [-h] -p -o  [ -b -n - u -v ]
+createConfig.pl [-h -v] -pid -o  [-g -b -u -db -t -c -r -m -ao -p -bo -vn]
 
-  Required Options (project must be defined):
+  Required Options (project and output directory must be defined):
 
-    --project       (-p) project number [e.g 888]
+    --project_id     (-pid) project id [e.g 888]
     --outdir        (-o) outdir [ Path to output folder ]
   Optional
-
-    --help          (-h)  This message and format of input file
-     One or more of the following:
-     
+    --genome        (-g)  genome fasta file name (default genome.fa)
     --bedIntervals  (-b) tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
-    --normal        (-n)  BOOLEAN   Only interrogate matched tumour normal pairs [Y/N default = N (all)].
-                    Requires '-p'
-    --sample_names  (-u)  Restrict to a list of samples within same project [ e.g., PD12345a PD12345c]
+    --sample_names  (-u) Restrict to the list of samples to analyse [ e.g., PD12345a PD12345c]
     --database_type (-db) database type [live] e.g., test or live
+    --infoTags      (-t) comma separated list of tags to be included in the vcf INFO field 
+                        (default: VD,VW,VT,VC for Vagrent annotations)
+    --hdr_cutoff    (-c) High Depth Region(HDR) cutoff  value[ avoids extreme depth regions (default: 005 i.e top 0.05% )]
+                         (possible values 001,005,01,05 and 1)
+    --restrict_flag (-r) restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
+    --augment       (-m) Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
+    --augment_only  (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
+    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
+    --vcf_normal    (-vn) use normal sample defined in vcf header field [ default 1 ]
+    --depth         (-dp)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
+    --help          (-h)  Display this help message
     --version       (-v) displays version number of this software
 
   Examples:
-    - Create config file containing tumour normal sample pairs to be merged 
-      perl createConfig.pl -p 888 -o testdir
+    - Create commands file for following project 
+      perl createConfig.pl -pid 888 -o testdir
 =cut
 

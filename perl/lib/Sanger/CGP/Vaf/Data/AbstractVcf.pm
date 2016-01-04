@@ -5,9 +5,9 @@ package Sanger::CGP::Vaf::Data::AbstractVcf;
 # 
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 # 
-# This file is part of VAGrENT.
+# This file is part of cgpVAF.
 # 
-# VAGrENT is free software: you can redistribute it and/or modify it under
+# cgpVAF is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
@@ -33,7 +33,6 @@ use Sanger::CGP::Vaf::VafConstants;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-
 1;
 
 sub new {
@@ -45,7 +44,6 @@ sub new {
 	$self->_localInit(@_);
 	return $self;
 }
-
 
 =head2 _init
 get the user input
@@ -59,7 +57,8 @@ sub _init {
 	my ($self,$options) = @_;
 	$self->{'options'}=$options;
 	foreach my $k (keys %$options) {
-		if( defined $options->{$k}) {
+		if(defined $options->{$k}) { # allows 0 and " "  string
+			#next if(ref($options->{$k}) eq 'ARRAY' && scalar@{$options->{$k}} < 1);
 			$self->{"_$k"}=$options->{$k};		
 		}
 	}	
