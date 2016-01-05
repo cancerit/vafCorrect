@@ -1,7 +1,7 @@
 package Sanger::CGP::Vaf::Data::AbstractVcf;
 																					 
 ##########LICENCE############################################################
-# Copyright (c) 2014 Genome Research Ltd.
+# Copyright (c) 2016 Genome Research Ltd.
 # 
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 # 
@@ -101,6 +101,14 @@ sub getAllSampleNames{
  $self->{'allSamples'}=$allSampleNames;
 }
 
+=head2 setNormal
+set normal sample name
+Inputs
+=over 2
+=item normal -normal sample name to set
+=back
+=cut
+
 sub setNormal {
 	my($self,$normal)=@_;
 	$self->{'_nn'}=$normal;
@@ -156,12 +164,11 @@ __END__
 
 =head1 NAME
 
-Sanger::CGP::VagrentSV::Annotator::AbstractSVAnnotator - Abstract base class for the SV annotation generators
+Sanger::CGP::Vaf::Process::AbstractVcf - Abstract base class for the variant allele fraction analysis 
 
 =head1 DESCRIPTION
 
-This is an abstract template class for the SV annotators, it provides a lot of shared behind the scenes functionality.  All
-subclasses must implement the _getAnnotation method.
+This is an abstract template class for the VAF, it provides a lot of shared behind the scenes functionality.  All
 
 =head1 METHODS
 
@@ -173,22 +180,19 @@ subclasses must implement the _getAnnotation method.
 
 =item Usage :
 
- my $source = Sanger::CGP::Vagrent::Annotators::AbstractAnnotatorSubClass->new(%params);
+ my $source = Sanger::CGP::Vaf::Process::AbstractVcf->new(%params);
 
 =item Function :
 
-Builds a new Sanger::CGP::Vagrent::Annotators::AbstractAnnotator inheriting object
+Builds a new Sanger::CGP::Vaf::Process::AbstractVcf inheriting object
 
 =item Returns :
 
-Sanger::CGP::Vagrent::Annotators::AbstractAnnotator object initialized with parameter values
+Sanger::CGP::Vaf::Process::AbstractVcf object initialized with parameter values
 
 =item Params :
 
 Hash of parameter values
-
- transcriptSource => A Sanger::CGP::Vagrent::TranscriptSource::AbstractTranscriptSource inheriting object
- bookmarker       => (Optional) An array reference of, or single, Sanger::CGP::Vagrent::Bookmarkers::AbstractBookmarker inheriting object
- only_bookmarked  => (Optional) Boolean, only return annotations that get bookmarked
+user input parameters
 
 =back

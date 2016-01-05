@@ -1,13 +1,13 @@
 package Sanger::CGP::Vaf::Process::AbstractVariant;
 																					 
 ##########LICENCE############################################################
-# Copyright (c) 2014 Genome Research Ltd.
+# Copyright (c) 2016 Genome Research Ltd.
 # 
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 # 
-# This file is part of VAGrENT.
+# This file is part of cgpVAF.
 # 
-# VAGrENT is free software: you can redistribute it and/or modify it under
+# cgpVAF is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
@@ -30,9 +30,7 @@ use Data::Dumper;
 use Attribute::Abstract;
 
 use Sanger::CGP::Vaf::VafConstants;
-
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
-
 
 1;
 
@@ -91,7 +89,6 @@ sub getLibSize {
 	return shift->{'_libsize'};
 }
 
-
 sub getVcfStatus {
 	return shift->{'_vcfStatus'};
 }
@@ -100,14 +97,9 @@ sub getBamObj {
 	return shift->{'_bamObj'};
 }
 
-
 sub getSample {
 	return shift->{'_samples'};
 }
-
-
-
-
 #-----Legacy
 sub addMessage {
 	my ($self,$msg) = @_;
@@ -133,17 +125,15 @@ sub _clearMessages {
 	shift->{_msg} = undef;
 }
 
-
 __END__
 
 =head1 NAME
 
-Sanger::CGP::VagrentSV::Annotator::AbstractSVAnnotator - Abstract base class for the SV annotation generators
+Sanger::CGP::Vaf::Process::AbstractVariant - Abstract base class for the variant allele fraction analysis 
 
 =head1 DESCRIPTION
 
-This is an abstract template class for the SV annotators, it provides a lot of shared behind the scenes functionality.  All
-subclasses must implement the _getAnnotation method.
+This is an abstract template class for the VAF, it provides a lot of shared behind the scenes functionality.  All
 
 =head1 METHODS
 
@@ -155,22 +145,19 @@ subclasses must implement the _getAnnotation method.
 
 =item Usage :
 
- my $source = Sanger::CGP::Vagrent::Annotators::AbstractAnnotatorSubClass->new(%params);
+ my $source = Sanger::CGP::Vaf::Process::AbstractVariant->new(%params);
 
 =item Function :
 
-Builds a new Sanger::CGP::Vagrent::Annotators::AbstractAnnotator inheriting object
+Builds a new Sanger::CGP::Vaf::Process::AbstractVariant inheriting object
 
 =item Returns :
 
-Sanger::CGP::Vagrent::Annotators::AbstractAnnotator object initialized with parameter values
+Sanger::CGP::Vaf::Process::AbstractVariant object initialized with parameter values
 
 =item Params :
 
 Hash of parameter values
-
- transcriptSource => A Sanger::CGP::Vagrent::TranscriptSource::AbstractTranscriptSource inheriting object
- bookmarker       => (Optional) An array reference of, or single, Sanger::CGP::Vagrent::Bookmarkers::AbstractBookmarker inheriting object
- only_bookmarked  => (Optional) Boolean, only return annotations that get bookmarked
+user input parameters
 
 =back
