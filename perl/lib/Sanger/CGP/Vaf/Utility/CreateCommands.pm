@@ -470,7 +470,6 @@ sub createVafCommands {
 		if(!defined($self->{'_r'})) { $filter=1;}
 	}
 	my ($vaf_options)=$self->_get_vaf_prm();
-	#print "**** @$vaf_options ****\n";
 	if($resp == 1 || $resp == 4 || $resp == 5 || $resp == 7 ) {
 		print "Writing commands for Pindel vcf files:\n";
 		foreach my $sample_group($cfg->Parameters($options->{'pid'})) {  # sample group
@@ -507,7 +506,6 @@ sub _get_vaf_prm {
 	my $vaf_options;
 	foreach my $key (keys %$options) {
 		if(defined $options->{$key} ) {
-			#next if(ref($options->{$key}) eq 'ARRAY' && scalar@{$options->{$key}}<1);
 			next if ($key eq 'u' || $key eq 'db' || $key eq 'o');
 			push(@$vaf_options,' -'.$key.' '.$options->{$key});
 		}

@@ -40,12 +40,9 @@ sub _localInit {
 } 
 
 =head2 formatVarinat
-get formatted position, for pindel - flag values for insertion del
+get hash containing location specific information
 Inputs
 =over 2
-=item location -variant position
-=item variant_type - variant type [indel or SNP ]
-
 =back
 =cut
 
@@ -86,6 +83,15 @@ return $g_pu;
 
 }
 
+=head2 formatVarinat
+get hash containing location specific information
+Inputs
+=over 2
+=item store_results -store results for printing
+=item g_pu -hash containing pileup/exonerate based allele fractions
+=item sample -sample name
+=back
+=cut
 
 
 sub storeResults {
@@ -139,11 +145,7 @@ sub storeResults {
 get sample specific original values for INFO and FILTER fields
 Inputs
 =over 2
-=item sample_names -sample names
-=item data_for_all_samples -original VCF fileds for given sample
-=item key_location -variant position
-=item normal -normal sample name
-
+=item data_for_all_samples -original VCF fields for a given sample
 =back
 =cut
 
@@ -179,15 +181,12 @@ sub getVcfFields {
 
 
 =head2 _getFlagStatus
-get new filter status based on original filter status
+get new filter flag value based on original filter defined in VCF
 Inputs
 =over 2
 =item flag_val -Original flag values in filter column
-=item normal -normal sample name
-
 =back
 =cut
-
 
 sub _getFlagStatus {
 	my ($self,$flag_val)=@_;
@@ -237,11 +236,10 @@ sub _getFlagStatus {
 	$NFS,$DNFS;
 }
 =head2 _get_INFO
-parse info filed and 
+parse info field 
 Inputs
 =over 2
 =item original_vcf_info -data from INFO field
-=item key_location -variant position
 =item DNFS -Descriptive flag status [ref header info]
 =back
 =cut
@@ -264,10 +262,16 @@ sub _getINFO {
 	return $old_info_val;
 }	
 
-
-
-
-
+=head2 createExonerateInput
+Create input files for exonerate 
+Inputs
+=over 2
+=item bam -bam object
+=item bam_header -bam header data
+=item depth -max depth at this location
+=item g_pu -hash containing sample specific info
+=back
+=cut
 
 sub createExonerateInput {
 	my($self,$bam,$bam_header,$depth,$g_pu)=@_;
@@ -279,18 +283,16 @@ sub createExonerateInput {
 	open (my $ref_n_alt_FH,'>'.$self->{'_outDir'}.'/temp.ref')|| $log->logcroak("unable to open file $!");;
 	print $ref_n_alt_FH ">alt\n$alt_seq\n>ref\n$ref_seq\n";
 	close($ref_n_alt_FH);
-	
 	return($g_pu);
 }
 
-=head2 getRange
-get left and right span from  indel position
+=head2 _getRange
+get left and right span from indel position
 Inputs
 =over 2
-=item bam_header_data - sample specific information on read length, chr length and lib size 
-=item sample -sample name
-=item g_pu - has containing sample specific info
-=item tabix_hdr - tabix object created from UCSC high depth region bed file
+=item bam_header -sample specific information on read length, chr length and lib size 
+=item g_pu -hash containing sample specific info
+=item max_depth -max depth at this location
 =back
 =cut
 
@@ -338,8 +340,8 @@ sub _getRange {
 	return $g_pu;
 }
 
-=head2 
-checks overlap with high depth regions
+=head2 _check_hdr_overlap
+checks overlap with high depth regions 
 Inputs
 =over 2
 =item chr -chromosome number
@@ -374,7 +376,7 @@ sub _check_hdr_overlap {
 get reference dna 
 Inputs
 =over 2
-=item sam_object - Bio::DB sam object
+=item bam_object - Bio::DB sam object
 =item chr - chromosome number
 =item start - start position
 =item end - end position
@@ -393,7 +395,7 @@ get alternative reference seq
 Inputs
 =over 2
 =item bam_objects - Bio::DB sam object
-=item g_pu - has containing sample specific info
+=item g_pu - hash containing sample specific info
 =back
 =cut
 sub _get_alt_seq {
@@ -434,9 +436,9 @@ sub _get_alt_seq {
 get updated 5p positions
 Inputs
 =over 2
-=item g_pu -- stores relative positions of variant region  
-=item alt_file —alt seq
-=item ref_file -ref seq
+=item ref_seq -reference sequence
+=item reconstructed_alt_seq —alternate sequence
+=item g_pu -stores relative positions of variant region 
 =back
 =cut
 
@@ -539,6 +541,15 @@ sub getIndelResults {
 	return $g_pu;
 }
 
+=head2 _fetch_features
+get reads in an given location using Bio:Db:Sam fetch method
+Inputs
+=over 2
+=item sam_object - Bio::DB sam object
+=item g_pu - hash containing sample specific info
+=item Reads_FH - file handler to store reads for a given location
+=back
+=cut
 
 
 sub _fetch_features {
@@ -659,7 +670,7 @@ sub _fetch_mate_seq {
 	}
 }
 
-=head2 _fetch_mate_unmapped_reads
+=head2 _fetch_unmapped_reads
 fetch reads whose mate is unmapped
 Inputs
 =over 2
@@ -721,9 +732,9 @@ my $read_counter=0;
 parse exonerate output 
 Inputs
 =over 2
-=item ref_seq —reference sequence and alt sequences in fasta format
+=item ref_seq_file —reference sequence and alt sequences in fasta format
 =item temp_read_file  —temp read file in fasta format
-=item g_pu -- stores relative positions of variant region  
+=item g_pu -stores relative positions of variant region  
 =back
 =cut
 
@@ -877,6 +888,14 @@ return $g_pu;
 }
 
 
+=head2 addNormalCount
+add count for normal sample
+Inputs
+=over 2
+=item g_pu - has containing sample specific info
+=back
+=cut
+
 sub addNormalCount {
 	my($self,$g_pu)=@_;
 	
@@ -892,8 +911,8 @@ sub addNormalCount {
 get pileup output for given location
 Inputs
 =over 2
-=item sam_object - Bio::DB sam object
-=item g_pu - has containing sample specific info
+=item bam_object - Bio::DB sam object
+=item g_pu - hash containing sample specific info
 =back
 =cut
 
@@ -963,11 +982,11 @@ sub getPileup {
 
 
 
-=head2 _format_pileup_line
+=head2 formatResults
 format pileup/ exonerate results as per VCF specifications
 =over 2
 =item original_flag -orignal flag values
-=item g_pu - hash containing results and sample specific info for give location
+=item g_pu -hash containing results and sample specific info for give location
 =back
 =cut
 

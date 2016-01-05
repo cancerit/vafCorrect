@@ -38,6 +38,12 @@ sub _localInit {
 	
 } 
 
+=head2 getChromosomes
+get chromosome names from genome file
+Inputs
+=over 2
+=back
+=cut
 
 sub getChromosomes {
 	my($self)=shift;
@@ -51,10 +57,16 @@ sub getChromosomes {
 	return $chromosomes;
 }
 
+=head2 getVcfHeaderData
+get header info from vcf file
+Inputs
+=over 2
+=back
+=cut
+
 
 sub getVcfHeaderData {
 my ($self)=@_;
-	#$self->_checkData($self->getTumourBam,$self->getVcfFile);
 	$self->_getData();
 	my $tumour_count=0;
 	my $info_tag_val=undef;
@@ -89,14 +101,18 @@ my ($self)=@_;
 	return ($info_tag_val,$updated_info_tags,$vcf_file_obj);
 }
 
-
+=head2 getProgress
+get analysis progress log
+Inputs
+=over 2
+=back
+=cut
 
 sub getProgress {
 	my($self)=shift;
-	
-	print "\n >>>>>> To view progress log please check  vcfcommons.log file created in current directory >>>>>>>>>\n";
+	print "\n >>>>>> To view overall progress log please check vcfcommons.log file created in the current directory >>>>>>>>>\n";
+	print "\n >>>>>> Samples specific progress.out file is created in the output directory >>>>>>>>>\n";
 	my $progress_fhw=undef;
-	
 	my $file_name=$self->{'_o'}.'/progress.out';
 	if (-e $file_name)
 	{
@@ -112,6 +128,16 @@ sub getProgress {
 	
 	return($progress_fhw,\@progress_data);
 }
+
+
+=head2 _populateBedHeader
+add bed info to vcf header 
+Inputs
+=over 2
+=item info_tag_val -vcf info tag object
+=back
+=cut
+
 
 sub _populateBedHeader {
 	my ($self,$info_tag_val)=@_;
@@ -137,6 +163,15 @@ sub _populateBedHeader {
 
 	return $info_tag_val;
 }
+
+
+=head2 writeFinalFileHeaders
+create sample specific file handlers to write VAF output in tsv and vcf format 
+Inputs
+=over 2
+=item info_tag_val -vcf info tag object
+=back
+=cut
 
 
 sub writeFinalFileHeaders {
@@ -180,7 +215,13 @@ sub writeFinalFileHeaders {
 	return ($outfile_name);
 }
 
-# get variant object 
+=head2 getVarinatObject
+create variant object storing sample specific inforamtion 
+Inputs
+=over 2
+=item info_tag_val -vcf info tag object
+=back
+=cut
 
 sub getVarinatObject {
 	my($self,$info_tag_val)=@_;
@@ -204,6 +245,17 @@ sub getVarinatObject {
 		
  return($variant,$bam_header_data,$bam_objects);
 }
+
+=head2 getMergedLocations
+get merged snp/indel locations for a given individual group
+Inputs
+=over 2
+=item 
+=item chr_location -chromosome or an interval on chromosome
+=item updated_info_tags -vcf info tag object
+=item vcf_file_obj -vcf file object
+=back
+=cut
 
 sub getMergedLocations {
 	my($self,$chr_location,$updated_info_tags,$vcf_file_obj)=@_;
@@ -247,12 +299,12 @@ sub getMergedLocations {
 }
 
 
-sub _checkData {
-	my ($self,$a,$b)=@_;
-	if( ((scalar @$a ) ne (scalar @$b)) && !defined $self->{'_bo'}) {
-		$log->logcroak("Unequal number of elemnts in input array, please provide matched number of elements in input array");
-	}
-}
+=head2 _getData
+check and get user input provided data 
+Inputs
+=over 2
+=back
+=cut
 
 sub _getData {
 	my $self=shift;
@@ -367,7 +419,7 @@ return($info_tag_val,$normal_sample,$updated_info_tags);
 }
 
 
-=head2 _custom_header_lines
+=head2 _getCustomHeader
 stores custom VCF header information as per VCF specifications
 Inputs
 =over 2
@@ -421,7 +473,12 @@ sub _getCustomHeader {
 	return ($vcf_filter,$vcf_info,$vcf_format);
 }
 
-
+=head2 _getProcessLog
+get process log to write in vcf header
+Inputs
+=over 2
+=back
+=cut
 sub _getProcessLog {
 	my ($self)=@_;
 	my $hash=$self->{'options'};
@@ -440,6 +497,14 @@ sub _getProcessLog {
 return ($log_key,$process_log);
 }
 
+=head2 _trim_file_path
+trim path to write in process log
+Inputs
+=over 2
+=item string -full path string
+
+=back
+=cut
 
 sub _trim_file_path{
 	my ($self,$string ) = @_;
@@ -500,6 +565,13 @@ sub	_getReadDepth {
  return $depth;
 } 
 
+=head2 getBedHash
+create has for user defined bed locations
+Inputs
+=over 2
+=back
+=cut
+
 
 sub getBedHash {
 	my($self)=@_;
@@ -522,15 +594,12 @@ sub getBedHash {
 }
 
 
-=head2 _populateBedLocations
-populate additional bed locations for each vcf file
+=head2 filterBedLocations
+Filter bed locations present in vcf file
 Inputs
 =over 2
-=item unique_locations -union of locations as created by merging vcf files  
-=item data_for_all_samples - hash storing data for all samples as key-val pair for OFS, FILTER and INFO fields.
-=item vcf_files -array of sample names in a tumour normal group
-=item info_tag_val - INFO filed data for bed locations
-=item bed_file -Bed file in tab separated format chr start stop alt and ref allele
+=item unique_locations -union of locations created by merging vcf files  
+=item bed_locations -hash of bed locations
 =back
 =cut
 sub filterBedLocations {
@@ -547,6 +616,14 @@ sub filterBedLocations {
 	  return $filtered_bed_locations;
 }
 
+=head2 populateBedLocations
+Populate bed locations for all the samples
+Inputs
+=over 2
+=item filtered_bed_locations -Filtered bed locations present in vcf file  
+=item updated_info_tags -INFO tags for bed locations
+=back
+=cut
 sub populateBedLocations {
 	my ($self,$filtered_bed_locations,$updated_info_tags)=@_;
 	my $temp_tag_val=undef;
@@ -565,17 +642,11 @@ sub populateBedLocations {
 	return ($data_for_all_samples,$filtered_bed_locations);
 }
 
-
-
-=head2 _populate_bed_locations
-populate additional bed locations for each vcf file
+=head2 _setNormal
+set normal sample
 Inputs
 =over 2
-=item unique_locations -union of locations as created by merging vcf files  
-=item data_for_all_samples - hash storing data for all samples as key-val pair for OFS, FILTER and INFO fields.
-=item vcf_files -array of sample names in a tumour normal group
-=item info_tag_val - INFO filed data for bed locations
-=item bed_file -Bed file in tab separated format chr start stop alt and ref allele
+=item vcf_normal -normal sample defined in vcf header
 =back
 =cut
 
@@ -599,14 +670,29 @@ sub _setNormal {
 	
 }
 
-
+=head2 processMergedLocations
+Analyse merged vcf and/or bed locations
+Inputs
+=over 2
+=item data_for_all_samples -sample specific location information
+=item unique_locations -merged unique locations for each individual
+=item variant -varinat varinat object containing location specific variant information
+=item bam_header_data -header info from BAM file
+=item bam_objects -Bio::DB sam object
+=item store_results -store results for given chromosome
+=item chr -chromosome
+=item tags -custom tags
+=item info_tag_value -hash containing info tag value
+=item progress_fhw -file handler to write progress data
+=item progress_data -progress data
+=back
+=cut
 
 sub processMergedLocations {
 	my($self,$data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data)=@_;
 	my $pileup_results=undef;
 	my $count=0;
 	my $total_locations=keys %$unique_locations;
-	#my $chr_results=undef;
 	
 	foreach my $progress_line(@$progress_data) {
 		chomp $progress_line;
@@ -615,12 +701,10 @@ sub processMergedLocations {
 			return;
 		}
 	}
-	
 	open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!");
 	open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!");
 	
   my($merged_vcf)=$self->_getVCFObject($info_tag_val);
-	
 	foreach my $location (sort keys %$unique_locations) {
 		$count++;
 		$variant->setLocation($location);
@@ -668,46 +752,31 @@ sub processMergedLocations {
 				}
 				$pileup_results->{$g_pu->{'sample'}}=$pileup_line;
 			}	
-			
 			# feature to test location change
 			#if(exists $g_pu->{'new_5p'} && $g_pu->{'sample'} eq $self->getNormalName) {
 			#	$log->debug("Updated position : $location: Old[5-3p]:".$g_pu->{'old_5p'}.'-'.$g_pu->{'old_3p'}.'  New[5-3p]:'.$g_pu->{'new_5p'}.'-'.$g_pu->{'new_3p'});
 			#}
 					
   	}# Done with all the samples ...	
-  	
-  	#print Dumper %pileup_results;
   	#get specific annotations from original VCF INFO field....
 		if(!defined $self->{'_ao'} ) {
 			$original_vcf_info->{'ND'} =	$depth;
 			$original_vcf_info->{'NVD'} =	$mutant_depth;
-			# create results object ....# ToDo....
-			#$chr_results->{$count}={original_vcf_info=>$original_vcf_info, NFS=>$NFS,pileup_results=>$pileup_results,g_pu=>$g_pu};
-			
 			$self->_writeOutput($original_vcf_info,$NFS,$pileup_results,$tags,$tmp_WFH_VCF,$tmp_WFH_TSV,$g_pu,$merged_vcf);
 			$depth=0;
 			$mutant_depth=0;
 		 }
-   
    if($count % 100 == 0) {
    	$log->debug("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
    }
    
 	}# Done with all locations for a chromosome...
-	
-	# write temporary result files
-	
-	#foreach my $key (keys %$chr_results){
-  #	$self->_writeOutput($chr_results->{$key}{'original_vcf_info'},$chr_results->{$key}{'NFS'},$chr_results->{$key}{'pileup_results'},$tags,$tmp_VCF_FH,$tmp_WFH_TSV,$chr_results->{$key}{'g_pu'},$merged_vcf);
-	#}
 	$merged_vcf->close();
 	# write success file name
 	close $tmp_WFH_VCF;
 	close $tmp_WFH_TSV;
 	print $progress_fhw "$self->{'_tmp'}/tmp_$chr.vcf\n";
-	
 	return ($store_results);
-	 #print $progress_fh "$outfile_name.vcf\n";
 }
 
 
@@ -715,12 +784,6 @@ sub processMergedLocations {
 create bam object using Bio::DB::Sam
 Inputs
 =over 2
-=item bam_files sample names
-=item input_dir
-used defined input folder
-=item genome
-path of the genome file
-
 =back
 =cut
 
@@ -744,16 +807,15 @@ sub _get_bam_object {
 get_bam_header_data -insert size and chr length
 Inputs
 =over 2
-=item bam_objects - Bio::DB sam object
+=item bam_objects -Bio::DB sam object
+=item bas_files -bas file to get lib size
 =back
 =cut
 
 sub _get_bam_header_data {
 	my ($self,$bam_objects,$bas_files)=@_;
   my ($chr_len,%bam_header_data);
-  
   return if $self->{'_a'} ne 'indel';
-  
   my $lib_size=0;
   foreach my $key (keys %$bam_objects) {	
   	my($mapped_length)=$self->_get_read_length($bam_objects->{$key});
@@ -808,7 +870,7 @@ sub _get_bam_header_data {
 get library size from BAS file
 Inputs
 =over 2
-=item bas file name
+=item bas_file -bas file name
 =back
 =cut
 
@@ -863,8 +925,6 @@ sub _get_read_length {
 write VCF header data
 Inputs
 =over 2
-=item input_bam_files -analysed sample names 
-
 =back
 =cut
 
@@ -931,13 +991,9 @@ sub WriteAugmentedHeader {
 write VCF header data
 Inputs
 =over 2
-=item input_bam_files -analysed sample names 
 =item info_tag_val -VCF INFO tag values
-=item WFH -output file handler
-=item genome -name of the genome file
 =back
 =cut
-
 
 sub _getVCFObject {
 	my($self,$info_tag_val)=@_;
@@ -1027,6 +1083,7 @@ Inputs
 =over 2
 =item header_line -- specific header line to parse
 =item val -- parse specific value from header
+=item prefix -header prefix e.g., SAMPLE, FILTER, FORMAT etc.,
 =back
 =cut
 
@@ -1038,24 +1095,22 @@ sub _get_header_lines {
 			push @$header, '#'.$prefix.'-:'.$key."\t" .$header_data->{$key}{$val}."\n";
 		}	
 	}	
-
 return $header;
-
 }
 
 
-=head2 _write_output
-Write output to file
+=head2 _writeOutput
+Write output to files
 Inputs
 =over 2
-=item location -variant position
-=item input_bam_files -type array :stores sample names
 =item original_vcf_info - original VCF data
 =item NFS - New Filter status
 =item new_pileup_results --pileup/exonerate results for given position
-=item vcf -VCF object
 =item tags -custom tags
-=item WFH -Write file handler
+=item WFH_VCF -Vcf Write file handler 
+=item WFH_TSV -Tsv Write file handler
+=item g_pu -hash containing pielup/exonerate data
+=item vcf -VCF object
 =back
 =cut
 
@@ -1095,7 +1150,6 @@ Inputs
 =over 2
 =item vcf_line vcf --line to be parsed
 =item original_vcf_info --VCF info field
-=item samples --samples considered for this analysis group
 =back
 =cut
 
@@ -1199,14 +1253,13 @@ foreach my $sample(@{$self->{'allSamples'}}) {
 }
 
 
-=head2 _writeResults
+=head2 writeResults
 Write augmented vcf file
 Inputs
 =over 2
-=item input_dir
-user provided input dir
-=item normal_sample -normal sample hash
-=item conn -database connection object
+=item aug_vcf_fh -Augmented vcf file handler
+=item store_results -Hash containing results
+=item aug_vcf_name -Augmented vcf name
 =back
 =cut
 
@@ -1223,13 +1276,13 @@ sub writeResults {
 Write augmented vcf file
 Inputs
 =over 2
-=item input_dir
-user provided input dir
-=item normal_sample -normal sample hash
-=item conn -database connection object
+=item vcf_file -vcf file name
+=item aug_vcf_fh -Hash of augmented vcf file handlers
+=item sample -sample name
+=item store_results -Hash containing results
+=item aug_vcf_name -Augmented vcf file name hash
 =back
 =cut
-
 
 sub _writeFinalVcf {
 	  my ($self,$vcf_file,$aug_vcf_fh,$sample,$store_results,$aug_vcf_name)=@_;
@@ -1270,6 +1323,15 @@ sub _writeFinalVcf {
 		return;
 }
 
+=head2 compressVcf
+Write bgzip compressed vcf file
+Inputs
+=over 2
+=item annot_vcf -vcf file to compress
+=back
+=cut
+
+
 sub compressVcf {
   my ($self,$annot_vcf)=@_;
   my $annot_gz = $annot_vcf.'.gz';
@@ -1288,13 +1350,38 @@ sub compressVcf {
   return ($annot_gz, $annot_tabix);
 }
 
-
+=head2 _runExternal
+Write augmented vcf file
+Inputs
+=over 2
+=item command -actual command to run
+=item ext_prog -external programme to run the command
+=item no_croak -action after error
+=item quiet -warning behaviour
+=item no_data 
+=tem FH -file handler
+=item binary -flag for binary output type
+=back
+=cut
 sub _runExternal {
         my ($self,$command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary) = @_;
         croak "Filehandle must be defined for binary output." if($binary && !$FH);
         return $self->_run_external_core(q{-|}, $command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary);
 }
-
+=head2 _run_external_core
+runs external command
+Inputs
+=over 2
+=item open_type -process type to open
+=item command -actual command to run
+=item ext_prog -external programme to run the command
+=item no_croak -action after error
+=item quiet -warning behaviour
+=item no_data 
+=tem FH -file handler
+=item binary -flag for binary output type
+=back
+=cut
 sub _run_external_core {
   my ($self,$open_type, $command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary) = @_;
   # ensure that commands containing pipes give appropriate errors
@@ -1369,8 +1456,24 @@ sub _run_external_core {
         }
 }
 
+=head2 catFiles
+cat files
+Inputs
+=over 2
+=item path -file path
+=item ext -file extension
+=item outfile -outfile name
+=back
+=cut
+sub catFiles {
+	my($self,$path,$ext,$outfile)=@_;
+	my $command='cat '.$path.'/*.'.$ext.' >>'."$outfile.$ext";
+  $self->_runExternal($command, 'cat', undef, 1, 1); # croakable, quiet, no data
+}
 
 
+
+# generic function
 sub _print_hash {
 	my ($self,$hash)=@_;
 	foreach my $key (sort keys %$hash) {
@@ -1379,12 +1482,6 @@ sub _print_hash {
 			print "$key:==>$hash->{$key}\n";	
 		}
 	}
-}
-
-sub catFiles {
-	my($self,$path,$ext,$outfile)=@_;
-	my $command='cat '.$path.'/*.'.$ext.' >>'."$outfile.$ext";
-  $self->_runExternal($command, 'cat', undef, 1, 1); # croakable, quiet, no data
 }
 
 
