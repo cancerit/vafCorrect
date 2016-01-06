@@ -40,9 +40,11 @@ use File::Path qw(mkpath);
 use FindBin qw($Bin);
 use Carp;
 use Const::Fast qw(const);
+use List::Util qw(first);
 use Capture::Tiny qw(:all);
 use Try::Tiny qw(try catch finally);
 use warnings FATAL => 'all';
+use Data::Dumper;
 
 use Log::Log4perl;
 Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
@@ -60,8 +62,16 @@ use base qw(Sanger::CGP::Vaf::Data::AbstractVcf);
 
 sub _localInit {
 	my $self=shift;
+	$self->_isValid();
 } 
 
+
+sub _isValid {
+	my $self=shift;
+	print "validating options\n";
+	$log->logcroak("pid must be specified") unless(defined $self->{'_pid'});
+	return 1;
+}
 
 ##### modules from create_config ######
 
@@ -195,21 +205,21 @@ Inputs
 sub buildInputData {
   my ($self,$conn) = @_;
   my $project_id=$self->{'_pid'};
-		my $all_data = $conn->executeArrHashRef('nst::NL::getProjectBamAndVcf',$project_id);
-		my @retained_data;
-		my $total_records = 0;
-		for my $curr(@{$all_data}) {
-			$total_records++;
-			next if( (scalar @{$self->{'_u'}}) > 0 && (! first { $curr->{'SAMPLE_SYNONYM'} eq $_ } @{$self->{'_u'}}) && ($curr->{'TREAT_AS_TUMOUR'} eq 'Y') );
-			next if(defined $self->{'_pid'} && ! first { $curr->{'ID_INT_PROJECT'} == $_ } $self->{'_pid'});
-			if(@retained_data > 0) {
-				croak "There are multiple species in your requested analysis.\n" if($curr->{'SPECIES'} ne $retained_data[-1]->{'SPECIES'});
-				croak "There are multiple builds in your requested analysis.\n" if($curr->{'BUILD'} ne $retained_data[-1]->{'BUILD'});
-			}
-			push @retained_data, $curr;
+	my $all_data = $conn->executeArrHashRef('nst::NL::getProjectBamAndVcf',$project_id);
+	my @retained_data;
+	my $total_records = 0;
+	for my $curr(@{$all_data}) {
+		$total_records++;
+		next if( (scalar @{$self->{'_u'}}) > 0 && (! first { $curr->{'SAMPLE_SYNONYM'} eq $_ } @{$self->{'_u'}}) && ($curr->{'TREAT_AS_TUMOUR'} eq 'Y') );
+		next if(defined $self->{'_pid'} && !first { $curr->{'ID_INT_PROJECT'} == $_ } $self->{'_pid'});
+		if(@retained_data > 0) {
+			croak "There are multiple species in your requested analysis.\n" if($curr->{'SPECIES'} ne $retained_data[-1]->{'SPECIES'});
+			croak "There are multiple builds in your requested analysis.\n" if($curr->{'BUILD'} ne $retained_data[-1]->{'BUILD'});
 		}
-		print "Total samples  for this project: ".scalar @retained_data."\n";
-	  return \@retained_data;
+		push @retained_data, $curr;
+	}
+	print "Total samples  for this project: ".scalar @retained_data."\n";
+	return \@retained_data;
 }
 =head2 generateRawOutput
 generate raw output using SQL results hash

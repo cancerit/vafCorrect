@@ -41,6 +41,7 @@ sub new {
 	my $self = {};
 	bless($self, $class);
 	$self->_init(@_);
+	$self->_isValidAbs();
 	$self->_localInit(@_);
 	return $self;
 }
@@ -58,13 +59,18 @@ sub _init {
 	$self->{'options'}=$options;
 	foreach my $k (keys %$options) {
 		if(defined $options->{$k}) { # allows 0 and " "  string
-			#next if(ref($options->{$k}) eq 'ARRAY' && scalar@{$options->{$k}} < 1);
 			$self->{"_$k"}=$options->{$k};		
 		}
 	}	
 }
 
 sub _localInit: Abstract;
+
+sub _isValidAbs {
+ my $self=shift;
+ $log->logcroak("output folder must be specified") unless(defined $self->{'_o'});
+ return 1;
+}
 
 sub getNormalBam {
  	my($self)=shift;

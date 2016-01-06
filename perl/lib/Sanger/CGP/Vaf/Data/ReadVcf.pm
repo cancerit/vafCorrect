@@ -55,8 +55,19 @@ use base qw(Sanger::CGP::Vaf::Data::AbstractVcf);
 
 sub _localInit {
 	my $self=shift;
-	
+	$self->_isValid();
 } 
+
+sub _isValid {
+	my $self=shift;
+	$log->logcroak("Input folder must be specified") unless(defined $self->{_d} && -e $self->{_g});
+	$log->logcroak("varinat type must be specified") unless(defined $self->{_a});
+	$log->logcroak("Tumour sample name(s) must be specified") unless(defined $self->{_tn});
+	$log->logcroak("Normal sample name must be specified") unless(defined $self->{_nn});
+	$log->logcroak("vcf file extension with dot(.) must be specified") unless(defined $self->{_e});
+	$log->logcroak("Genome must be specified") unless(defined $self->{_g} && -e $self->{_g});
+	return 1;
+}
 
 =head2 getChromosomes
 get chromosome names from genome file

@@ -1,4 +1,4 @@
-#!/software/perl-5.16.3/bin/perl
+#!/software/perl-5.16.3/bin/perl 
 
 ##########LICENCE############################################################
 # Copyright (c) 2016 Genome Research Ltd.
@@ -24,12 +24,13 @@
 BEGIN {
   use Cwd qw(abs_path);
   use File::Basename;
+  $ENV{POSIXLY_CORRECT}=1;
   unshift (@INC,dirname(abs_path($0)).'/../lib');
   $SIG{__WARN__} = sub {warn $_[0] unless(( $_[0] =~ m/^Subroutine Tabix.* redefined/) || ($_[0] =~ m/^Use of uninitialized value \$buf/)|| ($_[0] =~ m/symlink exists/) || ($_[0] =~ m/gzip: stdout: Broken pipe/) )};
 };
 
 use strict;
-
+use warnings FATAL => qw(all);
 $main::SQL_LIB_LOC = '.'; # this suppresses warnings about uninitialised values
 use FindBin qw($Bin);
 
@@ -52,8 +53,6 @@ use warnings FATAL => 'all';
 use autodie qw(:all);
 use Const::Fast qw(const);
 use Data::Dumper;
-
-
 
 try {
   my ($options) = option_builder();
@@ -93,10 +92,6 @@ try {
 }
 catch {
  croak "\n\n".$_."\n\n" if($_);
-}
-
-finally {
-#print "Script completed ----\n";
 };
 
 sub option_builder {

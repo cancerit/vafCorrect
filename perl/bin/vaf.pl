@@ -24,6 +24,7 @@
 BEGIN {
   use Cwd qw(abs_path);
   use File::Basename;
+  $ENV{POSIXLY_CORRECT}=1;
   unshift (@INC,dirname(abs_path($0)).'/../lib');
   $SIG{__WARN__} = sub {warn $_[0] unless(( $_[0] =~ m/^Subroutine Tabix.* redefined/) || ($_[0] =~ m/^Use of uninitialized value \$buf/) || ($_[0] =~ m/gzip: stdout: Broken pipe/))};
 };
@@ -158,7 +159,7 @@ sub option_builder {
 	pod2usage(q{'-d' input directory path must be defined}) unless (defined $options{'d'});
 	pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
 	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
-	pod2usage(q{'-nn' normal sample name must be provided}) unless (defined $options{'nn'});
+	pod2usage(q{'-nn' normal sample name/s must be provided}) unless (defined $options{'nn'});
   pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'} || defined $options{'bo'});
 	pod2usage(q{'-b' bed file must be specified }) unless (!defined $options{'e'} || !defined $options{'bo'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});

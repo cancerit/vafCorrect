@@ -41,6 +41,7 @@ sub new {
 	bless($self, $class);
 	$self->_init(@_);
 	$self->_localInit(@_);
+	$self->_isValidAbs(@_);
 	return $self;
 }
 
@@ -57,11 +58,17 @@ sub _init {
 	my $self = shift;
 	my (%vars) = @_;
 	foreach my $key (keys %vars) {
+	# explicitly 
 		$self->{"_$key"}=$vars{$key};
 	}
 }
 
 sub _localInit: Abstract;
+
+sub _isValidAbs {
+	my $self = shift;
+}
+
 
 sub getLocation {
 	return shift->{'_location'};
