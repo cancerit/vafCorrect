@@ -67,6 +67,7 @@ my $options={
 subtest 'vcf_object' => sub {
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	
+	
 };
 
 
