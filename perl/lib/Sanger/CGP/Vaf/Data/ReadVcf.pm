@@ -69,24 +69,6 @@ sub _isValid {
 	return 1;
 }
 
-=head2 getChromosomes
-get chromosome names from genome file
-Inputs
-=over 2
-=back
-=cut
-
-sub getChromosomes {
-	my($self)=shift;
-	my $chromosomes;
-	open my $fai_fh , '<', $self->{'_g'}.'.fai';
-	while (<$fai_fh>) {
-		next if ($_=~/^#/);
-		my($chr,$pos)=(split "\t", $_)[0,1];
-		push(@$chromosomes,$chr);
-	}
-	return $chromosomes;
-}
 
 =head2 getVcfHeaderData
 get header info from vcf file
@@ -129,7 +111,7 @@ my ($self)=@_;
 	if(defined $self->{'_b'} ) { 
 		$info_tag_val=$self->_populateBedHeader($info_tag_val);
 	}
-	return ($info_tag_val,$updated_info_tags,$vcf_file_obj);
+		return ($info_tag_val,$updated_info_tags,$vcf_file_obj);
 }
 
 =head2 getProgress
@@ -258,17 +240,17 @@ sub getVarinatObject {
 	my($self,$info_tag_val)=@_;
 	my($bam_objects,$bas_files)=$self->_get_bam_object();
 	my($bam_header_data,$lib_size)=$self->_get_bam_header_data($bam_objects,$bas_files);
-	
+	if(!defined $lib_size) {$lib_size='NA';}
 	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
 		'location' 		=> undef,
 		'varLine' 		=> undef,
 		'varType' 		=> $self->{'_a'},
-		'libSize' 		=> $lib_size,
+		'libSize' 		=> defined $lib_size?$lib_size:undef,
 		'samples' 		=> $self->{'allSamples'},
 		'tumourName'	=> $self->getTumourName,
 		'normalName'	=> $self->getNormalName,
 		'vcfStatus' 	=> $self->{'vcf'},
-		'noVcf'    		=> $self->{'noVcf'},
+		'noVcf'    		=> defined $self->{'noVcf'}?$self->{'noVcf'}:undef,
 		'outDir'			=> $self->getOutputDir,
 		'passedOnly'  => $self->{'_r'},
 		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$self->{'_c'}.'.ONHG19_sorted.bed.gz')
@@ -276,6 +258,27 @@ sub getVarinatObject {
 		
  return($variant,$bam_header_data,$bam_objects);
 }
+
+
+=head2 getChromosomes
+get chromosome names from genome file
+Inputs
+=over 2
+=back
+=cut
+
+sub getChromosomes {
+	my($self)=shift;
+	my $chromosomes;
+	open my $fai_fh , '<', $self->{'_g'}.'.fai';
+	while (<$fai_fh>) {
+		next if ($_=~/^#/);
+		my($chr,$pos)=(split "\t", $_)[0,1];
+		push(@$chromosomes,$chr);
+	}
+	return $chromosomes;
+}
+
 
 =head2 getMergedLocations
 get merged snp/indel locations for a given individual group
@@ -328,7 +331,6 @@ sub getMergedLocations {
 	#}		
 	return ($data_for_all_samples,$unique_locations);
 }
-
 
 =head2 _getData
 check and get user input provided data 
@@ -845,8 +847,8 @@ Inputs
 
 sub _get_bam_header_data {
 	my ($self,$bam_objects,$bas_files)=@_;
-  my ($chr_len,%bam_header_data);
-  return if $self->{'_a'} ne 'indel';
+  return if $self->{'_a'} ne 'indel'; 
+  my ($chr_len,%bam_header_data); 
   my $lib_size=0;
   foreach my $key (keys %$bam_objects) {	
   	my($mapped_length)=$self->_get_read_length($bam_objects->{$key});

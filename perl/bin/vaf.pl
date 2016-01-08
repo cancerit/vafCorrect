@@ -64,14 +64,13 @@ try {
     	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
   }
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
-	
-	$vcf_obj->getAllSampleNames();
-		
-	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData();
+	# this is called only once to add allSample names to vcf object
+	$vcf_obj->getAllSampleNames;
+	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
 	my($variant,$bam_header_data,$bam_objects)=$vcf_obj->getVarinatObject($info_tag_val);
-	my($bed_locations)=$vcf_obj->getBedHash();
-	my ($chromosomes)=$vcf_obj->getChromosomes();
-	my($progress_fhw,$progress_data)=$vcf_obj->getProgress();
+	my($bed_locations)=$vcf_obj->getBedHash;
+	my ($chromosomes)=$vcf_obj->getChromosomes;
+	my($progress_fhw,$progress_data)=$vcf_obj->getProgress;
 	
 	foreach my $chr(@$chromosomes) {
 		my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);

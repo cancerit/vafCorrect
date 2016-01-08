@@ -74,7 +74,6 @@ sub _isValidAbs {
 
 sub getNormalBam {
  	my($self)=shift;
-	$self->{'_d'};
 	return $self->{'_d'}.'/'.$self->getNormalName.'.bam';
 }
 
@@ -99,12 +98,11 @@ sub getNormalName {
 	return shift->{'_nn'};
 }
 
-
 sub getAllSampleNames{
  my($self)=shift;
- my $allSampleNames=$self->getTumourName;
- unshift(@$allSampleNames,$self->getNormalName);
- $self->{'allSamples'}=$allSampleNames;
+ my @allSampleNames=@{$self->getTumourName};
+ unshift(@allSampleNames,$self->getNormalName);
+ $self->{'allSamples'}=\@allSampleNames;
 }
 
 =head2 setNormal
@@ -119,11 +117,11 @@ sub setNormal {
 	my($self,$normal)=@_;
 	$self->{'_nn'}=$normal;
 	my ($file_name,$dir_name,$suffix) = fileparse($self->getNormalBam,qr/\.[^.]*/);
-	my $tmp_bam=$dir_name.$normal.$suffix;
-	if(! -e $tmp_bam ) {
-		$log->logcroak("Unable to find normal bam: $tmp_bam");
+	my $normal_bam=$dir_name.$normal.$suffix;
+	if(! -e $normal_bam ) {
+		$log->logcroak("Unable to find normal bam: $normal_bam");
 	}
-	$self->{'_nb'}=$dir_name.$normal.$suffix;
+	$self->{'_nb'}=$normal_bam;
 }
 
 sub getGenome {
