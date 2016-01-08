@@ -228,37 +228,6 @@ sub writeFinalFileHeaders {
 	return ($outfile_name);
 }
 
-=head2 getVarinatObject
-create variant object storing sample specific inforamtion 
-Inputs
-=over 2
-=item info_tag_val -vcf info tag object
-=back
-=cut
-
-sub getVarinatObject {
-	my($self,$info_tag_val)=@_;
-	my($bam_objects,$bas_files)=$self->_get_bam_object();
-	my($bam_header_data,$lib_size)=$self->_get_bam_header_data($bam_objects,$bas_files);
-	if(!defined $lib_size) {$lib_size='NA';}
-	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
-		'location' 		=> undef,
-		'varLine' 		=> undef,
-		'varType' 		=> $self->{'_a'},
-		'libSize' 		=> defined $lib_size?$lib_size:undef,
-		'samples' 		=> $self->{'allSamples'},
-		'tumourName'	=> $self->getTumourName,
-		'normalName'	=> $self->getNormalName,
-		'vcfStatus' 	=> $self->{'vcf'},
-		'noVcf'    		=> defined $self->{'noVcf'}?$self->{'noVcf'}:undef,
-		'outDir'			=> $self->getOutputDir,
-		'passedOnly'  => $self->{'_r'},
-		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$self->{'_c'}.'.ONHG19_sorted.bed.gz')
-		);
-		
- return($variant,$bam_header_data,$bam_objects);
-}
-
 
 =head2 getChromosomes
 get chromosome names from genome file

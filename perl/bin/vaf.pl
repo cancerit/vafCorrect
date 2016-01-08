@@ -67,7 +67,24 @@ try {
 	# this is called only once to add allSample names to vcf object
 	$vcf_obj->getAllSampleNames;
 	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
-	my($variant,$bam_header_data,$bam_objects)=$vcf_obj->getVarinatObject($info_tag_val);
+	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
+	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
+	# create variant object
+	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
+		'location' 		=> undef,
+		'varLine' 		=> undef,
+		'varType' 		=> $vcf_obj->{'_a'},
+		'libSize' 		=> defined $lib_size?$lib_size:undef,
+		'samples' 		=> $vcf_obj->{'allSamples'},
+		'tumourName'	=> $vcf_obj->getTumourName,
+		'normalName'	=> $vcf_obj->getNormalName,
+		'vcfStatus' 	=> $vcf_obj->{'vcf'},
+		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
+		'outDir'			=> $vcf_obj->getOutputDir,
+		'passedOnly'  => $vcf_obj->{'_r'},
+		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
+		);
+	
 	my($bed_locations)=$vcf_obj->getBedHash;
 	my ($chromosomes)=$vcf_obj->getChromosomes;
 	my($progress_fhw,$progress_data)=$vcf_obj->getProgress;
