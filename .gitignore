@@ -3,4 +3,5 @@ test.bed
 setup.sh
 test*
 *.out
+test*
 out*
