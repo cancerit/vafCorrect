@@ -653,6 +653,7 @@ sub run_and_consolidate_mpileup {
 		print $progress_fh "WARNING!! No normal sample BAM found in the input directory skipping analysis for this group @$input_bam_files\n";
 		return;
 	}
+	
 	my @tags=qw(FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR WTR DEP MDR WDR OFS);
 	my($bam_objects,$bas_files)=_get_bam_object($input_bam_files,$options);
 	
@@ -663,6 +664,7 @@ sub run_and_consolidate_mpileup {
 		 	($aug_vcf_fh,$aug_vcf_name)=_write_augmented_header($augment_vcf,$options,$input_bam_files,$normal);
 		}
 	}
+	
 	my($vcf,$WFH_VCF,$WFH_TSV)=_write_vcf_header($input_bam_files,$info_tag_val,$normal,$vcf_file_status,$options,\@tags,$normal_sample,$outfile_name);
 	my $count=0;
 	my $total_locations=keys %$unique_locations;
@@ -679,7 +681,7 @@ sub run_and_consolidate_mpileup {
 		$sample_counter=0;
 			if ($options->{'r'} && $unique_locations->{$location}!~/PASS/ && $unique_locations->{$location}!~/BEDFILE/) {		 
 						 if($options->{'ao'}) {
-					      #write_no_pass_lines_to_vcf
+					      #write_non_pass_lines_to_vcf
 					     foreach my $sample (@$input_bam_files) {
 					      $sample_counter++;
 					      if($data_for_all_samples->{$sample}{$location}) {
@@ -1256,7 +1258,7 @@ sub _write_vcf_header {
 	print $tmp_vcf $vcf->format_header();
 	close($tmp_vcf);
 
-	my($col_names,$header,$format_col)=_get_tab_sep_header($tmp_file);
+	my($col_names,$header)=_get_tab_sep_header($tmp_file);
 	my $temp_cols=$col_names->{'cols'};
 	
 	foreach my $sample(@$input_bam_files){
@@ -1501,11 +1503,13 @@ sub _get_range {
   my ($left_pos,$right_pos,$chr_len,$spanned_region);
   my $lib_size=$bam_header->{$sample}{'lib_size'};
   my ($hdr_flag)=check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$tabix_hdr);
+  #my $hdr_flag=0;
   my $spanning_seq_denom=2;
   #if location is in high depth region and has depth >1000 then hdr_flag is true
   if($hdr_flag && $max_depth > 1000){$spanning_seq_denom=4;}
   else {$hdr_flag=0;}
   $chr_len=$bam_header->{$sample}{$g_pu->{'chr'}};
+  
   if(defined $lib_size && defined $chr_len) {
   	$spanned_region = round(($lib_size *  $INSERT_SIZE_FACTOR )/$spanning_seq_denom);
   	#$spanned_region=round($spanned_region);
@@ -1523,9 +1527,12 @@ sub _get_range {
 	$g_pu->{'pos_5p'}=$left_pos;
 	$g_pu->{'pos_3p'}=$right_pos;
 	$g_pu->{'hdr'}=$hdr_flag;
-	# to get exact location of variant base and avoid borderline matching of a  
+	
+	
+	# to get exact location of variant base and avoid borderline matching of a variant
 	# added padding to reference posotion 
 	$g_pu->{'ref_pos_5p'}=($g_pu->{'start'} - $g_pu->{'pos_5p'}) + 1 ;
+
 	if($g_pu->{'ins_flag'} && !$g_pu->{'del_flag'}){
 		$g_pu->{'ref_pos_3p'}=$g_pu->{'ref_pos_5p'} + ( $g_pu->{'end'} - $g_pu->{'start'} );
 	}
@@ -1533,6 +1540,8 @@ sub _get_range {
 		$g_pu->{'ref_pos_3p'}=$g_pu->{'ref_pos_5p'} + ( $g_pu->{'end'} - $g_pu->{'start'} ) - 1;
 	}
 	$g_pu->{'alt_pos_3p'}=$g_pu->{'ref_pos_5p'} + length( $g_pu->{'alt_seq'}) -1;
+
+	#print Dumper $g_pu;
 
 	$g_pu;
 }
@@ -2588,9 +2597,9 @@ sub write_config {
 		}
 	}
 	
-	if($single_sample_count < 1) {
-		$log->warn("Single tumour sample present nothing to merge for: $single_sample_count sample pairs");
-	}
+	#if($single_sample_count < 1) {
+	#	$log->warn("Single tumour sample present nothing to merge for: $single_sample_count sample pairs");
+	#}
 	if (!defined $data_in_config) {
   	$log->warn("No data to merge for this project exit.....");
   	exit(0);

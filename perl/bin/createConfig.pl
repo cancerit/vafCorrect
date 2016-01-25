@@ -10,6 +10,7 @@ use strict;
 $main::SQL_LIB_LOC = '.'; # this suppresses warnings about uninitialised values
 use FindBin qw($Bin);
 
+#use lib("/software/CGP/projects/vcfCommons/perl/lib");
 use Sanger::CGP::Config::Config qw(vcfCommons);
 use Sanger::CGP::VcfCompare::VcfMergeAndPileup;
 
@@ -37,7 +38,8 @@ try {
   my ($options) = option_builder();
   my $project=$options->{'p'};
   my $base = Sanger::CGP::WholeGenome::Base->new;
-  $base->db_type('live');
+  $base->db_type($options->{'db'});
+	print "Using database $options->{'db'}\n";
   my $conn = $base->connection;
   Sanger::CGP::VcfCompare::VcfMergeAndPileup::load_sql_config($conn);
   my $to_process = Sanger::CGP::VcfCompare::VcfMergeAndPileup::build_input_data($options, $conn);
@@ -89,6 +91,7 @@ sub option_builder {
 					'b|userBed=s' => \$opts{'b'},
 					'o|outdir=s'  => \$opts{'o'},
 					'n|normal=s'  => \$opts{'n'},
+					'db|databse_type=s'  => \$opts{'db'},
 					'u|sample_names=s'  => \$opts{'u'},
 					'v|version'  => \$opts{'v'},
 	);
@@ -103,7 +106,7 @@ sub option_builder {
 	
 	pod2usage(q{'-p' project number must be defined.}) unless(defined $opts{'p'});
 	pod2usage(q{'-o' output folder must be specified.}) unless(defined $opts{'o'}) ;
-	
+	$opts{'db'}='live' unless(defined $opts{'db'});
 	unless(-e $opts{'o'}){
 	  mkpath($opts{'o'});
 	}
@@ -136,6 +139,7 @@ createConfig.pl [-h] -p -o  [ -b -n - u -v ]
     --normal        (-n)  BOOLEAN   Only interrogate matched tumour normal pairs [Y/N default = N (all)].
                     Requires '-p'
     --sample_names  (-u)  comma separated list of samples within same project [ e.g., PD12345a,PD12345c]
+    --database_type (-db) database type [live] e.g., test or live
     --version       (-v) displays version number of this software
 
   Examples:
