@@ -20,7 +20,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##############################################################
-
 Calculates the Variant Allele Fraction for variants locations in VCF and/or BED file
 This script performs comparative analysis of variant sites in multiple tumour/normal samples in an individual.
 Also facilitates the merging of varinats sites across the samples in a group defined by set of related samples in an individual and provides unbiased pileup[MNV] and exonerate[Indel] output for each variant site.

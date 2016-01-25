@@ -119,9 +119,11 @@ sub storeResults {
 	my $results = {'tMTR'=> '.', 
 							   'tWTR'=> '.',
 							 	 'tAMB'=> '.',
+							 	 'tVAF'=> '.',
 							 	 'nMTR'=> '.',
 							 	 'nWTR'=> '.',
-							 	 'nAMB'=> '.',								  
+							 	 'nAMB'=> '.',
+							 	 'nVAF'=> '.',								  
 		};	
 	if (!exists $g_pu->{'alt_p'}) {
 		$store_results->{$sample}{$self->getLocation}=$results;
@@ -130,7 +132,7 @@ sub storeResults {
 	
   my $MTR = $g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 	my $WTR = $g_pu->{'ref_p'} + $g_pu->{'ref_n'};
-
+ 
 	if ($self->getVarLine=~/BEDFILE/) {
 	    my $bed_line=$g_pu->{'chr'}."\t".
 	    						 $g_pu->{'start'}."\t".
@@ -139,9 +141,11 @@ sub storeResults {
 									 $g_pu->{'normal_MTR'}."\t".
 									 $g_pu->{'normal_WTR'}."\t".
 									 $g_pu->{'normal_AMB'}."\t".
+									 $g_pu->{'normal_VAF'}."\t".
 									 $MTR."\t".
 									 $WTR."\t".
-									 $g_pu->{'amb'}."\n";
+									 $g_pu->{'amb'}."\t".
+									 $g_pu->{'VAF'}."\n";
 									 
 			$store_results->{"$sample\_bed"}{$self->getLocation}=$bed_line;		
 			return $store_results;
@@ -149,11 +153,12 @@ sub storeResults {
 	$results->{'tMTR'}=$MTR;
 	$results->{'tWTR'}=$WTR;
 	$results->{'tAMB'}=$g_pu->{'amb'};
+	$results->{'tVAF'}=$g_pu->{'VAF'};
 	
 	$results->{'nMTR'}=$g_pu->{'normal_MTR'};
 	$results->{'nWTR'}=$g_pu->{'normal_WTR'};
 	$results->{'nAMB'}=$g_pu->{'normal_AMB'};
-	
+	$results->{'nVAF'}=$g_pu->{'normal_VAF'};
   $store_results->{$sample}{$self->getLocation}=$results;
   
   return $store_results; 
@@ -523,19 +528,20 @@ sub populateHash {
 	 
 	$g_pu->{'amb'} = 0;  
 	$g_pu->{'sample'} = $sample; 
-	if(exists $bam_header_data->{$sample}{'read_length'}){
+	
+	return $g_pu if($self->{'_varType'} eq 'snp');
+	#if(exists $bam_header_data->{$sample}{'read_length'}){
 		$g_pu->{'read_length'}=$bam_header_data->{$sample}{'read_length'};
-		
-	}
-	else {
-		$g_pu->{'read_length'}=100;
-	}
-	if(exists $bam_header_data->{$sample}{'lib_size'}){
+	#}
+	#else {
+	#	$g_pu->{'read_length'}=$Sanger::CGP::Vaf::VafConstants::READ_LENGTH;
+	#}
+	#if(exists $bam_header_data->{$sample}{'lib_size'}){
 		$g_pu->{'lib_size'}=$bam_header_data->{$sample}{'lib_size'};
-	}
-	else {
-		$g_pu->{'lib_size'}=100;
-	} 
+	#}
+	#else {
+	#	$g_pu->{'lib_size'}=$Sanger::CGP::Vaf::VafConstants::READ_LENGTH*2;
+	#} 
 	# exonerate score is 5 per base , we allow max 4 mismatches * 9 = 36 score units, 4 bases * 5 for readlength = 20 score units to be safe side added another 14 score units
 	$g_pu->{'exonerate_score_cutoff'} = (($g_pu->{'read_length'}) * $Sanger::CGP::Vaf::VafConstants::EXONERATE_SCORE_MULTIPLIER) - $Sanger::CGP::Vaf::VafConstants::EXONERATE_SCORE_FACTOR;	                 
   $g_pu;
@@ -918,14 +924,15 @@ Inputs
 
 sub addNormalCount {
 	my($self,$g_pu)=@_;
-	
+	my $VAF;
 						$g_pu->{'normal_MTR'}=$g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 						$g_pu->{'normal_WTR'}=$g_pu->{'ref_p'} + $g_pu->{'ref_n'};
+						eval{$VAF=$g_pu->{'normal_MTR'}/($g_pu->{'normal_WTR'}+$g_pu->{'normal_MTR'}); };
+						$g_pu->{'normal_VAF'}=defined $VAF?sprintf("%.2f",$VAF):'0.0';
 						$g_pu->{'normal_AMB'}=$g_pu->{'amb'};
 						
 	return $g_pu;
 }
-
 
 =head2 _get_pileup
 get pileup output for given location
@@ -946,11 +953,10 @@ sub getPileup {
 									foreach my $p (@{$pu}) {
 										next if($p->is_del || $p->is_refskip);
 										my $a = $p->alignment;
-										
 										my $flags = $a->flag;
-										# & bitwise comparison
-										## Ignore reads if they match the following flags:
-										#Brass/ReadSelection.pm
+										# \& bitwise comparison
+										##Ignore reads if they match the following flags:
+										#Brass-ReadSelection.pm
 										next if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
 										next if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
 										next if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
@@ -965,7 +971,7 @@ sub getPileup {
 										#my $refbase = $bam_object->segment($seqid,$pos,$pos)->dna;
 										my $qbase  = substr($a->qseq, $p->qpos, 1);
 										my $strand = $a->strand;
-										next if $qbase =~ /[nN]/; #in case of insertion ....
+										next if $qbase =~/[nN]/; #in case of insertion ....
 										#$g_pu->{'depth'}++; # commented as for paired end it is calculated twice
 										my $key;
 										if(($refbase eq $qbase) && $strand > 0) {
@@ -1000,8 +1006,6 @@ sub getPileup {
 	return $g_pu;	
 }
 
-
-
 =head2 formatResults
 format pileup/ exonerate results as per VCF specifications
 =over 2
@@ -1020,7 +1024,6 @@ sub formatResults {
 	else {
 		$VCF_OFS='NA';
 	}
-	
 	my $MTR = $g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 	my $WTR = $g_pu->{'ref_p'} + $g_pu->{'ref_n'};
 	my $DEP = $MTR + $WTR + $g_pu->{'amb'};
@@ -1048,6 +1051,10 @@ sub formatResults {
 	elsif($g_pu->{'ref_p'} > 0 && $g_pu->{'ref_n'} > 0 ) 
 	{ $WDR=3; }
 	
+	my $VAF;
+	eval {$VAF = $MTR/($MTR+$WTR);};
+	$VAF=defined $VAF?sprintf("%.2f",$VAF):'0.0';
+	
 	if($self->getVarType ne 'indel') {
 	$pileup_results={ 
 										'FAZ' =>$g_pu->{'FAZ'},
@@ -1064,17 +1071,19 @@ sub formatResults {
 										'MDR'	=>$MDR,
 										'WDR'	=>$WDR,
 										'OFS'	=>$VCF_OFS,
+										'VAF' =>$VAF,
 										};
 	}
 	
 	else {
-	$pileup_results={ 'MTR'=>$MTR,
-										'WTR'=>$WTR,
-										'DEP'=>$DEP,
-										'MDR'=>$MDR,
-										'WDR'=>$WDR,
-										'OFS'=>$VCF_OFS,
-										'AMB'=>$g_pu->{'amb'}
+	$pileup_results={ 'MTR'	=>$MTR,
+										'WTR'	=>$WTR,
+										'DEP'	=>$DEP,
+										'MDR'	=>$MDR,
+										'WDR'	=>$WDR,
+										'OFS'	=>$VCF_OFS,
+										'AMB'	=>$g_pu->{'amb'},
+										'VAF'	=>$VAF
 										};
 	}
 		

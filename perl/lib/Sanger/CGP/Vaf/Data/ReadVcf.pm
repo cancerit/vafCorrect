@@ -103,7 +103,7 @@ my ($self)=@_;
 		
 	}	
 	
-	if(!defined $self->{'_bo'} ) { 
+	if($self->{'_bo'}==0) { 
 		$log->logcroak("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
 		$self->_setNormal($vcf_normal_sample);	
 	}	
@@ -124,18 +124,17 @@ Inputs
 sub getProgress {
 	my($self)=shift;
 	print "\n >>>>>> To view overall progress log please check vcfcommons.log file created in the current directory >>>>>>>>>\n";
-	print "\n >>>>>> Samples specific progress.out file is created in the output directory >>>>>>>>>\n";
-	my $progress_fhw=undef;
+	print "\n >>>>>> Samples specific progress.out file is created in the output directory : $self->{'_o'} >>>>>>>>>\n";
+	my $progress_fhw;
 	my $file_name=$self->{'_o'}.'/progress.out';
 	if (-e $file_name)
 	{
-		open $progress_fhw, '>>', $file_name;
+		open $progress_fhw, '>>', $file_name or die "Can't open $file_name: $!";
 	}
 	else{
-		open $progress_fhw, '>', $file_name;
+		open $progress_fhw, '>', $file_name or die "Unable to create progress file $file_name: $!";
 	}
-	
-	open my $progress_fhr, '<', $file_name;
+	open my $progress_fhr, '<', $file_name or die "Can't open $file_name: $!";
 	my @progress_data=<$progress_fhr>;
 	close($progress_fhr);
 	
@@ -188,7 +187,7 @@ Inputs
 
 
 sub writeFinalFileHeaders {
-	my($self,$info_tag_val)=@_;
+	my($self,$info_tag_val,$tags)=@_;
 	
 	my $WFH_VCF=undef;
 	my $WFH_TSV=undef;
@@ -210,12 +209,7 @@ sub writeFinalFileHeaders {
 	close($tmp_vcf);
 	my($col_names,$header,$format_col)=$self->_get_tab_sep_header($tmp_file);
 	my $temp_cols=$col_names->{'cols'};
-	
-	my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
-	if($self->{'_a'} eq 'indel') {
-		$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS
-	}
-	
+		
 	foreach my $sample(@{$self->{'allSamples'}}){
 		foreach my $tag_name(@$tags){
 			push ($temp_cols,"$sample\_$tag_name");
@@ -266,6 +260,10 @@ sub getMergedLocations {
 	my $data_for_all_samples=undef;
 	my $info_data=undef;
 	my $unique_locations=undef;
+	if($self->{'_bo'}==1) {
+		$log->debug("Selected BedOnly analysis skipping data from VCF files");
+		return;
+	}
 	
 	foreach my $sample (keys %$vcf_file_obj) {
 			my $vcf=$vcf_file_obj->{$sample};
@@ -293,11 +291,6 @@ sub getMergedLocations {
 				}
 			}	
 	}
-	# do bed or bed only analysis
-	
-	#if(defined $self->{'_b'} ) {
-	#	($unique_locations, $data_for_all_samples,$info_tag_val)=$self->_populate_bed_locations($unique_locations,$data_for_all_samples,$info_tag_val,$updated_info_tags);		
-	#}		
 	return ($data_for_all_samples,$unique_locations);
 }
 
@@ -321,7 +314,7 @@ sub _getData {
 		if((defined ${$self->getVcfFile}[$count]) &&  ( -e ${$self->getVcfFile}[$count]) ) {
 			$self->{'vcf'}{$sample}=${$self->getVcfFile}[$count];		
 		}
-		elsif(!defined $self->{'_bo'}) {
+		elsif($self->{'_bo'}==0) {
 			$log->logcroak("Unble to find VCF file for sample: ".$sample);
 		}	
 		$count++;	
@@ -456,20 +449,24 @@ sub _getCustomHeader {
 	$vcf_format->{'DEP'}={(key=>'FORMAT',ID=>'DEP', Number=>'1',Type=>'Integer',Description=>"Total reads covering this position (for subs del positions should be ignored)")};
 	$vcf_format->{'MDR'}={(key=>'FORMAT',ID=>'MDR', Number=>'1',Type=>'Integer',Description=>"Variant allele read directions 0=no reads; 1=Forward; 2=Reverse; 3=Forward + Reverse")};
 	$vcf_format->{'WDR'}={(key=>'FORMAT',ID=>'WDR', Number=>'1',Type=>'Integer',Description=>"Reference allele read directions 0=no reads; 1=Forward; 2=Reverse; 3=Forward + Reverse")};
-	$vcf_format->{'OFS'}={(key=>'FORMAT',ID=>'OFS', Number=>'1',Type=>'String',Description=>"Original filter status as defined in old_FILTER field")};
+	$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'String',Description=>"Varinat Allele Fraction (excludes ambiguous reads if any)")};
+	$vcf_format->{'OFS'}={(key=>'FORMAT',ID=>'OFS', Number=>'1',Type=>'String',Description=>"Original filter status as defined in input vcf FILTER field")};
+	
 	if ($self->{'_a'} eq 'indel') {
 		$vcf_format->{'AMB'}={(key=>'FORMAT',ID=>'AMB', Number=>'1',Type=>'String',Description=>"Reads mapping on both the alleles with same specificity")};
 	}
 	
 	if ($self->{'_a'} eq 'snp') {
-		$vcf_format->{'FAZ'}={(key=>'FORMAT',ID=>'FAZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a A for this position, forward strand")};
-		$vcf_format->{'FCZ'}={(key=>'FORMAT',ID=>'FCZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a C for this position, forward strand")};
-		$vcf_format->{'FGZ'}={(key=>'FORMAT',ID=>'FGZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a G for this position, forward strand")};
-		$vcf_format->{'FTZ'}={(key=>'FORMAT',ID=>'FTZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a T for this position, forward strand")};
-		$vcf_format->{'RAZ'}={(key=>'FORMAT',ID=>'RAZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a A for this position, reverse strand")};
-		$vcf_format->{'RCZ'}={(key=>'FORMAT',ID=>'RCZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a C for this position, reverse strand")};
-		$vcf_format->{'RGZ'}={(key=>'FORMAT',ID=>'RGZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a G for this position, reverse strand")};
-		$vcf_format->{'RTZ'}={(key=>'FORMAT',ID=>'RTZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting a T for this position, reverse strand")};	
+		$vcf_format->{'FAZ'}={(key=>'FORMAT',ID=>'FAZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting A for this position, forward strand")};
+		$vcf_format->{'FCZ'}={(key=>'FORMAT',ID=>'FCZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting C for this position, forward strand")};
+		$vcf_format->{'FGZ'}={(key=>'FORMAT',ID=>'FGZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting G for this position, forward strand")};
+		$vcf_format->{'FTZ'}={(key=>'FORMAT',ID=>'FTZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting T for this position, forward strand")};
+		$vcf_format->{'RAZ'}={(key=>'FORMAT',ID=>'RAZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting A for this position, reverse strand")};
+		$vcf_format->{'RCZ'}={(key=>'FORMAT',ID=>'RCZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting C for this position, reverse strand")};
+		$vcf_format->{'RGZ'}={(key=>'FORMAT',ID=>'RGZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting G for this position, reverse strand")};
+		$vcf_format->{'RTZ'}={(key=>'FORMAT',ID=>'RTZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting T for this position, reverse strand")};	
+		$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'String',Description=>"Varinat Allele Fraction (excludes ambiguous reads if any)")};
+
 	}
 	
 	return ($vcf_filter,$vcf_info,$vcf_format);
@@ -695,19 +692,20 @@ sub processMergedLocations {
 	my $pileup_results=undef;
 	my $count=0;
 	my $total_locations=keys %$unique_locations;
-	
 	foreach my $progress_line(@$progress_data) {
 		chomp $progress_line;
 		if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf") {
-			$log->debug("Skipping Analysis for chr: $chr --: result file: $self->{'_tmp'}/tmp_$chr.vcf exists");
+			$log->debug("Skipping Analysis for chr:$chr: result file--> $self->{'_tmp'}/tmp_$chr.vcf exists");
 			return;
 		}
 	}
 	open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!");
 	open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!");
 	
+	
   my($merged_vcf)=$self->_getVCFObject($info_tag_val);
-	foreach my $location (sort keys %$unique_locations) {
+  
+  foreach my $location (sort keys %$unique_locations) {
 		$count++;
 		$variant->setLocation($location);
 		$variant->setVarLine($unique_locations->{$location});
@@ -727,9 +725,9 @@ sub processMergedLocations {
     }
     my $mutant_depth=0;
     my $depth=0;
+     
   	foreach my $sample (@{$self->{'allSamples'}}) {
-   		#$sample_counter++;
-			$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
+   		$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
 			if($self->{'_a'} eq 'indel') {	
 				$g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
 				if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
@@ -757,8 +755,7 @@ sub processMergedLocations {
 			# feature to test location change
 			#if(exists $g_pu->{'new_5p'} && $g_pu->{'sample'} eq $self->getNormalName) {
 			#	$log->debug("Updated position : $location: Old[5-3p]:".$g_pu->{'old_5p'}.'-'.$g_pu->{'old_3p'}.'  New[5-3p]:'.$g_pu->{'new_5p'}.'-'.$g_pu->{'new_3p'});
-			#}
-					
+			#}				
   	}# Done with all the samples ...	
   	#get specific annotations from original VCF INFO field....
 		if(!defined $self->{'_ao'} ) {
@@ -778,9 +775,9 @@ sub processMergedLocations {
 	close $tmp_WFH_VCF;
 	close $tmp_WFH_TSV;
 	print $progress_fhw "$self->{'_tmp'}/tmp_$chr.vcf\n";
+	# returns only when we are augmenting the VCF files else always written into a file 
 	return ($store_results);
 }
-
 
 =head2 _get_bam_object
 create bam object using Bio::DB::Sam
@@ -803,7 +800,6 @@ sub _get_bam_object {
 	}
 	return(\%bam_objects,\%bas_files);
 }
-
 
 =head2 _get_bam_header_data
 get_bam_header_data -insert size and chr length
@@ -852,7 +848,7 @@ sub _get_bam_header_data {
     
   	if ($lib_size == 0 ) {$lib_size=$read_len*2};
   	
-  	if( -e $bas_files->{$key} ) {
+  	if( -e $bas_files->{$key}) {
   		 $lib_size=$self->_get_lib_size_from_bas($bas_files->{$key});
   	}
   	elsif ($lib_size == 0 )  {
@@ -864,7 +860,6 @@ sub _get_bam_header_data {
 			$bam_header_data{$key}{'read_length'}=$read_len;
 		}
 	}
-		
 	return(\%bam_header_data,$lib_size);
 }
 
@@ -962,6 +957,7 @@ sub WriteAugmentedHeader {
 			$vcf_aug->add_header_line($vcf_format->{'MTR'});
 			$vcf_aug->add_header_line($vcf_format->{'WTR'});
 			$vcf_aug->add_header_line($vcf_format->{'AMB'});
+			$vcf_aug->add_header_line($vcf_format->{'VAF'});
 			$vcf_aug->add_header_line($vcf_format->{'process_log'});
 
 			print $tmp_vcf $vcf_aug->format_header();
@@ -972,9 +968,9 @@ sub WriteAugmentedHeader {
     
 	if(defined $self->{'_b'} && defined $self->{'_m'}) {
 		my $input_bam_files=$self->{'bam'};
-		my @bed_header=qw(chr pos ref alt FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_NORMAL WTR_NORMAL AMB_NORMAL FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR);
+		my @bed_header=qw(chr pos ref alt FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_NORMAL WTR_NORMAL AMB_NORMAL VAF_NORMAL FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR VAF_TUMOUR);
 		if($self->{'_a'} eq 'indel') {
-			@bed_header=qw(chr pos ref alt  MTR_NORMAL WTR_NORMAL AMB_NORMAL MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR);
+			@bed_header=qw(chr pos ref alt  MTR_NORMAL WTR_NORMAL AMB_NORMAL VAF_NORMAL MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR VAF_TUMOUR);
 		}
 		foreach my $sample (keys %$input_bam_files) {
 			if ($sample ne $self->getNormalName) {
@@ -987,7 +983,6 @@ sub WriteAugmentedHeader {
 	}
   return($aug_vcf_fh,$aug_vcf_name);
 }
-
 
 =head2 getVCFObject
 write VCF header data
@@ -1035,8 +1030,6 @@ sub _getVCFObject {
 	
 	return $vcf;
 }
-
-
 
 =head2 _get_tab_sep_header
 parse header data to generate header data and columns names

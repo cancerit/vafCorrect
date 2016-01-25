@@ -59,15 +59,21 @@ try {
   my $base = Sanger::CGP::WholeGenome::Base->new;
   $base->db_type($options->{'db'});
   print "Using database $options->{'db'}\n";
-  my $conn = $base->connection;
-  
+  my $cfg;
   my $vaf=Sanger::CGP::Vaf::Utility::CreateCommands->new($options);
-  $vaf->loadSql($conn);
-  my $data_to_process = $vaf->buildInputData($conn);
-  $base->clear_connection;
-  my ($sample_group,$normal_samples, $species, $build,$symlinked_files)= $vaf->generateRawOutput($data_to_process);
-  my($cfg)=$vaf->writeConfig($sample_group,$normal_samples, $species, $build,$symlinked_files,$conn);
-  undef $conn;
+  
+  if(defined $options->{'i'}){
+  	print "Using user defined config file:".$options->{'i'}."\n";
+  	$cfg = Config::IniFiles->new( -file => $options->{'i'} );  
+  }else{
+		my $conn = $base->connection;
+		$vaf->loadSql($conn);
+		my $data_to_process = $vaf->buildInputData($conn);
+		$base->clear_connection;
+		my ($sample_group,$normal_samples, $species, $build,$symlinked_files)= $vaf->generateRawOutput($data_to_process);
+		($cfg)=$vaf->writeConfig($sample_group,$normal_samples, $species, $build,$symlinked_files,$conn);
+		undef $conn;
+  }
   if(defined $cfg) {
 		print "Please specify vcf file types to merge: \n".
 		 "[1] Pindel \n".
@@ -82,7 +88,7 @@ try {
 		chomp $resp;
 		if($resp=~/^(1|2|3|4|5|6|7)$/) {
 			$vaf->createVafCommands($resp,$cfg);
-			print "\n >>>>>> To analyse the data please use commands from commands.txt file created in current directory >>>>>>>>>\n";	
+			print "\n >>>>>> To analyse the data please use commands from cgpVafCommands.cmd file created in current directory >>>>>>>>>\n";	
 		}
 		else{
 			warn "Please provide valid option... exiting...\n";
@@ -116,6 +122,7 @@ sub option_builder {
 	'oe|output_vcfExtension=s' => \$options{'oe'},
 	'dp|depth=s' => \$options{'dp'},
 	'vn|vcf_normal=i' => \$options{'vn'},
+	'i|configFile=s' => \$options{'i'},
 	'v|version'  => \$options{'v'},
 	);
 
@@ -132,8 +139,8 @@ sub option_builder {
 	unless(-e $options{'o'}){
 	  mkpath($options{'o'});
 	}
-	# check if directory path has / at the end other wise add it
-	$options{'o'} .= '/' unless($options{'o'} =~ m|/$|);
+	# check if directory path has slash / at the end other wise add it
+	#$options{'o'} .= '/' unless($options{'o'} =~ m|/$|);
 	return \%options;
 }
 
@@ -145,7 +152,7 @@ createVafCmd.pl - Create commands to run for each sample group containing tumour
 
 =head1 SYNOPSIS
 
-createVafCmd.pl [-h -v] -pid -o  [-g -b -u -db -t -c -r -m -ao -p -bo -vn]
+createVafCmd.pl [-h -v] -pid -o  [-g -b -u -db -t -c -r -m -ao -p -bo -vn -dp -i]
 
   Required Options (project and output directory must be defined):
 
@@ -166,6 +173,8 @@ createVafCmd.pl [-h -v] -pid -o  [-g -b -u -db -t -c -r -m -ao -p -bo -vn]
     --bed_only      (-bo)	Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
     --vcf_normal    (-vn)	use normal sample defined in vcf header field [ default 1 ]
     --depth         (-dp)	comma separated list of field(s) as specified in FORMAT field representing total depth at given location
+    --configFile    (-i)  path to config file listing tumour/normal samples names for a project without 
+                         file extension, this file can be generated  manually
     --help          (-h) 	Display this help message
     --version       (-v) 	displays version number of this software
 

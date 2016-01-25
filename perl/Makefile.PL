@@ -4,8 +4,8 @@ use ExtUtils::MakeMaker;
 use File::ShareDir::Install;
 
 WriteMakefile(
-  NAME          => 'vcfCommon',
-  VERSION_FROM  => 'lib/Sanger::CGP::VcfCompare',
+  NAME          => 'cgpVaf',
+  VERSION_FROM  => 'lib/Sanger::CGP::cgpVaf',
   EXE_FILES     => [qw( 
                         bin/mergeAndPileup.pl
                         bin/createConfig.pl

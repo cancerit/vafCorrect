@@ -333,7 +333,7 @@ sub writeConfig {
 	my $root_path = $self->{'_o'};
 	my $project = $self->{'_pid'};
   my $cfg=Config::IniFiles->new();
-  my $config_path="$root_path/$project\_VcfMergeConfig.ini";
+  my $config_path="$root_path/$project\_cgpVafConfig.ini";
   $cfg->SetFileName($config_path);
   $cfg->AddSection($project); 
   #print Dumper($sample_group);
@@ -492,7 +492,7 @@ sub createVafCommands {
 	#--varinat_type  (-v)  specify variant data type (default SNV [ specify snp or indel])
 	#--outDir        (-o)  Output folder [default to inputdir/outptut]
  	my $options = $self->{'options'};
- 	open my $cmd_fh , '>', 'commands.out' || logcroak('Unable to open'.$!);
+ 	open my $cmd_fh , '>', 'cgpVafCommands.cmd' || logcroak('Unable to open'.$!);
 	my ($filter,$algorithm);
 	if($resp=~/^(1|2|3|4|5|6|7)$/) {
 	  #print "\033[2J"; # clears the screen
@@ -537,7 +537,7 @@ sub _get_vaf_prm {
 	my $vaf_options;
 	foreach my $key (keys %$options) {
 		if(defined $options->{$key} ) {
-			next if ($key eq 'u' || $key eq 'db' || $key eq 'o');
+			next if ($key eq 'u' || $key eq 'db' || $key eq 'o' || $key eq 'i');
 			push(@$vaf_options,' -'.$key.' '.$options->{$key});
 		}
 	}
@@ -561,11 +561,11 @@ sub _print_cmd {
 	my($self, $vaf_options, $normal_sample, $tumour_samples, $varinat, $vcf_extension,$cmd_fh)=@_;
 	$normal_sample=~s/_UNM\d+//g;
 	if(defined $self->{'_g'}) {
-		print $cmd_fh "$Bin/vaf.pl -d $self->{'_o'} -o $self->{'_o'}/output/$normal_sample/$varinat ".
+		print $cmd_fh "$Bin/cgpVaf.pl -d $self->{'_o'} -o $self->{'_o'}/output/$normal_sample/$varinat ".
 				" -g $self->{'_g'} -a $varinat -e $vcf_extension ".
 				" -nn $normal_sample -tn @$tumour_samples @$vaf_options \n";
 	}else{
-		print $cmd_fh "$Bin/vaf.pl -d $self->{'_o'} -o $self->{'_o'}/output/$normal_sample/$varinat ".
+		print $cmd_fh "$Bin/cgpVaf.pl -d $self->{'_o'} -o $self->{'_o'}/output/$normal_sample/$varinat ".
 				" -g $self->{'_o'}/genome.fa -a $varinat -e $vcf_extension ".
 				" -nn $normal_sample -tn @$tumour_samples @$vaf_options \n";
 	}

@@ -1,4 +1,4 @@
-#!/software/perl-5.16.3/bin/perl
+#!/software/perl-5.16.3/bin/perl -w
 
 ##########LICENCE############################################################
 # Copyright (c) 2016 Genome Research Ltd.
@@ -55,13 +55,13 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 my $store_results;
 my $chr_results;
 
-my @tags=qw(FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR WTR DEP MDR WDR OFS);
+my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
 try {
 	my ($options) = option_builder();
 	
 	if ($options->{'a'} eq 'indel') {
-    	@tags=qw(MTR WTR DEP AMB MDR WDR OFS);
+    	$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
   }
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	# this is called only once to add allSample names to vcf object
@@ -74,7 +74,7 @@ try {
 		'location' 		=> undef,
 		'varLine' 		=> undef,
 		'varType' 		=> $vcf_obj->{'_a'},
-		'libSize' 		=> defined $lib_size?$lib_size:undef,
+		'libSize' 		=> defined $lib_size?$lib_size:100,
 		'samples' 		=> $vcf_obj->{'allSamples'},
 		'tumourName'	=> $vcf_obj->getTumourName,
 		'normalName'	=> $vcf_obj->getNormalName,
@@ -90,26 +90,31 @@ try {
 	my($progress_fhw,$progress_data)=$vcf_obj->getProgress;
 	
 	foreach my $chr(@$chromosomes) {
-		my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
+		my $data_for_all_samples;
+		my $unique_locations;
+		if($options->{'bo'} == 0){
+			#print "Bed only is no defined------\n";
+			($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
+		}
 		if(defined $options->{'b'} ){
 			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);	
 		}	
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,\@tags,$info_tag_val,$progress_fhw,$progress_data);
+		# Write results to tmp file...
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data);
 		$log->debug("Completed analysis for: $chr ");
 	}# completed all chromosomes;
 	
 	if(defined $bed_locations) {
 		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',\@tags,$info_tag_val,$progress_fhw,$progress_data);	
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',$tags,$info_tag_val,$progress_fhw,$progress_data);	
 	}
-	
-	#
+	# if augmentation option is selected then write augmented vcf file 
   if(defined $store_results && defined $options->{'m'}) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
     	$vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
   }
   
-  my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val);
+  my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
   
   if(defined $outfile_name_no_ext){
   	foreach my $progress_line(@$progress_data) {
@@ -128,7 +133,6 @@ try {
 		close $progress_fhw;
 		
   }
-
 }
 	
 catch {
@@ -169,7 +173,7 @@ sub option_builder {
         
 	if(defined $options{'v'}){
 		print $Sanger::CGP::Vaf::VafConstants::VERSION."\n";
-		exit;
+		exit; 
 	}
 	pod2usage(q{'-g' genome must be defined}) unless (defined $options{'g'});
 	pod2usage(q{'-d' input directory path must be defined}) unless (defined $options{'d'});
@@ -180,8 +184,10 @@ sub option_builder {
 	pod2usage(q{'-b' bed file must be specified }) unless (!defined $options{'e'} || !defined $options{'bo'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
+	$options{'d'}=~s/\/$//g;
 	mkpath($options{'o'});
 	if(!defined $options{'tmp'}) {
+		$options{'o'}=~s/\/\//\//g;
 		mkpath($options{'o'}.'/tmpvaf');
 		$options{'tmp'}=$options{'o'}.'/tmpvaf';
 	}
@@ -229,11 +235,11 @@ __END__
 
 =head1 NAME
 
-vaf.pl merge the variants in vcf files for a given Tumour - normal pairs in a project  and write pileup and exonerate output for merged locations
+cgpVaf.pl merge the variants in vcf files for a given Tumour - normal pairs in a project  and write pileup and exonerate output for merged locations
 
 =head1 SYNOPSIS
 
-vaf.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
+cgpVaf.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
 
   Required Options (inputDir and variant_type must be defined):
 
@@ -266,8 +272,8 @@ vaf.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
 
    Examples:
       Merge vcf files to create single vcf containing union of all the variant sites and provides pileup output for each location
-      perl vaf.pl -d tmpvcfdir -o testout -a snp -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2 
+      perl cgpVaf.pl -d tmpvcfdir -o testout -a snp -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2 
       Merge vcf files to create single vcf containing union of all the variant sites and provides allele count for underlying location
-      perl vaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2
+      perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2
 =cut
 
