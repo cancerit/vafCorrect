@@ -26,9 +26,9 @@ use File::ShareDir::Install;
 WriteMakefile(
   NAME          => 'Vaf',
   LICENSE       => 'agpl_3', # http://search.cpan.org/~dagolden/CPAN-Meta-2.142690/lib/CPAN/Meta/Spec.pm#license
-  VERSION_FROM  => 'lib/Sanger/CGP/Vaf.pm',
-  EXE_FILES     => [qw( bin/cgpVaf.pl
-                        bin/createVafCmd.pl
+  VERSION_FROM  => 'perl/lib/Sanger/CGP/Vaf.pm',
+  EXE_FILES     => [qw( perl/bin/cgpVaf.pl
+                        perl/bin/createVafCmd.pl
 												)],
   PREREQ_PM     => {
                     'Attribute::Abstract' => '1.02',

@@ -1,2 +1,7 @@
+test.bed
+*.log
+setup.sh
+test*
+*.out
 test*
 out*

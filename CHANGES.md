@@ -1,4 +1,7 @@
-
+## V4.0 ########
+* Contains pre-calculated VAF values in FORMAT field
+* Per chromosome progress tracking i.e., failed jobs can be resumed from last unsuccessful chromosome
+* Added setup script script
 ### 3.2.4 ########
 
 * Added condition to check snps that fall at the end of chromosome
