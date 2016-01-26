@@ -103,7 +103,7 @@ my ($self)=@_;
 		
 	}	
 	
-	if($self->{'_bo'}==0) { 
+	if(defined $self->{'_bo'} and ($self->{'_bo'} == 0)) { 
 		$log->logcroak("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
 		$self->_setNormal($vcf_normal_sample);	
 	}	
@@ -260,7 +260,7 @@ sub getMergedLocations {
 	my $data_for_all_samples=undef;
 	my $info_data=undef;
 	my $unique_locations=undef;
-	if($self->{'_bo'}==1) {
+	if(defined $self->{'_bo'} && $self->{'_bo'}==1) {
 		$log->debug("Selected BedOnly analysis skipping data from VCF files");
 		return;
 	}
@@ -314,7 +314,7 @@ sub _getData {
 		if((defined ${$self->getVcfFile}[$count]) &&  ( -e ${$self->getVcfFile}[$count]) ) {
 			$self->{'vcf'}{$sample}=${$self->getVcfFile}[$count];		
 		}
-		elsif($self->{'_bo'}==0) {
+		elsif(defined $self->{'_bo'} && $self->{'_bo'}==0) {
 			$log->logcroak("Unble to find VCF file for sample: ".$sample);
 		}	
 		$count++;	
