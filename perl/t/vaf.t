@@ -7,7 +7,7 @@ use FindBin qw($Bin);
 use File::Temp qw/ :seekable /;
 use Data::Dumper;
 
-use Sanger::CGP::Config::Config qw(vcfCommons);
+#use Sanger::CGP::Config::Config qw(vcfCommons);
 use Sanger::CGP::Vaf::Data::ReadVcf;
 use Sanger::CGP::Vaf::Process::Variant;
 use Sanger::CGP::Vaf::VafConstants;
@@ -20,8 +20,6 @@ use English qw( -no_match_vars );
 use warnings FATAL => 'all';
 use Carp;
 use Getopt::Long;
-use Set::IntSpan;
-use Math::Round;
 use Pod::Usage;
 use File::Path;
 use Const::Fast qw(const);

@@ -22,8 +22,8 @@ package Sanger::CGP::Vaf::Utility::CreateCommands;
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##############################################################
 
-use Sanger::CGP::VcfCompare;
-our $VERSION = Sanger::CGP::VcfCompare->VERSION;
+use Sanger::CGP::Vaf;
+our $VERSION = Sanger::CGP::Vcf->VERSION;
 
 BEGIN {
   $SIG{__WARN__} = sub {warn $_[0] unless(( $_[0] =~ m/^Subroutine Tabix.* redefined/) .
@@ -52,7 +52,7 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 const my $SEP => "/";
 const my $test_mode => 0;
-const my $version => Sanger::CGP::VcfCompare->VERSION;
+const my $version => Sanger::CGP::Vaf->VERSION;
 const my $ref_dir => '/nfs/cancer_ref01';
 const my $ref_dir_x10 => '/lustre/scratch112/sanger/cgppipe/canpipe/live/ref';
 

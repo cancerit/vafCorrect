@@ -172,7 +172,8 @@ sub option_builder {
   pod2usage(-message => Sanger::CGP::Vaf::license, -verbose => 1) if(defined $options{'h'});
         
 	if(defined $options{'v'}){
-		print $Sanger::CGP::Vaf::VafConstants::VERSION."\n";
+		my $version = Sanger::CGP::Vaf->VERSION;
+		print "$version\n";
 		exit; 
 	}
 	pod2usage(q{'-g' genome must be defined}) unless (defined $options{'g'});

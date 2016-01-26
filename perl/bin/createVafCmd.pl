@@ -126,10 +126,10 @@ sub option_builder {
 	'v|version'  => \$options{'v'},
 	);
 
-  pod2usage(-message => Sanger::CGP::VcfCompare::license, -verbose => 1) if(defined $options{'h'});
+  pod2usage(-message => Sanger::CGP::Vaf::license, -verbose => 1) if(defined $options{'h'});
 	
 	if(defined $options{'v'}){
-		my $version = Sanger::CGP::VcfCompare->VERSION;
+		my $version = Sanger::CGP::Vaf->VERSION;
 		print "$version\n";
 		exit;
 	}
