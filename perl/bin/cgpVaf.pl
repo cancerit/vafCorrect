@@ -53,7 +53,6 @@ use Sanger::CGP::Vaf::VafConstants;
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 my $store_results;
-my $chr_results;
 
 my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
@@ -112,6 +111,10 @@ try {
   if(defined $store_results && defined $options->{'m'}) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
     	$vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
+    	if($options->{'ao'} == 1) {
+    		rmdir $options->{'tmp'} or $log->warn("Could not rmove folder".$options->{'tmp'}.':'.$!);
+	 			unlink($vcf_obj->getOutputDir.'/temp.reads', $vcf_obj->getOutputDir.'/temp.ref', $vcf_obj->getOutputDir.'/temp.vcf') or $log->warn("Could not unlink".$vcf_obj->getOutputDir.':'.$!);
+	 		}
   }
   
   my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
@@ -131,7 +134,12 @@ try {
 		my($outfile_gz,$outfile_tabix)=$vcf_obj->compressVcf("$outfile_name_no_ext.vcf");
 		print $progress_fhw "$outfile_name_no_ext.tsv\n";
 		close $progress_fhw;
-		
+		if ((-e $outfile_gz) && (-e $outfile_tabix)) {
+			 		unlink glob $options->{'tmp'}."/tmp_*.vcf" or $log->warn("Could not unlink".$options->{'tmp'}.'/tmp_*.vcf:'.$!);
+			 		unlink glob $options->{'tmp'}."/tmp_*.tsv" or $log->warn("Could not unlink".$options->{'tmp'}.'/tmp_*.tsv:'.$!);
+			 		rmdir $options->{'tmp'} or $log->warn("Could not rmove folder".$options->{'tmp'}.':'.$!);
+			 		unlink($vcf_obj->getOutputDir.'/temp.reads', $vcf_obj->getOutputDir.'/temp.ref', $vcf_obj->getOutputDir.'/temp.vcf') or $log->warn("Could not unlink".$vcf_obj->getOutputDir.':'.$!);
+    }
   }
 }
 	
@@ -166,6 +174,7 @@ sub option_builder {
                 'dp|depth=s' => \$options{'dp'},
                 'pid|id_int_project=s' => \$options{'pid'},
                 'vn|vcf_normal=i' => \$options{'vn'},
+                'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
                 'v|version'  => \$options{'v'}
 	);
 	
@@ -184,6 +193,7 @@ sub option_builder {
   pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'} || defined $options{'bo'});
 	pod2usage(q{'-b' bed file must be specified }) unless (!defined $options{'e'} || !defined $options{'bo'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
+  
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
 	$options{'d'}=~s/\/$//g;
 	mkpath($options{'o'});
@@ -222,7 +232,7 @@ sub option_builder {
 	}
 	if(!defined $options{'ao'}) {
 		# augment vcf no merging step
-		$options{'ao'}=undef;
+		$options{'ao'}=0;
 	}
 	if(!defined $options{'oe'}) {
 		# augment vcf extesnion
@@ -240,7 +250,7 @@ cgpVaf.pl merge the variants in vcf files for a given Tumour - normal pairs in a
 
 =head1 SYNOPSIS
 
-cgpVaf.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
+cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -d -pid -bo -vn -vcf -v]
 
   Required Options (inputDir and variant_type must be defined):
 
@@ -264,10 +274,11 @@ cgpVaf.pl [-h] -d -a  -tn -nn -b -e  -o[ -t -c -r -g -f -v]
    --restrict_flag (-r)  restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
    --augment       (-m)  Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
    --augment_only  (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
-   --depth         (-dp)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
-   --id_int_project(-pid) Internal project id [WTSI only]
+   --depth         (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
+   --id_int_project(-pid)Internal project id [WTSI only]
    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
    --vcf_normal    (-vn) use normal sample defined in vcf header field [ default 1 ]
+   --vcf           (-vcf)user defined vcf file name [please specify in same order as tumour sample names]
    --help          (-h)  Display this help message
    --version       (-v)  provide version information for vaf
 

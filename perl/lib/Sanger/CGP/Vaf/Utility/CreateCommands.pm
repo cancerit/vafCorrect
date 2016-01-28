@@ -260,7 +260,6 @@ Inputs
 =item options -user provide input parameters
 =item input_files -input files to process
 =item symlinked_files -hash storing symlinked file path information
-
 =back
 =cut
 
@@ -588,7 +587,7 @@ path where symlink will be created
 
 sub _createSymlink {
 	my ($self,$file, $symlink_path)=@_;
-	if( -l $symlink_path) { $log->warn("symlink exists, skipping file $file"); return;} 
+	if( -l $symlink_path) { $log->debug("symlink exists, skipping file $symlink_path ==> $file"); return;} 
 	symlink $file, $symlink_path;
 }
 

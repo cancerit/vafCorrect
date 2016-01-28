@@ -132,8 +132,10 @@ sub storeResults {
 	
   my $MTR = $g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 	my $WTR = $g_pu->{'ref_p'} + $g_pu->{'ref_n'};
- 
-	if ($self->getVarLine=~/BEDFILE/) {
+	my $VAF;
+	eval {$VAF = $MTR/($MTR+$WTR);};
+	$VAF=defined $VAF?sprintf("%.2f",$VAF):'0.0';
+ 	if ($self->getVarLine=~/BEDFILE/) {
 	    my $bed_line=$g_pu->{'chr'}."\t".
 	    						 $g_pu->{'start'}."\t".
 	    						 $g_pu->{'ref_seq'}."\t".
@@ -153,7 +155,7 @@ sub storeResults {
 	$results->{'tMTR'}=$MTR;
 	$results->{'tWTR'}=$WTR;
 	$results->{'tAMB'}=$g_pu->{'amb'};
-	$results->{'tVAF'}=$g_pu->{'VAF'};
+	$results->{'tVAF'}=$VAF;
 	
 	$results->{'nMTR'}=$g_pu->{'normal_MTR'};
 	$results->{'nWTR'}=$g_pu->{'normal_WTR'};
@@ -928,7 +930,7 @@ sub addNormalCount {
 						$g_pu->{'normal_MTR'}=$g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 						$g_pu->{'normal_WTR'}=$g_pu->{'ref_p'} + $g_pu->{'ref_n'};
 						eval{$VAF=$g_pu->{'normal_MTR'}/($g_pu->{'normal_WTR'}+$g_pu->{'normal_MTR'}); };
-						$g_pu->{'normal_VAF'}=defined $VAF?sprintf("%.2f",$VAF):'0.0';
+						$g_pu->{'normal_VAF'}=defined $VAF?sprintf("%.2f",$VAF):'0.00';
 						$g_pu->{'normal_AMB'}=$g_pu->{'amb'};
 						
 	return $g_pu;
