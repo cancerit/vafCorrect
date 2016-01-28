@@ -158,7 +158,7 @@ sub _populateBedHeader {
 	my %info_tag;
 	$info_tag{'Interval'}='BedFile';
 	# create header for bed only locations...
-	if( !defined $self->{'vcf'} && !defined $self->{'_ao'} ) {
+	if( !defined $self->{'vcf'} && $self->{'_ao'}==0 ) {
 		my ($vcf_filter,$vcf_info,$vcf_format)=$self->_getCustomHeader();
 			foreach my $key (sort keys %$vcf_info) {
 			push(@$info_tag_val,$vcf_info->{$key});
@@ -193,7 +193,7 @@ sub writeFinalFileHeaders {
 	my $WFH_TSV=undef;
 	
 	# return if no VCF file found or augment only option is provided for indel data ...
-	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || (defined $self->{'_ao'})); 
+	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || ( $self->{'_ao'} == 1)); 
 	my $vcf=$self->_getVCFObject($info_tag_val);
 	my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0]."_consolidated_".$self->{'_a'};	
 	$log->debug("VCF outfile:$outfile_name.vcf");
@@ -314,6 +314,10 @@ sub _getData {
 		if((defined ${$self->getVcfFile}[$count]) &&  ( -e ${$self->getVcfFile}[$count]) ) {
 			$self->{'vcf'}{$sample}=${$self->getVcfFile}[$count];		
 		}
+		elsif(defined $self->{'_vcf'}) {
+			$self->{'vcf'}{$sample}=$self->{'_d'}.'/'.${$self->{'_vcf'}}[$count];
+			$log->debug("No default VCF file found, using user defined VCF: ".$self->{'vcf'}{$sample});
+		}
 		elsif(defined $self->{'_bo'} && $self->{'_bo'}==0) {
 			$log->logcroak("Unble to find VCF file for sample: ".$sample);
 		}	
@@ -325,7 +329,6 @@ sub _getData {
 	$self->{'bam'}{$self->getNormalName}=$self->getNormalBam;
 		
 }
-
 
 =head2 _getOriginalHeader
 parse VCF header and get data from old header lines
@@ -699,8 +702,9 @@ sub processMergedLocations {
 			return;
 		}
 	}
-	open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!");
-	open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!");
+	
+	open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
+	open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
 	
 	
   my($merged_vcf)=$self->_getVCFObject($info_tag_val);
@@ -712,7 +716,7 @@ sub processMergedLocations {
 		my($g_pu)=$variant->formatVarinat();
 		#process only passed varinats	
 		if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
-			if(defined $self->{'_ao'} || defined $self->{'_m'}) {
+			if($self->{'_ao'} == 1 || defined $self->{'_m'}) {
 				foreach my $sample (@{$self->getTumourName}) {
 					$store_results=$variant->storeResults($store_results,$g_pu,$sample);
 				}
@@ -740,7 +744,7 @@ sub processMergedLocations {
 			else{
 				$g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
 			}
-			if(!defined $self->{'_ao'} ) {
+			if($self->{'_ao'} == 0) {
 				my($pileup_line)=$variant->formatResults($original_flag,$g_pu);
 				# Mutant read depth found at this location
 				if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'MTR'} > 0 ) {
@@ -758,7 +762,7 @@ sub processMergedLocations {
 			#}				
   	}# Done with all the samples ...	
   	#get specific annotations from original VCF INFO field....
-		if(!defined $self->{'_ao'} ) {
+		if($self->{'_ao'} == 0 ) {
 			$original_vcf_info->{'ND'} =	$depth;
 			$original_vcf_info->{'NVD'} =	$mutant_depth;
 			$self->_writeOutput($original_vcf_info,$NFS,$pileup_results,$tags,$tmp_WFH_VCF,$tmp_WFH_TSV,$g_pu,$merged_vcf);
@@ -770,10 +774,10 @@ sub processMergedLocations {
    }
    
 	}# Done with all locations for a chromosome...
-	$merged_vcf->close();
+	$merged_vcf->close() if defined $merged_vcf;
 	# write success file name
-	close $tmp_WFH_VCF;
-	close $tmp_WFH_TSV;
+	close $tmp_WFH_VCF if($self->{'_ao'} ==0);
+	close $tmp_WFH_TSV if($self->{'_ao'} ==0);
 	print $progress_fhw "$self->{'_tmp'}/tmp_$chr.vcf\n";
 	# returns only when we are augmenting the VCF files else always written into a file 
 	return ($store_results);
@@ -941,7 +945,7 @@ sub WriteAugmentedHeader {
 			my $aug_vcf=$self->getOutputDir.'/'.$tmp_file.$self->{'_oe'};
 			$aug_vcf_name->{$sample}=$aug_vcf;
 			open(my $tmp_vcf,'>',$aug_vcf)|| $log->logcroak("unable to open file $!");
-			$log->debug("Augmenting vcf file:".$self->getOutputDir."/$tmp_file.".$self->{'_oe'});
+			$log->debug("Augmenting vcf file:".$self->getOutputDir."/$tmp_file".$self->{'_oe'});
 			my $vcf_aug = Vcf->new(file => $augment_vcf->{$sample});
 			$vcf_aug->parse_header();
 			#to get all the FORMAT fileds in one group 
@@ -995,7 +999,7 @@ Inputs
 sub _getVCFObject {
 	my($self,$info_tag_val)=@_;
 	# return if no VCF file found or augment only option is provided for indel data ...
-	return if(( !defined $self->{'vcf'} && !defined $self->{'_b'}) || (defined $self->{'_ao'}));
+	return if(( !defined $self->{'vcf'} && !defined $self->{'_b'}) || ($self->{'_ao'} == 1));
 	my $vcf=Vcf->new();
 	my $genome_name=$self->_trim_file_path($self->getGenome);
 	my $script_name=$self->_trim_file_path($0);
@@ -1111,7 +1115,7 @@ Inputs
 
 sub _writeOutput {
 	my ($self,$original_vcf_info,$NFS,$new_pileup_results,$tags,$WFH_VCF,$WFH_TSV,$g_pu,$vcf)=@_;
-  if ((!$vcf && !$self->{'_b'})|| $self->{'_ao'}) {
+  if ((!$vcf && !$self->{'_b'})|| ($self->{'_ao'}==1)) {
 		return 1;
 	}
   if (!defined $original_vcf_info) {$original_vcf_info=['.'];}
@@ -1297,14 +1301,17 @@ sub _writeFinalVcf {
 				$vcf->add_format_field($x,'MTR');
 				$vcf->add_format_field($x,'WTR');
 				$vcf->add_format_field($x,'AMB');
-		
+		    $vcf->add_format_field($x,'VAF');
+		    
 				$$x{gtypes}{'TUMOUR'}{'MTR'}=$result_line->{'tMTR'};
 				$$x{gtypes}{'TUMOUR'}{'WTR'}=$result_line->{'tWTR'};
 				$$x{gtypes}{'TUMOUR'}{'AMB'}=$result_line->{'tAMB'};
-		
+		    $$x{gtypes}{'TUMOUR'}{'VAF'}=$result_line->{'tVAF'};
+		    
 				$$x{gtypes}{'NORMAL'}{'MTR'}=$result_line->{'nMTR'};
 				$$x{gtypes}{'NORMAL'}{'WTR'}=$result_line->{'nWTR'};
 				$$x{gtypes}{'NORMAL'}{'AMB'}=$result_line->{'nAMB'};
+				$$x{gtypes}{'NORMAL'}{'VAF'}=$result_line->{'nVAF'};
 				$aug_vcf_fh->{$sample}->print($vcf->format_line($x));
 			}
 	}
