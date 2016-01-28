@@ -1,4 +1,6 @@
-## V4.0.0.1 ########
+## V4.1.0 ########
+*Added option to accept vcf file as command line input
+## V4.0.1 ########
 * Fixed readme file
 ## V4.0 ########
 * Contains pre-calculated VAF values in FORMAT field
