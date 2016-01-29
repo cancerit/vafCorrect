@@ -302,7 +302,6 @@ Inputs
 
 sub createExonerateInput {
 	my($self,$bam,$bam_header,$depth,$g_pu)=@_;
-	#print Dumper $bam_header;
 	$g_pu=$self->_getRange($bam_header,$g_pu,$depth);
 	my($ref_seq)=$self->_get_dna_segment($bam,$g_pu->{'chr'},$g_pu->{'pos_5p'},$g_pu->{'pos_3p'});
 	my($alt_seq)=$self->_get_alt_seq($bam,$g_pu);
@@ -326,12 +325,9 @@ Inputs
 sub _getRange {
   my($self,$bam_header,$g_pu,$max_depth)=@_;
   
-  return if $self->getVarType ne 'indel';
-  
+  return unless($self->getVarType eq 'indel');
   my ($left_pos,$right_pos,$chr_len,$spanned_region);
- 
   my $lib_size=$self->{'_libSize'};
-  
   my ($hdr_flag)=$self->_check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$self->{'_tabix_hdr'});
   my $spanning_seq_denom=$Sanger::CGP::Vaf::VafConstants::SPANNING_SEQ_DENOMINATOR;
   #if location is in high depth region and has depth >1000 then hdr_flag is true
@@ -361,9 +357,7 @@ sub _getRange {
 	}else{
 		$g_pu->{'ref_pos_3p'}=$g_pu->{'ref_pos_5p'} + ( $g_pu->{'end'} - $g_pu->{'start'} ) - 1;
 	}
-	
 	$g_pu->{'alt_pos_3p'}=$g_pu->{'ref_pos_5p'} + length( $g_pu->{'alt_seq'}) -1;
-
 	return $g_pu;
 }
 
@@ -472,8 +466,7 @@ Inputs
 sub _get_ref_5p_pos {
 	my ($self,$ref_seq,$reconstructed_alt_seq,$g_pu) = @_;		
 			my $new_pos;
-			my $exclusive_OR=$ref_seq^$reconstructed_alt_seq;
-		
+			my $exclusive_OR=$ref_seq^$reconstructed_alt_seq;		
 			if($exclusive_OR =~ /[^\0]/g) {
 				$new_pos=$-[0]; #gives offset of the beginning of last successful match
 				$g_pu->{'new_pos'}=$new_pos;
@@ -482,8 +475,8 @@ sub _get_ref_5p_pos {
 				my $insert_length = ($g_pu->{'alt_pos_3p'} - $g_pu->{'ref_pos_5p'});
 				
 				# added for testing....
-				$g_pu->{'old_5p'}=$g_pu->{'ref_pos_5p'};
-				$g_pu->{'old_3p'}=$g_pu->{'ref_pos_3p'};
+				#$g_pu->{'old_5p'}=$g_pu->{'ref_pos_5p'};
+				#$g_pu->{'old_3p'}=$g_pu->{'ref_pos_3p'};
 				#-----
 				# get run over after insert string due to match with reference bases
 				$g_pu->{'insert_mod'}=($new_pos - $g_pu->{'ref_pos_5p'}) % $insert_length;
@@ -492,8 +485,8 @@ sub _get_ref_5p_pos {
 				$g_pu->{'ref_pos_3p'}=$new_pos;
 				
 				# added for testing....
-				$g_pu->{'new_5p'}=$g_pu->{'ref_pos_5p'};
-				$g_pu->{'new_3p'}=$g_pu->{'ref_pos_3p'};
+				#$g_pu->{'new_5p'}=$g_pu->{'ref_pos_5p'};
+				#$g_pu->{'new_3p'}=$g_pu->{'ref_pos_3p'};
 				#-----	
 
 		}
@@ -540,6 +533,9 @@ sub populateHash {
 	#}
 	#if(exists $bam_header_data->{$sample}{'lib_size'}){
 		$g_pu->{'lib_size'}=$bam_header_data->{$sample}{'lib_size'};
+		
+		#print "LIB:::: $sample".$bam_header_data->{$sample}{'lib_size'}."-------------\n";
+		
 	#}
 	#else {
 	#	$g_pu->{'lib_size'}=$Sanger::CGP::Vaf::VafConstants::READ_LENGTH*2;
@@ -582,7 +578,6 @@ Inputs
 
 sub _fetch_features {
 	my ($self,$sam_object,$g_pu,$Reads_FH)=@_;
-	
 	if(($g_pu->{'end'} - $g_pu->{'start'}) < $g_pu->{'lib_size'}){
 		$self->_fetch_reads($sam_object, "$g_pu->{'region'}",$Reads_FH);
 		$g_pu->{'long_indel'}=0;
@@ -594,7 +589,7 @@ sub _fetch_features {
 		$g_pu->{'long_indel'}=1;
 		}
 	#only get unmapped reads if not in HDR region and while analysing only PASSED varinat
-	if(!defined $g_pu->{'hdr'} && defined $self->{'_passedOnly'}){
+	if($g_pu->{'hdr'} == 0 && $self->{'_passedOnly'} == 1){
 		$self->_fetch_unmapped_reads($sam_object,"$g_pu->{'chr'}:$g_pu->{'pos_5p'}-$g_pu->{'pos_3p'}",$Reads_FH);
 	}
 close($Reads_FH);
@@ -653,7 +648,6 @@ my $read_counter=0;
 		}
 				
 	});
-	
 	#added separately as it was pulling only one read 
 	foreach my $key (keys %$mate_info)
 	{
@@ -744,7 +738,6 @@ my $read_counter=0;
 	}
 				
 	});
-	
 	#added separately as it was pulling only one read 
 	foreach my $key (keys %$mate_info)
 	{
@@ -840,9 +833,8 @@ sub _do_exonerate {
 			}
 		}
 	}	
-	
-$g_pu=$self->_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n); 
 
+$g_pu=$self->_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n); 
 
 return $g_pu;
 
@@ -865,7 +857,7 @@ Inputs
 =cut
 
 sub _cleanup_read_ambiguities {
-	my ($sel,$g_pu,$read_track_alt,$read_track_ref,$alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n)=@_;
+	my ($self,$g_pu,$read_track_alt,$read_track_ref,$alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n)=@_;
 	my $amb_reads;
 	foreach my $read (sort keys %$read_track_alt) {
 			if(exists $read_track_ref->{$read}) {
@@ -908,9 +900,7 @@ sub _cleanup_read_ambiguities {
 		if($alt_count_p) { $g_pu -> {'alt_p'}=keys %$alt_count_p; }
 		if($alt_count_n) { $g_pu -> {'alt_n'}=keys %$alt_count_n; }
 		if($amb_reads)	 { $g_pu -> {'amb'}=keys %$amb_reads; }
-		
-		#print Dumper $amb_reads;
-		
+			
 return $g_pu;
 
 }
