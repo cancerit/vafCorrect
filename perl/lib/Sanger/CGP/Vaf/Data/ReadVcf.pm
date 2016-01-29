@@ -710,6 +710,7 @@ sub processMergedLocations {
   my($merged_vcf)=$self->_getVCFObject($info_tag_val);
   
   foreach my $location (sort keys %$unique_locations) {
+  	#next unless($location=~/114911505/);
 		$count++;
 		$variant->setLocation($location);
 		$variant->setVarLine($unique_locations->{$location});
@@ -725,13 +726,13 @@ sub processMergedLocations {
 		}
     my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
     if ($self->{'_a'} eq 'indel') {
-			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
+			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);		
     }
     my $mutant_depth=0;
     my $depth=0;
      
   	foreach my $sample (@{$self->{'allSamples'}}) {
-   		$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
+   		$g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;		
 			if($self->{'_a'} eq 'indel') {	
 				$g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
 				if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
