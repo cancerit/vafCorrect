@@ -1,3 +1,5 @@
+## V4.1.2 ########
+*Added setup.sh
 ## V4.1.1 ########
 *Fixed bug in unmapped mate retrival
 ## V4.1.0 ########
