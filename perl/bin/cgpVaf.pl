@@ -71,6 +71,7 @@ try {
 	# create variant object
 	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
 		'location' 		=> undef,
+		'tmp'					=>$options->{'tmp'},
 		'varLine' 		=> undef,
 		'varType' 		=> $vcf_obj->{'_a'},
 		'libSize' 		=> defined $lib_size?$lib_size:100,
@@ -112,8 +113,8 @@ try {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
     	$vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
     	if($options->{'ao'} == 1) {
-    		rmdir $options->{'tmp'} or $log->warn("Could not rmove folder".$options->{'tmp'}.':'.$!);
-	 			unlink($vcf_obj->getOutputDir.'/temp.reads', $vcf_obj->getOutputDir.'/temp.ref', $vcf_obj->getOutputDir.'/temp.vcf') or $log->warn("Could not unlink".$vcf_obj->getOutputDir.':'.$!);
+		 		unlink glob $options->{'tmp'}."/temp.*" or $log->warn("Could not unlink".$options->{'tmp'}.'/temp.*:'.$!);
+    		#rmdir $options->{'tmp'} or $log->warn("Could not rmove folder".$options->{'tmp'}.':'.$!);
 	 		}
   }
   
@@ -137,8 +138,8 @@ try {
 		if ((-e $outfile_gz) && (-e $outfile_tabix)) {
 			 		unlink glob $options->{'tmp'}."/tmp_*.vcf" or $log->warn("Could not unlink".$options->{'tmp'}.'/tmp_*.vcf:'.$!);
 			 		unlink glob $options->{'tmp'}."/tmp_*.tsv" or $log->warn("Could not unlink".$options->{'tmp'}.'/tmp_*.tsv:'.$!);
-			 		rmdir $options->{'tmp'} or $log->warn("Could not rmove folder".$options->{'tmp'}.':'.$!);
-			 		unlink($vcf_obj->getOutputDir.'/temp.reads', $vcf_obj->getOutputDir.'/temp.ref', $vcf_obj->getOutputDir.'/temp.vcf') or $log->warn("Could not unlink".$vcf_obj->getOutputDir.':'.$!);
+			 		unlink glob $options->{'tmp'}."/temp.*" or $log->warn("Could not unlink".$options->{'tmp'}.'/temp.*:'.$!);
+			 		#rmdir $options->{'tmp'} or $log->warn("Could not rmove folder".$options->{'tmp'}.':'.$!);
     }
   }
 }
@@ -199,8 +200,9 @@ sub option_builder {
 	mkpath($options{'o'});
 	if(!defined $options{'tmp'}) {
 		$options{'o'}=~s/\/\//\//g;
-		mkpath($options{'o'}.'/tmpvaf');
-		$options{'tmp'}=$options{'o'}.'/tmpvaf';
+		my $tn_name=@{$options{'tn'}}[0];
+		mkpath($options{'o'}.'/tmpvaf_'.$tn_name);
+		$options{'tmp'}=$options{'o'}.'/tmpvaf_'.$tn_name;
 	}
 	if(!defined $options{'vn'}) { $options{'vn'}=1;}
 	if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {	
