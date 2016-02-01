@@ -167,7 +167,6 @@ sub storeResults {
  
 }
 
-
 =head2 getVcfFields
 get sample specific original values for INFO and FILTER fields
 Inputs
@@ -204,8 +203,6 @@ sub getVcfFields {
 	
 	return ($old_info_val,$NFS,$flag_val,$max_depth);
 }
-
-
 
 =head2 _getFlagStatus
 get new filter flag value based on original filter defined in VCF
@@ -306,7 +303,7 @@ sub createExonerateInput {
 	my($ref_seq)=$self->_get_dna_segment($bam,$g_pu->{'chr'},$g_pu->{'pos_5p'},$g_pu->{'pos_3p'});
 	my($alt_seq)=$self->_get_alt_seq($bam,$g_pu);
 	$g_pu=$self->_get_ref_5p_pos($ref_seq,$alt_seq,$g_pu);
-	open (my $ref_n_alt_FH,'>'.$self->{'_outDir'}.'/temp.ref')|| $log->logcroak("unable to open file $!");;
+	open (my $ref_n_alt_FH,'>'.$self->{'_tmp'}.'/temp.ref')|| $log->logcroak("unable to open file $!");;
 	print $ref_n_alt_FH ">alt\n$alt_seq\n>ref\n$ref_seq\n";
 	close($ref_n_alt_FH);
 	return($g_pu);
@@ -559,9 +556,9 @@ Inputs
 
 sub getIndelResults {
 	my($self,$bam,$g_pu)=@_;
-	open (my $Reads_FH, '>',$self->{'_outDir'}.'/temp.reads') || $log->logcroak("unable to open file $!");
+	open (my $Reads_FH, '>',$self->{'_tmp'}.'/temp.reads') || $log->logcroak("unable to open file $!");
 	$g_pu=$self->_fetch_features($bam,$g_pu,$Reads_FH);
-	$g_pu=$self->_do_exonerate($self->{'_outDir'}.'/temp.ref',$self->{'_outDir'}.'/temp.reads',$g_pu);
+	$g_pu=$self->_do_exonerate($self->{'_tmp'}.'/temp.ref',$self->{'_tmp'}.'/temp.reads',$g_pu);
 	return $g_pu;
 }
 

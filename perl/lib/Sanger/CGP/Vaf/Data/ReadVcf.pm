@@ -126,7 +126,7 @@ sub getProgress {
 	print "\n >>>>>> To view overall progress log please check vcfcommons.log file created in the current directory >>>>>>>>>\n";
 	print "\n >>>>>> Samples specific progress.out file is created in the output directory : $self->{'_o'} >>>>>>>>>\n";
 	my $progress_fhw;
-	my $file_name=$self->{'_o'}.'/progress.out';
+	my $file_name=$self->{'_tmp'}.'/progress.out';
 	if (-e $file_name)
 	{
 		open $progress_fhw, '>>', $file_name or die "Can't open $file_name: $!";
@@ -195,7 +195,7 @@ sub writeFinalFileHeaders {
 	# return if no VCF file found or augment only option is provided for indel data ...
 	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || ( $self->{'_ao'} == 1)); 
 	my $vcf=$self->_getVCFObject($info_tag_val);
-	my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0]."_consolidated_".$self->{'_a'};	
+	my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].$self->{'_a'};	
 	$log->debug("VCF outfile:$outfile_name.vcf");
 	$log->debug("TSV outfile:$outfile_name.tsv");
 	open($WFH_VCF, '>',"$outfile_name.vcf");
@@ -203,7 +203,7 @@ sub writeFinalFileHeaders {
 	
 	print $WFH_VCF $vcf->format_header();	
   # writing results in tab separated format
-	my $tmp_file=$self->{'_o'}.'/temp.vcf';
+	my $tmp_file=$self->{'_tmp'}.'/temp.vcf';
 	open(my $tmp_vcf,'>',$tmp_file);
 	print $tmp_vcf $vcf->format_header();
 	close($tmp_vcf);
@@ -697,7 +697,7 @@ sub processMergedLocations {
 	my $total_locations=keys %$unique_locations;
 	foreach my $progress_line(@$progress_data) {
 		chomp $progress_line;
-		if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf") {
+		if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf" ) {
 			$log->debug("Skipping Analysis for chr:$chr: result file--> $self->{'_tmp'}/tmp_$chr.vcf exists");
 			return;
 		}
