@@ -195,7 +195,7 @@ sub writeFinalFileHeaders {
 	# return if no VCF file found or augment only option is provided for indel data ...
 	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || ( $self->{'_ao'} == 1)); 
 	my $vcf=$self->_getVCFObject($info_tag_val);
-	my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].$self->{'_a'};	
+	my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';	
 	$log->debug("VCF outfile:$outfile_name.vcf");
 	$log->debug("TSV outfile:$outfile_name.tsv");
 	open($WFH_VCF, '>',"$outfile_name.vcf");
