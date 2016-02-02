@@ -191,16 +191,15 @@ sub writeFinalFileHeaders {
 	
 	my $WFH_VCF=undef;
 	my $WFH_TSV=undef;
-	
+  my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';	
 	# return if no VCF file found or augment only option is provided for indel data ...
-	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || ( $self->{'_ao'} == 1)); 
+	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || ( $self->{'_ao'} == 1) || (-e "$outfile_name.vcf.gz")); 
 	my $vcf=$self->_getVCFObject($info_tag_val);
-	my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';	
+	#my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';	
 	$log->debug("VCF outfile:$outfile_name.vcf");
 	$log->debug("TSV outfile:$outfile_name.tsv");
-	open($WFH_VCF, '>',"$outfile_name.vcf");
-	open($WFH_TSV, '>',"$outfile_name.tsv");
-	
+	open($WFH_VCF, '>',"$outfile_name.vcf") unless(-e "$outfile_name.vcf.gz");
+	open($WFH_TSV, '>',"$outfile_name.tsv") unless(-e "$outfile_name.tsv");
 	print $WFH_VCF $vcf->format_header();	
   # writing results in tab separated format
 	my $tmp_file=$self->{'_tmp'}.'/temp.vcf';
