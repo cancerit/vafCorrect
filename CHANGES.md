@@ -1,3 +1,5 @@
+## V4.1.6 ########
+*fixed test to created progress file path
 ## V4.1.5 ########
 *updated condition to create outfile only if it is absent
 ## V4.1.4 ########

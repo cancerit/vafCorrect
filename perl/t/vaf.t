@@ -26,6 +26,7 @@ use Const::Fast qw(const);
 use List::Util qw(first);
 use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
+use File::Path qw(mkpath);
 
 const my $MODULE1 => ' Sanger::CGP::Vaf::Data::ReadVcf';
 const my $MODULE2 => 'Sanger::CGP::Vaf::Process::Variant';
@@ -57,6 +58,8 @@ subtest 'Initialisation checks' => sub {
 
 const my $tags => $Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
+mkpath("$test_output/tmpvcf_$test_samples[0]");
+
 my $options={
 	'd'	=>	$test_data,
 	'o'	=>	$test_output,
@@ -65,10 +68,11 @@ my $options={
 	'tn'=>  \@test_samples,
 	'nn'=>  $normal_sample,
 	'e'	=>	$test_ext2,
+	'ao' => 0,
 	't'=>"VT,VC",
 	'r'=>0,
 	'c'=>005,
-	'tmp' => "$test_output/tmpvcf",
+	'tmp' => "$test_output/tmpvcf_$test_samples[0]",
 	#'b' => "$test_data/test.bed",
 	#'bo' => 1
 	};
@@ -136,6 +140,7 @@ subtest 'ReadVcf' => sub {
 		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
+		'tmp'					=> $options->{'tmp'},
 		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
 		);
 	
