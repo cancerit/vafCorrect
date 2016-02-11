@@ -113,8 +113,7 @@ try {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
     	$vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
     	if($options->{'ao'} == 1) {
-		 		unlink glob $options->{'tmp'}."/temp.*" or $log->warn("Could not unlink".$options->{'tmp'}.'/temp.*:'.$!);
-    		#rmdir $options->{'tmp'} or $log->warn("Could not rmove folder".$options->{'tmp'}.':'.$!);
+    	  my($cleaned)=$vcf_obj->cleanTempdir($options->{'tmp'});
 	 		}
   }
   
@@ -136,11 +135,8 @@ try {
 		print $progress_fhw "$outfile_name_no_ext.tsv\n";
 		close $progress_fhw;
 		if ((-e $outfile_gz) && (-e $outfile_tabix)) {
-			 		unlink glob $options->{'tmp'}."/tmp_*.vcf" or $log->warn("Could not unlink".$options->{'tmp'}.'/tmp_*.vcf:'.$!);
-			 		unlink glob $options->{'tmp'}."/tmp_*.tsv" or $log->warn("Could not unlink".$options->{'tmp'}.'/tmp_*.tsv:'.$!);
-			 		unlink glob $options->{'tmp'}."/temp.*" or $log->warn("Could not unlink".$options->{'tmp'}.'/temp.*:'.$!);
-			 		#rmdir $options->{'tmp'} or $log->warn("Could not rmove folder".$options->{'tmp'}.':'.$!);
-    }
+			my($cleaned)=$vcf_obj->cleanTempdir($options->{'tmp'});
+		}
   }
 }
 	

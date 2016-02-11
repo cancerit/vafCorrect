@@ -23,9 +23,6 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Path;
 use Const::Fast qw(const);
-use List::Util qw(first);
-use Try::Tiny qw(try catch finally);
-use Capture::Tiny qw(:all);
 use File::Path qw(mkpath);
 
 const my $MODULE1 => ' Sanger::CGP::Vaf::Data::ReadVcf';
@@ -226,17 +223,19 @@ subtest 'ReadVcf' => sub {
  	  $variant->setLocation('1:16902712:T:C');
 		$variant->setVarLine('PD20515a-UM;MN;MQ');
 		my($g_pu)=$variant->formatVarinat();
-		diag(Dumper $g_pu);	
 		is_deeply($g_pu,$expected_g_pu,'ReadVcf_processMergedLocations:g_pu');
  		$g_pu=$variant->populateHash($g_pu,'PD20515a',$bam_header_data);
- 		diag(Dumper $g_pu);	 
  		$g_pu=$variant->getPileup($bam_objects->{'PD20515a'},$g_pu);
- 		diag(Dumper $g_pu);	 
- 		
  };
 
 
-
+subtest 'CleanTestResults' => sub {
+	  my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+	  my($cleaned1) = $vcf_obj->cleanTempdir($options->{'tmp'}); 
+		is_deeply($cleaned1,$options->{'tmp'},'CleanTestResults:tmpdir');
+		my($cleaned2) = $vcf_obj->cleanTempdir($test_output);
+		is_deeply($cleaned2,$test_output,'CleanTestResults:testOutdir');
+};
 
 
 done_testing();
