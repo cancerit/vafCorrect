@@ -1,7 +1,7 @@
 
 
 ##########LICENCE##########
-# Copyright (c) 2014 Genome Research Ltd., 
+# Copyright (c) 2014 Genome Research Ltd.,
 #
 # This file is part of cgpVAF.
 #
@@ -20,7 +20,7 @@
 ##########LICENCE##########
 
 SOURCE_SAMTOOLS="https://github.com/samtools/samtools/archive/0.1.20.tar.gz"
-SOURCE_TABIX="https://github.com/sb43/tabix/archive/0.2.6.tar.gz" 
+SOURCE_TABIX="https://github.com/sb43/tabix/archive/0.2.6.tar.gz"
 #SOURCE_VCFTOOLS="https://github.com/vcftools/vcftools/archive/v0.1.14.tar.gz"
 SOURCE_VCFTOOLS="http://sourceforge.net/projects/vcftools/files/vcftools_0.1.12a.tar.gz/download"
 
@@ -67,13 +67,12 @@ fi
 CPU=1
 echo "compilation CPUs set to $CPU"
 
-INST_PATH_USER=$1
+INST_PATH=$1
 
 # get current directory
 INIT_DIR=`pwd`
 
 # create inst_path
-INST_PATH="$INST_PATH_USER/perl";
 mkdir -p $INST_PATH/bin
 mkdir -p $INST_PATH/lib
 mkdir -p $INST_PATH/config
