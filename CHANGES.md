@@ -1,3 +1,7 @@
+
+## V4.1.6 ########
+*added test to check final result removal 
+*chnaged bio:db:sam version to 1.42
 ## V4.1.6 ########
 *fixed test to created progress file path
 ## V4.1.5 ########

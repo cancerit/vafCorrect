@@ -39,7 +39,7 @@ use warnings FATAL => 'all';
 use Capture::Tiny qw(:all);
 use Carp;
 use Try::Tiny qw(try catch finally);
-
+use File::Remove qw(remove);
 use Bio::DB::Sam;
 use Bio::DB::Sam::Constants;
 use Sanger::CGP::Vaf::VafConstants;
@@ -1473,7 +1473,15 @@ sub catFiles {
   $self->_runExternal($command, 'cat', undef, 1, 1); # croakable, quiet, no data
 }
 
-
+# recursively cleanups folder and underlying substructure
+sub cleanTempdir {
+    my ($self,$dir)=@_;
+    $log->logcroak("Unable to find cleanup dir:$dir") if(! -d $dir && $dir!~/^./);
+    my ($num)=remove(\1,"$dir");
+    $log->logcroak("Unable to remove cleanup dir:$dir") if(-d $dir);
+    $log->debug("Dir: $dir cleaned successfully");
+    return $num;
+}
 
 # generic function
 sub _print_hash {
