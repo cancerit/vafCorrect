@@ -1,3 +1,5 @@
+## V4.1.10 ########
+* Improved and corrected setup.sh and location of Makefile.PL
 ## V4.1.8 ########
 *added test to check final result removal 
 *chnaged bio:db:sam version to 1.42
@@ -24,9 +26,6 @@
 * Per chromosome progress tracking i.e., failed jobs can be resumed from last unsuccessful chromosome
 * Added setup script script
 ### 3.2.4 ########
-
 * Added condition to check snps that fall at the end of chromosome
-
 ### 3.2.3 ########
-
 *	Added option to create config file for user defined list of samples

@@ -64,8 +64,15 @@ if [ "$#" -ne "1" ] ; then
   exit 0
 fi
 
-CPU=1
-echo "compilation CPUs set to $CPU"
+CPU=`grep -c ^processor /proc/cpuinfo`
+if [ $? -eq 0 ]; then
+  if [ "$CPU" -gt "6" ]; then
+    CPU=6
+  fi
+else
+  CPU=1
+fi
+echo "Max compilation CPUs set to $CPU"
 
 INST_PATH=$1
 
@@ -77,8 +84,6 @@ mkdir -p $INST_PATH/bin
 mkdir -p $INST_PATH/lib
 mkdir -p $INST_PATH/config
 mkdir -p $INST_PATH/bin/hdr
-cp $INIT_DIR/perl/bin/cgpVaf.pl $INST_PATH/bin/
-cp $INIT_DIR/perl/bin/createVafCmd.pl $INST_PATH/bin/
 cp $INIT_DIR/perl/config/log4perl.vaf.conf $INST_PATH/config/
 cp -rp $INIT_DIR/perl/bin/hdr	$INST_PATH/bin/
 cp -rp $INIT_DIR/README.md	$INST_PATH/README.md
@@ -89,10 +94,8 @@ cd $INIT_DIR
 
 # make sure that build is self contained
 unset PERL5LIB
-ARCHNAME=`perl -e 'use Config; print $Config{archname};'`
 PERLROOT=$INST_PATH/lib/perl5
-PERLARCH=$PERLROOT/$ARCHNAME
-export PERL5LIB="$PERLROOT:$PERLARCH"
+export PERL5LIB="$PERLROOT"
 
 # log information about this system
 (
@@ -195,7 +198,7 @@ fi
 
 done_message "" "Failed to build $CURR_TOOL."
 
-cd $INIT_DIR
+cd "$INIT_DIR/perl"
 
 echo -n "Installing Perl prerequisites ..."
 if ! ( perl -MExtUtils::MakeMaker -e 1 >/dev/null 2>&1); then
@@ -212,7 +215,7 @@ done_message "" "Failed during installation of core dependencies."
 echo -n "Installing cgpVaf ..."
 (
   set -e
-  cd "$INIT_DIR"
+  cd "$INIT_DIR/perl"
 	echo -n `pwd`
   perl Makefile.PL INSTALL_BASE=$INST_PATH
   make
