@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ##########LICENCE##########
-# Copyright (c) 2014 
+# Copyright (c) 2014-2016
 #
 # This file is part of cgpVaf
 # cgpVaf is free software: you can redistribute it and/or modify it under
@@ -33,7 +33,7 @@ WriteMakefile(
   PREREQ_PM     => {
                     'Attribute::Abstract' => '1.02',
                     'Bio::DB::Sam' => '1.42',
-                    'Bio::Root::Version' => '1.006924', 
+                    'Bio::Root::Version' => '1.006924',
                     'Capture::Tiny' => 0.24,
                     'Config::IniFiles' => '2.83',
                     'Const::Fast' => '0.014',
