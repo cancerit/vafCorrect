@@ -40,6 +40,7 @@ use Capture::Tiny qw(:all);
 use Carp;
 use Try::Tiny qw(try catch finally);
 use File::Remove qw(remove);
+use File::Path qw(remove_tree);
 use Bio::DB::Sam;
 use Bio::DB::Sam::Constants;
 use Sanger::CGP::Vaf::VafConstants;
@@ -696,7 +697,7 @@ sub processMergedLocations {
 	my $total_locations=keys %$unique_locations;
 	foreach my $progress_line(@$progress_data) {
 		chomp $progress_line;
-		if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf" ) {
+		if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf" && ($self->{'_ao'} == 0) ) {
 			$log->debug("Skipping Analysis for chr:$chr: result file--> $self->{'_tmp'}/tmp_$chr.vcf exists");
 			return;
 		}
@@ -778,7 +779,7 @@ sub processMergedLocations {
 	# write success file name
 	close $tmp_WFH_VCF if($self->{'_ao'} ==0);
 	close $tmp_WFH_TSV if($self->{'_ao'} ==0);
-	print $progress_fhw "$self->{'_tmp'}/tmp_$chr.vcf\n";
+	print $progress_fhw "$self->{'_tmp'}/tmp_$chr.vcf\n" if($self->{'_ao'} ==0);
 	# returns only when we are augmenting the VCF files else always written into a file 
 	return ($store_results);
 }
@@ -1320,7 +1321,7 @@ sub _writeFinalVcf {
 		my ($aug_gz,$aug_tabix)=$self->compressVcf($aug_vcf_name->{$sample});
 		# remove raw vcf file after tabix indexing
     if ((-e $aug_gz) && (-e $aug_tabix)) {
-    	unlink $aug_vcf_name->{$sample} or $log->warn("Could not unlink".$aug_vcf_name->{$sample}.':'.$!);
+    	unlink $aug_vcf_name->{$sample} or $log->warn("Could not unlink".$aug_vcf_name->{$sample}.':'.$!) if(-e $aug_vcf_name->{$sample});
     }
 		return;
 }
@@ -1476,12 +1477,67 @@ sub catFiles {
 # recursively cleanups folder and underlying substructure
 sub cleanTempdir {
     my ($self,$dir)=@_;
-    $log->logcroak("Unable to find cleanup dir:$dir") if(! -d $dir && $dir!~/^./);
-    my ($num)=remove(\1,"$dir");
-    $log->logcroak("Unable to remove cleanup dir:$dir") if(-d $dir);
+    my $num;
+    $log->debug("Unable to find cleanup dir:$dir") if(! -d $dir && $dir!~/^./);
+    eval{
+    	($num)=remove(\1,"$dir");
+    };
+    $log->debug("Unable to remove cleanup dir:$dir") if(-d $dir);
     $log->debug("Dir: $dir cleaned successfully");
     return $num;
 }
+
+
+sub check_and_cleanup_dir{
+  my ($self,$dir) = @_;
+  if(-e $dir && -d $dir){
+    my ($dirs, $files) = $self->clear_path($dir);
+  }
+  return;
+}
+
+
+=head3 clear_path
+
+=over
+
+Implemented as File::Path remove_tree (rmtree) is naff
+the idea is to remove the content of all of the directories
+and then use remove_tree to remove the directories
+needed to handle very big structures from devil
+
+=back
+
+=cut
+sub clear_path {
+  my ($self, $root_path) = @_;
+  my ($dir_count, $file_count) = (0,0);
+  my @dirs = ($root_path);
+  $dir_count++;
+  if((scalar @dirs) > 0) {
+    my $curr_path = shift @dirs;
+    opendir my $CLEAN, $curr_path or $log->debug("Path does not exist $curr_path");
+    while(my $thing = readdir $CLEAN) {
+      next if($thing =~ m/^\.{1,2}$/);
+      next if($thing =~ m/^\.nfs/);
+      print $thing."\n";
+      my $full_path = $curr_path.'/'.$thing;
+      if(-d $full_path) {
+        push @dirs, $full_path;
+        $dir_count++;
+      }
+      else {
+        unlink $full_path or $log->debug("Unable to delete $full_path");
+        $file_count++;
+      }
+    }
+    remove_tree($root_path) or $log->debug("Unable to remove $root_path");
+    closedir $CLEAN;
+  }
+  return ($dir_count, $file_count);
+}
+
+
 
 # generic function
 sub _print_hash {
