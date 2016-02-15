@@ -1,3 +1,5 @@
+## V4.1.12 ########
+* Updated verison
 ## V4.1.11 ########
 * Added condition to ignore writing progress file if augment only option is selected
 ## V4.1.10 ########
