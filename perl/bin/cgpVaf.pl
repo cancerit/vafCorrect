@@ -111,9 +111,12 @@ try {
 	# if augmentation option is selected then write augmented vcf file 
   if(defined $store_results && defined $options->{'m'}) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
-    	$vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name); 
+    	$vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
+    	
     	if($options->{'ao'} == 1) {
-    	  my($cleaned)=$vcf_obj->cleanTempdir($options->{'tmp'});
+    	  my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
+    	  close $progress_fhw;
+    	  exit(0);
 	 		}
   }
   
@@ -135,7 +138,7 @@ try {
 		print $progress_fhw "$outfile_name_no_ext.tsv\n";
 		close $progress_fhw;
 		if ((-e $outfile_gz) && (-e $outfile_tabix)) {
-			my($cleaned)=$vcf_obj->cleanTempdir($options->{'tmp'});
+			my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
 		}
   }
 }
