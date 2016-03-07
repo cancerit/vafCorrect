@@ -2,7 +2,7 @@ package Sanger::CGP::Vaf;
 use strict;
 use Const::Fast qw(const);
 
-our $VERSION = '4.1.12';
+our $VERSION = '4.1.13';
 
 const my $LICENSE =>
 "#################
