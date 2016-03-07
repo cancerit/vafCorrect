@@ -35,7 +35,7 @@ $main::SQL_LIB_LOC = '.'; # this suppresses warnings about uninitialised values
 use FindBin qw($Bin);
 
 #use lib("/software/CGP/projects/vcfCommons/perl/lib");
-use Sanger::CGP::Config::Config qw(vcfCommons);
+use Sanger::CGP::Config::Config qw(cgpVaf);
 use Sanger::CGP::Vaf::Utility::CreateCommands;
 
 use Sanger::CGP::Database::Conn;
