@@ -403,12 +403,16 @@ sub _getOriginalHeader {
 		push(@$info_tag_val,$header_sample_line->{$sample_data});
 		}
 	}
-	
 	#add sample names..
 	my $sample_info=$vcf->get_header_line(key=>'SAMPLE', ID=>'NORMAL');
 	foreach my $sample_line ( @$sample_info) {
 		foreach my $key (keys %$sample_line) {
 			if(defined $sample_line->{$key} and $key eq "SampleName") {
+				if (exists $sample_line->{'CGP_Project'}) {
+					$self->_createSymlink($Sanger::CGP::Vaf::VafConstants::NST_LINKS.'/'.$sample_line->{'CGP_Project'}.'/'.$sample_line->{$key}.'/'.$sample_line->{$key}.'.bam',"$self->{'_d'}/$sample_line->{$key}.bam");
+					$self->_createSymlink($Sanger::CGP::Vaf::VafConstants::NST_LINKS.'/'.$sample_line->{'CGP_Project'}.'/'.$sample_line->{$key}.'/'.$sample_line->{$key}.'.bam',"$self->{'_d'}/$sample_line->{$key}.bam");
+					$log->debug("Created symlink for sample in vcf header: $sample_line->{$key} in project:".$sample_line->{'CGP_Project'});
+				}
 				$normal_sample->{$sample_line->{$key}}.="|$sample";
 			}
 		}		
@@ -663,7 +667,7 @@ sub _setNormal {
 		elsif(defined $self->{'_vn'}){
 			$flag=0;
 			$self->setNormal($key);
-			$log->debug("Setting normal sample as specified in VCF header : make sure normal sample ($key) bam file is present");
+			$log->debug("Setting normal sample from VCF header : make bam file is present at : $self->{'_d'}/${key}.bam");
 		}
 	}
 	if($flag==1 && $self->{'_vn'}){
@@ -1550,4 +1554,8 @@ sub _print_hash {
 	}
 }
 
-
+sub _createSymlink {
+  my ($self,$file, $symlink_path)=@_;
+  if( -l $symlink_path) { $log->debug("symlink exists, skipping file $symlink_path ==> $file"); return;}
+  symlink $file, $symlink_path;
+}

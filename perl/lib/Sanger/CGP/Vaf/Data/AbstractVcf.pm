@@ -28,6 +28,7 @@ use Log::Log4perl;
 use POSIX qw(ceil);
 use Data::Dumper;
 use Attribute::Abstract;
+use File::Basename;
 
 use Sanger::CGP::Vaf::VafConstants;
 

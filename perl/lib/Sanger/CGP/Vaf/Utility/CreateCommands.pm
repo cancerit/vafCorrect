@@ -46,6 +46,8 @@ use Try::Tiny qw(try catch finally);
 use warnings FATAL => 'all';
 use Data::Dumper;
 
+use Sanger::CGP::Vaf::VafConstants;
+
 use Log::Log4perl;
 Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
@@ -53,8 +55,8 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 const my $SEP => "/";
 const my $test_mode => 0;
 const my $version => Sanger::CGP::Vaf->VERSION;
-const my $ref_dir => '/nfs/cancer_ref01';
-const my $ref_dir_x10 => '/lustre/scratch112/sanger/cgppipe/canpipe/live/ref';
+const my $ref_dir => $Sanger::CGP::Vaf::VafConstants::GENOME_REF01;
+const my $ref_dir_x10 => $Sanger::CGP::Vaf::VafConstants::GENOME_CANPIPE;
 
 
 use base qw(Sanger::CGP::Vaf::Data::AbstractVcf);
@@ -340,9 +342,8 @@ sub writeConfig {
 		my @samples_to_analyse=split("\t",$sample_group->{$project}{$id_ind});
 		#print Dumper($sample_group->{$project}{$id_ind});
 		if(@samples_to_analyse >0) {
-			
 			# only analyse matched tumour normal pairs
-			if(!exists $normal_samples->{$project}{$id_ind} && (defined $self->{'_n'} && $self->{'_n'} eq 'Y')) {
+			if(!exists $normal_samples->{$project}{$id_ind} && (defined $self->{'_n'} && uc($self->{'_n'}) eq 'Y')) {
 				next;
 			} 
 			if(!exists $normal_samples->{$project}{$id_ind}) {
@@ -350,13 +351,22 @@ sub writeConfig {
 				 my($unm_sample)=$self->_get_unmatched_normal($samples_to_analyse[0],$project,$root_path,$conn);
 				 if(defined $unm_sample) {
 				 	$group_name=$unm_sample.'_UNM'.$unmatched_normal_count;
+					$log->debug("Unmatched normal detected $group_name: @samples_to_analyse");
 				 }
 				 else{
 				 	$group_name=$samples_to_analyse[0]."_$unmatched_normal_count";
 				 }
 			}
 			else {
-			  $group_name="$normal_samples->{$project}{$id_ind}";
+				 my($normal_check_name)=$self->_get_unmatched_normal($samples_to_analyse[0],$project,$root_path,$conn);
+				 if($normal_check_name ne $normal_samples->{$project}{$id_ind}) {
+				 			$unmatched_normal_count++;
+				 			$log->debug("Using normal ($normal_check_name) from SIP_ATTRIBUTES instead of matched normal($normal_samples->{$project}{$id_ind})");
+			  			$group_name=$normal_check_name.'_UNM'.$unmatched_normal_count;
+			  	}
+			  	else{
+			  		$group_name="$normal_samples->{$project}{$id_ind}";
+			  	}
 			}
 			my $subset_flag=0;
 	  	if((scalar @{$self->{'_u'}}) > 0) {
