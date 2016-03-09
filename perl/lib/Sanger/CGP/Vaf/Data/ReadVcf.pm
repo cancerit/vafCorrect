@@ -1474,7 +1474,7 @@ Inputs
 =cut
 sub catFiles {
 	my($self,$path,$ext,$outfile)=@_;
-	my $command='cat '.$path.'/*.'.$ext.' >>'."$outfile.$ext";
+	my $command='cat '.$path.'/tmp_*.'.$ext.' >>'."$outfile.$ext";
   $self->_runExternal($command, 'cat', undef, 1, 1); # croakable, quiet, no data
 }
 
@@ -1524,7 +1524,7 @@ sub clear_path {
     while(my $thing = readdir $CLEAN) {
       next if($thing =~ m/^\.{1,2}$/);
       next if($thing =~ m/^\.nfs/);
-      print $thing."\n";
+      #print $thing."\n";
       my $full_path = $curr_path.'/'.$thing;
       if(-d $full_path) {
         push @dirs, $full_path;
@@ -1540,8 +1540,6 @@ sub clear_path {
   }
   return ($dir_count, $file_count);
 }
-
-
 
 # generic function
 sub _print_hash {
