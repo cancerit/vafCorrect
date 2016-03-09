@@ -1,4 +1,7 @@
 
+## V4.1.15 ########
+
+* Fixed vcf header, as it was copied twice in the outfile
 ## V4.1.14 ########
 
 * Added explicit check for normal sample using SIP_ATTRIBUTES table
