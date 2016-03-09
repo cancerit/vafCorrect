@@ -1,3 +1,8 @@
+
+## V4.1.14 ########
+
+* Added explicit check for normal sample using SIP_ATTRIBUTES table
+
 ## V4.1.13 ########
 
 * updated defualt project ini folder to cgpVaf

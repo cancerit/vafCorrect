@@ -330,7 +330,7 @@ sub _getRange {
   #if location is in high depth region and has depth >1000 then hdr_flag is true
   if($hdr_flag && $max_depth > 1000){$spanning_seq_denom=4;}
   else {$hdr_flag=0;}
-  $chr_len=$bam_header->{$self->{'_normalName'}}{$g_pu->{'chr'}};
+	$chr_len=$bam_header->{$self->{'_normalName'}}{$g_pu->{'chr'}};
   if(defined $lib_size && defined $chr_len) {
   	$spanned_region = round(($lib_size *  $Sanger::CGP::Vaf::VafConstants::INSERT_SIZE_FACTOR )/$spanning_seq_denom);
   	#$spanned_region=round($spanned_region);
@@ -342,7 +342,10 @@ sub _getRange {
 		 $left_pos=$g_pu->{'start'} - 50;
 		 $right_pos = $g_pu->{'end'} + 50;
 		}
+	}else{
+		$log->logcroak("Library size or chromosome length in not defined");
 	}
+	
 	$g_pu->{'pos_5p'}=$left_pos;
 	$g_pu->{'pos_3p'}=$right_pos;
 	$g_pu->{'hdr'}=$hdr_flag;
