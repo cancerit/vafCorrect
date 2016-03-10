@@ -173,7 +173,6 @@ sub option_builder {
                 'tmp|tmpdir=s' => \$options{'tmp'},
                 'dp|depth=s' => \$options{'dp'},
                 'pid|id_int_project=s' => \$options{'pid'},
-                'vn|vcf_normal=i' => \$options{'vn'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
                 'v|version'  => \$options{'v'}
 	);
@@ -203,7 +202,6 @@ sub option_builder {
 		mkpath($options{'o'}.'/tmpvaf_'.$tn_name);
 		$options{'tmp'}=$options{'o'}.'/tmpvaf_'.$tn_name;
 	}
-	if(!defined $options{'vn'}) { $options{'vn'}=1;}
 	if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {	
 		warn "Analysing:".$options{'a'}."\n";
 	}
@@ -278,7 +276,6 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -d -pid -bo -vn -vcf
    --depth         (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --id_int_project(-pid)Internal project id [WTSI only]
    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
-   --vcf_normal    (-vn) use normal sample defined in vcf header field [ default 1 ]
    --vcf           (-vcf)user defined vcf file name [please specify in same order as tumour sample names]
    --help          (-h)  Display this help message
    --version       (-v)  provide version information for vaf
