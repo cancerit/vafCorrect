@@ -106,25 +106,6 @@ sub getAllSampleNames{
  $self->{'allSamples'}=\@allSampleNames;
 }
 
-=head2 setNormal
-set normal sample name
-Inputs
-=over 2
-=item normal -normal sample name to set
-=back
-=cut
-
-sub setNormal {
-	my($self,$normal)=@_;
-	$self->{'_nn'}=$normal;
-	my ($file_name,$dir_name,$suffix) = fileparse($self->getNormalBam,qr/\.[^.]*/);
-	my $normal_bam=$dir_name.$normal.$suffix;
-	if(! -e $normal_bam ) {
-		$log->logcroak("Unable to find normal bam: $normal_bam");
-	}
-	$self->{'_nb'}=$normal_bam;
-}
-
 sub getGenome {
 	return shift->{'_g'};
 }
