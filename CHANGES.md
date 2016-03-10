@@ -1,7 +1,12 @@
 
+## V4.1.16 ########
+
+* corrected condition to get unmatched normal 
+
 ## V4.1.15 ########
 
 * Fixed vcf header, as it was copied twice in the outfile
+
 ## V4.1.14 ########
 
 * Added explicit check for normal sample using SIP_ATTRIBUTES table

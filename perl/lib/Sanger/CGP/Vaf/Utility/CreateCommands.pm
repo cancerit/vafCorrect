@@ -359,7 +359,7 @@ sub writeConfig {
 			}
 			else {
 				 my($normal_check_name)=$self->_get_unmatched_normal($samples_to_analyse[0],$project,$root_path,$conn);
-				 if($normal_check_name ne $normal_samples->{$project}{$id_ind}) {
+				 if($normal_check_name && $normal_check_name ne $normal_samples->{$project}{$id_ind}) {
 				 			$unmatched_normal_count++;
 				 			$log->debug("Using normal ($normal_check_name) from SIP_ATTRIBUTES instead of matched normal($normal_samples->{$project}{$id_ind})");
 			  			$group_name=$normal_check_name.'_UNM'.$unmatched_normal_count;

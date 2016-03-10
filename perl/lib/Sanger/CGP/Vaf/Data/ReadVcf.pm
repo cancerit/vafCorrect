@@ -104,12 +104,11 @@ my ($self)=@_;
 		
 	}	
 	
-	if(defined $self->{'_bo'} and ($self->{'_bo'} == 0)) { 
+	if($self->{'_bo'} and ($self->{'_bo'} == 0)) { 
 		$log->logcroak("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
-		$self->_setNormal($vcf_normal_sample);	
 	}	
 		
-	if(defined $self->{'_b'} ) { 
+	if($self->{'_b'}) { 
 		$info_tag_val=$self->_populateBedHeader($info_tag_val);
 	}
 		return ($info_tag_val,$updated_info_tags,$vcf_file_obj);
@@ -408,11 +407,11 @@ sub _getOriginalHeader {
 	foreach my $sample_line ( @$sample_info) {
 		foreach my $key (keys %$sample_line) {
 			if(defined $sample_line->{$key} and $key eq "SampleName") {
-				if (exists $sample_line->{'CGP_Project'}) {
-					$self->_createSymlink($Sanger::CGP::Vaf::VafConstants::NST_LINKS.'/'.$sample_line->{'CGP_Project'}.'/'.$sample_line->{$key}.'/'.$sample_line->{$key}.'.bam',"$self->{'_d'}/$sample_line->{$key}.bam");
-					$self->_createSymlink($Sanger::CGP::Vaf::VafConstants::NST_LINKS.'/'.$sample_line->{'CGP_Project'}.'/'.$sample_line->{$key}.'/'.$sample_line->{$key}.'.bam',"$self->{'_d'}/$sample_line->{$key}.bam");
-					$log->debug("Created symlink for sample in vcf header: $sample_line->{$key} in project:".$sample_line->{'CGP_Project'});
-				}
+				#if (exists $sample_line->{'CGP_Project'}) {
+				#	$self->_createSymlink($Sanger::CGP::Vaf::VafConstants::NST_LINKS.'/'.$sample_line->{'CGP_Project'}.'/'.$sample_line->{$key}.'/'.$sample_line->{$key}.'.bam',"$self->{'_d'}/$sample_line->{$key}.bam");
+				#	$self->_createSymlink($Sanger::CGP::Vaf::VafConstants::NST_LINKS.'/'.$sample_line->{'CGP_Project'}.'/'.$sample_line->{$key}.'/'.$sample_line->{$key}.'.bam',"$self->{'_d'}/$sample_line->{$key}.bam");
+				#	$log->debug("Created symlink for sample in vcf header: $sample_line->{$key} in project:".$sample_line->{'CGP_Project'});
+				#}
 				$normal_sample->{$sample_line->{$key}}.="|$sample";
 			}
 		}		
@@ -648,33 +647,6 @@ sub populateBedLocations {
 	return ($data_for_all_samples,$filtered_bed_locations);
 }
 
-=head2 _setNormal
-set normal sample
-Inputs
-=over 2
-=item vcf_normal -normal sample defined in vcf header
-=back
-=cut
-
-sub _setNormal {
-	my($self,$vcf_normal)=@_;
-	my $flag=1;
-	foreach my $key (keys %$vcf_normal) {
-		if($key eq $self->getNormalName) {
-			$flag=0;
-			$log->debug(" User provided normal sample matches with VCF normal");
-		}
-		elsif(defined $self->{'_vn'}){
-			$flag=0;
-			$self->setNormal($key);
-			$log->debug("Setting normal sample from VCF header : make bam file is present at : $self->{'_d'}/${key}.bam");
-		}
-	}
-	if($flag==1 && $self->{'_vn'}){
-			$log->debug("Unable to find normal sample defined in vcf header");
-		}
-	
-}
 
 =head2 processMergedLocations
 Analyse merged vcf and/or bed locations
@@ -800,6 +772,7 @@ sub _get_bam_object {
 	my (%bam_objects,%bas_files);
 	my $files=$self->{'bam'};
 	foreach my $sample (keys %$files) {
+		$log->logcroak("Unable to find bam file: $files->{$sample}") unless(-e $files->{$sample});
 		my $sam = Bio::DB::Sam->new(-bam => $files->{$sample},
 															-fasta =>$self->getGenome,
 															-expand_flags => 1);
