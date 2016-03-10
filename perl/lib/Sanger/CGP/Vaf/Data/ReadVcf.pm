@@ -105,13 +105,36 @@ my ($self)=@_;
 	}	
 	
 	if($self->{'_bo'} and ($self->{'_bo'} == 0)) { 
-		$log->logcroak("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
+		$log->debug("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
+		$self->_checkNormal($vcf_normal_sample);
 	}	
 		
 	if($self->{'_b'}) { 
 		$info_tag_val=$self->_populateBedHeader($info_tag_val);
 	}
 		return ($info_tag_val,$updated_info_tags,$vcf_file_obj);
+}
+
+
+
+=head2 _checkNormal
+check normal sample
+Inputs
+=over 2
+=item vcf_normal -normal sample defined in vcf header
+=back
+=cut
+
+sub _checkNormal {
+	my($self,$vcf_normal)=@_;
+	foreach my $key (keys %$vcf_normal) {
+		if($key eq $self->getNormalName) {
+			$log->debug("User provided normal sample matches with VCF normal");
+		}
+		else{
+			$log->debug("User provided normal sample doesn't matche with normal samples defined in VCF header");
+		}
+	}	
 }
 
 =head2 getProgress
