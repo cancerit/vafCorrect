@@ -89,45 +89,46 @@ sub loadSql {
   my ($self,$conn) = @_;
 	$conn->addQuery('nst::NL::getProjectBamAndVcf', q{
 	select cs.id_sample cs_id_sample, cs.id_ind, ip.id_int_project, sip.sample_synonym, LOWER(s.species) SPECIES, ipat.build, ipat.design, ipat.sw, sipa.attr_value treat_as_tumour
-	, max(decode(ar.result_type, 247, ar.result,decode(ar.result_type,7,ar.result))) BAM
-	, max(decode(ar.result_type, 16, ar.result)) BAI
-	, max(decode(ar.result_type, 250, ar.result)) BAS
-	, max(decode(ar.result_type,140, ar.result)) CAVE
-	, max(decode(ar.result_type,141, ar.result)) CAVE_IDX
-	, max(decode(ar.result_type,183, ar.result)) CAVE_C
-	, max(decode(ar.result_type,184, ar.result)) CAVE_C_IDX
-	, max(decode(ar.result_type,132, ar.result)) PINDEL
-	, max(decode(ar.result_type,133, ar.result)) PINDEL_IDX
-	, max(decode(ar.result_type,27, ar.result)) PINDEL_BAM
-	, max(decode(ar.result_type,28, ar.result)) PINDEL_BAI
-	from (
-		select id_int_project
-		, max(decode(attr_type, 1, attr_value)) build
-		, max(decode(attr_type, 3, attr_value)) design
-		, nvl(max(decode(attr_type, 10, attr_value)),0) sw
-		from internal_project_attributes
-		group by id_int_project
-	) ipat
-	, internal_project ip
-	, sample_int_project sip
-	, sip_attributes sipa
-	, sample s
-	, analysis_results ar
-	,cosi_summary cs
-	where ip.team_name > 0
-	and ip.id_int_project = ipat.id_int_project
-	and ip.id_int_project = sip.id_int_project
-	and sip.id_sample = s.id_sample
-	and sip.id_sample_cosmic = sipa.id_sample_cosmic
-	and sip.id_sample_cosmic = cs.id_sample
-	and sipa.attr_type = 12
-	and ip.id_int_project = ar.id_int_project
-	and sip.id_sample_cosmic = ar.id_field
-	and ar.is_current = 1
-	and ar.result_type in (7,247,16,250,140,141,183,184,132,133,27,28)
-	and ip.id_int_project = ?
-	group by ip.id_int_project, sip.sample_synonym, s.species, ipat.build, ipat.design, ipat.sw, sipa.attr_value,cs.id_sample,cs.id_ind
-	order by 1,2
+, max(decode(ar.result_type, 247, ar.result,decode(ar.result_type,7,ar.result))) BAM
+, max(decode(ar.result_type, 16, ar.result)) BAI
+, max(decode(ar.result_type, 250, ar.result)) BAS
+, max(decode(ar.result_type,140, ar.result)) CAVE
+, max(decode(ar.result_type,141, ar.result)) CAVE_IDX
+, max(decode(ar.result_type,183, ar.result)) CAVE_C
+, max(decode(ar.result_type,184, ar.result)) CAVE_C_IDX
+, max(decode(ar.result_type,132, ar.result)) PINDEL
+, max(decode(ar.result_type,133, ar.result)) PINDEL_IDX
+, max(decode(ar.result_type,27, ar.result)) PINDEL_BAM
+, max(decode(ar.result_type,28, ar.result)) PINDEL_BAI
+from (
+select id_int_project
+, max(decode(attr_type, 1, attr_value)) build
+, max(decode(attr_type, 3, attr_value)) design
+, nvl(max(decode(attr_type, 10, attr_value)),0) sw
+from internal_project_attributes where id_int_project = ?
+group by id_int_project
+) ipat
+, internal_project ip
+, sample_int_project sip
+, sip_attributes sipa
+, sample s
+, analysis_results ar
+,cosi_summary cs
+where ip.team_name > 0
+and ip.id_int_project = ipat.id_int_project
+and ip.id_int_project = sip.id_int_project
+and sip.id_sample = s.id_sample
+and sip.id_sample_cosmic = sipa.id_sample_cosmic
+and sip.id_int_project = sipa.id_int_project
+and sip.id_sample_cosmic = cs.id_sample
+and sipa.attr_type = 12
+and ip.id_int_project = ar.id_int_project
+and sip.id_sample_cosmic = ar.id_field
+and ar.is_current = 1
+and ar.result_type in (7,247,16,250,140,141,183,184,132,133,27,28)
+and ip.id_int_project = ?
+group by ip.id_int_project, sip.sample_synonym, s.species, ipat.build, ipat.design, ipat.sw, sipa.attr_value,cs.id_sample,cs.id_ind
+order by 1,2
 		});
 
 $conn->addQuery('nst::NL::getProjectBamAndVcfForUnm', q{
@@ -148,7 +149,7 @@ $conn->addQuery('nst::NL::getProjectBamAndVcfForUnm', q{
 		, max(decode(attr_type, 1, attr_value)) build
 		, max(decode(attr_type, 3, attr_value)) design
 		, nvl(max(decode(attr_type, 10, attr_value)),0) sw
-		from internal_project_attributes
+		from internal_project_attributes 
 		group by id_int_project
 	) ipat
 	, internal_project ip
@@ -162,6 +163,7 @@ $conn->addQuery('nst::NL::getProjectBamAndVcfForUnm', q{
 	and ip.id_int_project = sip.id_int_project
 	and sip.id_sample = s.id_sample
 	and sip.id_sample_cosmic = sipa.id_sample_cosmic
+	and sip.id_int_project = sipa.id_int_project
 	and sip.id_sample_cosmic = cs.id_sample
 	and sipa.attr_type = 12
 	and ip.id_int_project = ar.id_int_project
@@ -207,7 +209,7 @@ Inputs
 sub buildInputData {
   my ($self,$conn) = @_;
   my $project_id=$self->{'_pid'};
-	my $all_data = $conn->executeArrHashRef('nst::NL::getProjectBamAndVcf',$project_id);
+	my $all_data = $conn->executeArrHashRef('nst::NL::getProjectBamAndVcf',$project_id,$project_id);
 	my @retained_data;
 	my $total_records = 0;
 	for my $curr(@{$all_data}) {

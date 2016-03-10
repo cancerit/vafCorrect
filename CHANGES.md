@@ -1,4 +1,8 @@
 
+## V4.1.17 ########
+
+* Updated SQL query to get input data to generate commands 
+
 ## V4.1.16 ########
 
 * corrected condition to get unmatched normal 
