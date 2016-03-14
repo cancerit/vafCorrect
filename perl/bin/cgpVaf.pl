@@ -237,6 +237,9 @@ sub option_builder {
 		# augment vcf extesnion
 		$options{'oe'}='.vaf.vcf';
 	}
+	if(($options{'ao'} || $options{'m'}) && lc($options{'a'}) eq 'snp') {
+		$log->logcroak("Warning: VCF augment option is only supported for indels");
+	} 
 	
  \%options;
 }
