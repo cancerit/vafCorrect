@@ -12,7 +12,7 @@ use Sanger::CGP::Vaf::Data::ReadVcf;
 use Sanger::CGP::Vaf::Process::Variant;
 use Sanger::CGP::Vaf::VafConstants;
 
-use Bio::DB::Sam;
+use Bio::DB::HTS;
 
 use Config::IniFiles;
 use Vcf;;

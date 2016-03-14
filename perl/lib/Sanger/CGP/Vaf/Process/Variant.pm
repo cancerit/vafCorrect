@@ -40,8 +40,8 @@ use warnings FATAL => 'all';
 use Capture::Tiny qw(:all);
 
 use Math::Round qw(round);
-use Bio::DB::Sam;
-use Bio::DB::Sam::Constants;
+use Bio::DB::HTS;
+use Bio::DB::HTS::Constants;
 
 use Sanger::CGP::Vaf::VafConstants;
 

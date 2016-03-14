@@ -30,8 +30,9 @@ WriteMakefile(
 												)],
   PREREQ_PM     => {
                     'Attribute::Abstract' => '1.02',
-                    'Bio::DB::Sam' => '1.42',
-                    'Bio::Root::Version' => '1.006924',
+										'Bio::DB::HTS' => '1.10',
+                    'Bio::Root::Version' => '1.006009001',
+                    #'Bio::DB::Sam' => '1.42',
                     'Capture::Tiny' => '0.24',
                     'Config::IniFiles' => '2.83',
                     'Const::Fast' => '0.014',
