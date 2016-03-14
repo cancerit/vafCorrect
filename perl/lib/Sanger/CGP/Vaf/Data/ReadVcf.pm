@@ -466,12 +466,12 @@ sub _getCustomHeader {
 	$vcf_filter->{'filter2'}={(key=>'FILTER',ID=>'2',Description=>"New filter status 2=called in any")};
 	$vcf_filter->{'filter3'}={(key=>'FILTER',ID=>'3',Description=>"New filter status 3=called + passed")};	
         
-	$vcf_info->{'NS'}={(key=>'INFO',ID=>'NS',Number=>'1',Description=>"Number of samples analysed [Excludes designated normal sample]")}; 
-	$vcf_info->{'NC'}={(key=>'INFO',ID=>'NC',Number=>'1',Description=>"Number of samples where variant originally Called [Excludes designated normal sample]")};
-	$vcf_info->{'NP'}={(key=>'INFO',ID=>'NP',Number=>'1',Description=>"Number of samples where variant Passed the Filter [Excludes designated normal sample]")};
-	$vcf_info->{'ND'}={(key=>'INFO',ID=>'ND',Number=>'1',Description=>"Number of samples where sequencing Depth[>0 reads] found [Excludes designated normal sample]")};
-	$vcf_info->{'NA'}={(key=>'INFO',ID=>'NA',Number=>'1',Description=>"Number of samples where original algorithm is run [Excludes designated normal sample]")};
-	$vcf_info->{'NVD'}={(key=>'INFO',ID=>'NVD',Number=>'1',Description=>"Number of samples where sequencing depth[>0 reads] found for variant reads[Excludes designated normal sample]")};
+	$vcf_info->{'NS'}={(key=>'INFO',ID=>'NS',Number=>'1',Type=>"Integer",Description=>"Number of samples analysed [Excludes designated normal sample]")}; 
+	$vcf_info->{'NC'}={(key=>'INFO',ID=>'NC',Number=>'1',Type=>"Integer",Description=>"Number of samples where variant originally Called [Excludes designated normal sample]")};
+	$vcf_info->{'NP'}={(key=>'INFO',ID=>'NP',Number=>'1',Type=>"Integer",Description=>"Number of samples where variant Passed the Filter [Excludes designated normal sample]")};
+	$vcf_info->{'ND'}={(key=>'INFO',ID=>'ND',Number=>'1',Type=>"Integer",Description=>"Number of samples where sequencing Depth[>0 reads] found [Excludes designated normal sample]")};
+	$vcf_info->{'NA'}={(key=>'INFO',ID=>'NA',Number=>'1',Type=>"Integer",Description=>"Number of samples where original algorithm is run [Excludes designated normal sample]")};
+	$vcf_info->{'NVD'}={(key=>'INFO',ID=>'NVD',Number=>'1',Type=>"Integer",Description=>"Number of samples where sequencing depth[>0 reads] found for variant reads[Excludes designated normal sample]")};
 	
 	$vcf_format->{'MTR'}={(key=>'FORMAT',ID=>'MTR', Number=>'1',Type=>'Integer',Description=>"Reads reporting the variant allele")};
 	$vcf_format->{'WTR'}={(key=>'FORMAT',ID=>'WTR', Number=>'1',Type=>'Integer',Description=>"Reads reporting the reference allele")};
