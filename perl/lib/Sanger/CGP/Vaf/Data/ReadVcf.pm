@@ -41,8 +41,8 @@ use Carp;
 use Try::Tiny qw(try catch finally);
 use File::Remove qw(remove);
 use File::Path qw(remove_tree);
-use Bio::DB::Sam;
-use Bio::DB::Sam::Constants;
+use Bio::DB::HTS;
+use Bio::DB::HTS::Constants;
 use Sanger::CGP::Vaf::VafConstants;
 use Sanger::CGP::Vaf::Process::Variant;
 use Log::Log4perl;
@@ -482,7 +482,7 @@ sub _getCustomHeader {
 	$vcf_format->{'OFS'}={(key=>'FORMAT',ID=>'OFS', Number=>'1',Type=>'String',Description=>"Original filter status as defined in input vcf FILTER field")};
 	
 	if ($self->{'_a'} eq 'indel') {
-		$vcf_format->{'AMB'}={(key=>'FORMAT',ID=>'AMB', Number=>'1',Type=>'String',Description=>"Reads mapping on both the alleles with same specificity")};
+		$vcf_format->{'AMB'}={(key=>'FORMAT',ID=>'AMB', Number=>'1',Type=>'Integer',Description=>"Reads mapping on both the alleles with same specificity")};
 	}
 	
 	if ($self->{'_a'} eq 'snp') {
@@ -796,7 +796,7 @@ sub _get_bam_object {
 	my $files=$self->{'bam'};
 	foreach my $sample (keys %$files) {
 		$log->logcroak("Unable to find bam file: $files->{$sample}") unless(-e $files->{$sample});
-		my $sam = Bio::DB::Sam->new(-bam => $files->{$sample},
+		my $sam = Bio::DB::HTS->new(-bam => $files->{$sample},
 															-fasta =>$self->getGenome,
 															-expand_flags => 1);
 		$sam->max_pileup_cnt($Sanger::CGP::Vaf::VafConstants::MAX_PILEUP_DEPTH);
