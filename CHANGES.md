@@ -1,4 +1,8 @@
 
+## V4.1.18 ########
+
+* Added support to Bio::DB::HTS 
+
 ## V4.1.17 ########
 
 * Updated SQL query to get input data to generate commands 
