@@ -1,5 +1,5 @@
 
-## V4.1.18 ########
+## V4.2.0 ########
 
 * Added support to Bio::DB::HTS 
 
