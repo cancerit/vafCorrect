@@ -12,10 +12,6 @@ use Sanger::CGP::Vaf::Data::ReadVcf;
 use Sanger::CGP::Vaf::Process::Variant;
 use Sanger::CGP::Vaf::VafConstants;
 
-use Bio::DB::Sam;
-
-use Config::IniFiles;
-use Vcf;;
 use English qw( -no_match_vars );
 use warnings FATAL => 'all';
 use Carp;

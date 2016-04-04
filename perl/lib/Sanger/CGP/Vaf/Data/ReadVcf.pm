@@ -41,8 +41,8 @@ use Carp;
 use Try::Tiny qw(try catch finally);
 use File::Remove qw(remove);
 use File::Path qw(remove_tree);
-use Bio::DB::Sam;
-use Bio::DB::Sam::Constants;
+use Bio::DB::HTS;
+use Bio::DB::HTS::Constants;
 use Sanger::CGP::Vaf::VafConstants;
 use Sanger::CGP::Vaf::Process::Variant;
 use Log::Log4perl;
@@ -466,23 +466,23 @@ sub _getCustomHeader {
 	$vcf_filter->{'filter2'}={(key=>'FILTER',ID=>'2',Description=>"New filter status 2=called in any")};
 	$vcf_filter->{'filter3'}={(key=>'FILTER',ID=>'3',Description=>"New filter status 3=called + passed")};	
         
-	$vcf_info->{'NS'}={(key=>'INFO',ID=>'NS',Number=>'1',Description=>"Number of samples analysed [Excludes designated normal sample]")}; 
-	$vcf_info->{'NC'}={(key=>'INFO',ID=>'NC',Number=>'1',Description=>"Number of samples where variant originally Called [Excludes designated normal sample]")};
-	$vcf_info->{'NP'}={(key=>'INFO',ID=>'NP',Number=>'1',Description=>"Number of samples where variant Passed the Filter [Excludes designated normal sample]")};
-	$vcf_info->{'ND'}={(key=>'INFO',ID=>'ND',Number=>'1',Description=>"Number of samples where sequencing Depth[>0 reads] found [Excludes designated normal sample]")};
-	$vcf_info->{'NA'}={(key=>'INFO',ID=>'NA',Number=>'1',Description=>"Number of samples where original algorithm is run [Excludes designated normal sample]")};
-	$vcf_info->{'NVD'}={(key=>'INFO',ID=>'NVD',Number=>'1',Description=>"Number of samples where sequencing depth[>0 reads] found for variant reads[Excludes designated normal sample]")};
+	$vcf_info->{'NS'}={(key=>'INFO',ID=>'NS',Number=>'1',Type=>"Integer",Description=>"Number of samples analysed [Excludes designated normal sample]")}; 
+	$vcf_info->{'NC'}={(key=>'INFO',ID=>'NC',Number=>'1',Type=>"Integer",Description=>"Number of samples where variant originally Called [Excludes designated normal sample]")};
+	$vcf_info->{'NP'}={(key=>'INFO',ID=>'NP',Number=>'1',Type=>"Integer",Description=>"Number of samples where variant Passed the Filter [Excludes designated normal sample]")};
+	$vcf_info->{'ND'}={(key=>'INFO',ID=>'ND',Number=>'1',Type=>"Integer",Description=>"Number of samples where sequencing Depth[>0 reads] found [Excludes designated normal sample]")};
+	$vcf_info->{'NA'}={(key=>'INFO',ID=>'NA',Number=>'1',Type=>"Integer",Description=>"Number of samples where original algorithm is run [Excludes designated normal sample]")};
+	$vcf_info->{'NVD'}={(key=>'INFO',ID=>'NVD',Number=>'1',Type=>"Integer",Description=>"Number of samples where sequencing depth[>0 reads] found for variant reads[Excludes designated normal sample]")};
 	
 	$vcf_format->{'MTR'}={(key=>'FORMAT',ID=>'MTR', Number=>'1',Type=>'Integer',Description=>"Reads reporting the variant allele")};
 	$vcf_format->{'WTR'}={(key=>'FORMAT',ID=>'WTR', Number=>'1',Type=>'Integer',Description=>"Reads reporting the reference allele")};
 	$vcf_format->{'DEP'}={(key=>'FORMAT',ID=>'DEP', Number=>'1',Type=>'Integer',Description=>"Total reads covering this position (for subs del positions should be ignored)")};
 	$vcf_format->{'MDR'}={(key=>'FORMAT',ID=>'MDR', Number=>'1',Type=>'Integer',Description=>"Variant allele read directions 0=no reads; 1=Forward; 2=Reverse; 3=Forward + Reverse")};
 	$vcf_format->{'WDR'}={(key=>'FORMAT',ID=>'WDR', Number=>'1',Type=>'Integer',Description=>"Reference allele read directions 0=no reads; 1=Forward; 2=Reverse; 3=Forward + Reverse")};
-	$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'String',Description=>"Varinat Allele Fraction (excludes ambiguous reads if any)")};
+	$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'Float',Description=>"Variant Allele Fraction (excludes ambiguous reads if any)")};
 	$vcf_format->{'OFS'}={(key=>'FORMAT',ID=>'OFS', Number=>'1',Type=>'String',Description=>"Original filter status as defined in input vcf FILTER field")};
 	
 	if ($self->{'_a'} eq 'indel') {
-		$vcf_format->{'AMB'}={(key=>'FORMAT',ID=>'AMB', Number=>'1',Type=>'String',Description=>"Reads mapping on both the alleles with same specificity")};
+		$vcf_format->{'AMB'}={(key=>'FORMAT',ID=>'AMB', Number=>'1',Type=>'Integer',Description=>"Reads mapping on both the alleles with same specificity")};
 	}
 	
 	if ($self->{'_a'} eq 'snp') {
@@ -494,7 +494,7 @@ sub _getCustomHeader {
 		$vcf_format->{'RCZ'}={(key=>'FORMAT',ID=>'RCZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting C for this position, reverse strand")};
 		$vcf_format->{'RGZ'}={(key=>'FORMAT',ID=>'RGZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting G for this position, reverse strand")};
 		$vcf_format->{'RTZ'}={(key=>'FORMAT',ID=>'RTZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting T for this position, reverse strand")};	
-		$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'String',Description=>"Varinat Allele Fraction (excludes ambiguous reads if any)")};
+		$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'Float',Description=>"Variant Allele Fraction (excludes ambiguous reads if any)")};
 
 	}
 	
@@ -796,7 +796,7 @@ sub _get_bam_object {
 	my $files=$self->{'bam'};
 	foreach my $sample (keys %$files) {
 		$log->logcroak("Unable to find bam file: $files->{$sample}") unless(-e $files->{$sample});
-		my $sam = Bio::DB::Sam->new(-bam => $files->{$sample},
+		my $sam = Bio::DB::HTS->new(-bam => $files->{$sample},
 															-fasta =>$self->getGenome,
 															-expand_flags => 1);
 		$sam->max_pileup_cnt($Sanger::CGP::Vaf::VafConstants::MAX_PILEUP_DEPTH);
