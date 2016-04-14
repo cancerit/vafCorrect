@@ -1,3 +1,6 @@
+## V4.2.2 ########
+
+* changed Bio::DB::HTS version to 1.12
 
 ## V4.2.1 ########
 
