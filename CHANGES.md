@@ -1,4 +1,8 @@
 
+## V4.2.1 ########
+
+* changed Bio::DB::HTS version to 1.11 
+
 ## V4.2.0 ########
 
 * Added support to Bio::DB::HTS 
