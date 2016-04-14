@@ -237,3 +237,5 @@ echo "Please add the following to beginning of PERL5LIB:"
 echo "  $PERLROOT"
 echo "  $PERLARCH"
 echo
+
+exit 0
