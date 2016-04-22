@@ -26,12 +26,12 @@ BEGIN {
   use File::Basename;
   $ENV{POSIXLY_CORRECT}=1;
   unshift (@INC,dirname(abs_path($0)).'/../lib');
-  $SIG{__WARN__} = sub {warn $_[0] unless(( $_[0] =~ m/^Subroutine Tabix.* redefined/) || ($_[0] =~ m/^Use of uninitialized value \$buf/) || ($_[0] =~ m/gzip: stdout: Broken pipe/))};
+  $SIG{__WARN__} = sub {warn $_[0] unless(($_[0] =~ m/^Use of uninitialized value \$buf/) || ($_[0] =~ m/gzip: stdout: Broken pipe/))};
 };
 
 use strict;
-#$main::SQL_LIB_LOC = '.'; # this suppresses warnings about uninitialised values
 
+use Bio::DB::HTS:Tabix;
 use File::Path qw(mkpath);
 use FindBin qw($Bin);
 use English qw( -no_match_vars );
@@ -43,6 +43,7 @@ use Getopt::Long;
 use Data::Dumper;
 use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
+
 
 
 use Log::Log4perl;
@@ -82,8 +83,8 @@ try {
 		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
-		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
-		);
+		'tabix_hdr' 	=> Bio::DB::HTS:Tabix->new(filename => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
+		);	
 	
 	my($bed_locations)=$vcf_obj->getBedHash;
 	my ($chromosomes)=$vcf_obj->getChromosomes;
@@ -165,7 +166,7 @@ sub option_builder {
                 'o|outDir=s'  => \$options{'o'},
                 'm|augment=i' => \$options{'m'},
                 'ao|augment_only=i' => \$options{'ao'},
-                # provide at least 1 tumour samples name
+                # provide at least 1 tumour sample name
                 'tn|tumour_name=s{1,}' => \@{$options{'tn'}},
                 'nn|normal_name=s' => \$options{'nn'},
                 'bo|bed_only=i' => \$options{'bo'},
@@ -252,17 +253,17 @@ cgpVaf.pl merge the variants in vcf files for a given Tumour - normal pairs in a
 
 =head1 SYNOPSIS
 
-cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -d -pid -bo -vn -vcf -v]
+cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -pid -bo -vcf -v]
 
   Required Options (inputDir and variant_type must be defined):
 
    --variant_type  (-a)  variant type (snp or indel) [default snp]
    --inputDir      (-d)  input directory path
    --genome        (-g)  genome fasta file name (default genome.fa)
-   --tumour_name   (-tn) Toumour sample name [ list of space separated names in same order as input files ]
-   --normal_name   (-nn) Normal sample name
+   --tumour_name   (-tn) Toumour sample name [ list of space separated  sample names ]
+   --normal_name   (-nn) Normal sample name [ single sample used as normal for this analysis ]
    --outDir        (-o)  Output folder
-   --vcfExtension  (-e)  vcf file extension string after the sample name - INCLUDE's dot (default: .caveman_c.annot.vcf.gz) 
+   --vcfExtension  (-e)  vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz) 
 
   Optional
    --infoTags      (-t)  comma separated list of tags to be included in the vcf INFO field 
@@ -279,14 +280,14 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -d -pid -bo -vn -vcf
    --depth         (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --id_int_project(-pid)Internal project id [WTSI only]
    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
-   --vcf           (-vcf)user defined vcf file name [please specify in same order as tumour sample names]
+   --vcf           (-vcf)user defined vcf file name (otherwise deduced from tumour name and  [please specify in same order as tumour sample names]
    --help          (-h)  Display this help message
    --version       (-v)  provide version information for vaf
 
    Examples:
       Merge vcf files to create single vcf containing union of all the variant sites and provides pileup output for each location
       perl cgpVaf.pl -d tmpvcfdir -o testout -a snp -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2 
-      Merge vcf files to create single vcf containing union of all the variant sites and provides allele count for underlying location
+      Merge vcf files to create single vcf containing union of all the variant sites and provides allele count for underlying indel location
       perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2
 =cut
 

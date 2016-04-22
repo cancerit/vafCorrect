@@ -23,14 +23,12 @@ package Sanger::CGP::Vaf::Process::Variant;
 ##########LICENCE##############################################################
 
 BEGIN {
-  $SIG{__WARN__} = sub {warn $_[0] unless(( $_[0] =~ m/^Subroutine Tabix.* redefined/) .
-   ($_[0] =~ m/^Odd number of elements in hash assignment/) || ($_[0] =~m/^Use of uninitialized value \$gtype/) || ($_[0] =~ m/^Use of uninitialized value \$buf/)|| ($_[0] =~ m/symlink exists/) || ($_[0] =~ m/gzip: stdout: Broken pipe/) )};
+  $SIG{__WARN__} = sub {warn $_[0] unless(($_[0] =~ m/^Odd number of elements in hash assignment/) || ($_[0] =~m/^Use of uninitialized value \$gtype/) || ($_[0] =~ m/^Use of uninitialized value \$buf/)|| ($_[0] =~ m/symlink exists/) || ($_[0] =~ m/gzip: stdout: Broken pipe/) )};
 
 };
 
 $main::SQL_LIB_LOC = '.'; # this suppresses warnings about uninitialised values
 use strict;
-use Tabix;
 use Vcf;
 use Data::Dumper;
 use English;
