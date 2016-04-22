@@ -11,7 +11,7 @@ use Data::Dumper;
 use Sanger::CGP::Vaf::Data::ReadVcf;
 use Sanger::CGP::Vaf::Process::Variant;
 use Sanger::CGP::Vaf::VafConstants;
-
+use Bio::DB::HTS::Tabix;
 use English qw( -no_match_vars );
 use warnings FATAL => 'all';
 use Carp;
@@ -134,9 +134,9 @@ subtest 'ReadVcf' => sub {
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
 		'tmp'					=> $options->{'tmp'},
-		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
+		'tabix_hdr' 		=> Bio::DB::HTS::Tabix->new(filename => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
 		);
-	
+
 	#diag(Dumper $variant);
 	is_deeply($vcf_obj->getChromosomes,\@chr,'ReadVcf:getChromosomes');
 	my($bed_locations)=$vcf_obj->getBedHash;
@@ -213,7 +213,7 @@ subtest 'ReadVcf' => sub {
 		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
-		'tabix_hdr' 		=> new Tabix(-data => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
+		'tabix_hdr' 		=> Bio::DB::HTS::Tabix->new(filename => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
 		);
 	 		
  	  $variant->setLocation('1:16902712:T:C');

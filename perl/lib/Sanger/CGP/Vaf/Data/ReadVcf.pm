@@ -23,13 +23,11 @@ package Sanger::CGP::Vaf::Data::ReadVcf;
 ##########LICENCE##############################################################
 
 BEGIN {
-  $SIG{__WARN__} = sub {warn $_[0] unless(( $_[0] =~ m/^Subroutine Tabix.* redefined/) .
-   ($_[0] =~ m/^Odd number of elements in hash assignment/) || ($_[0] =~m/^Use of uninitialized value \$gtype/) || ($_[0] =~ m/^Use of uninitialized value \$buf/)|| ($_[0] =~ m/symlink exists/) || ($_[0] =~ m/gzip: stdout: Broken pipe/) )};
+  $SIG{__WARN__} = sub {warn $_[0] unless(($_[0] =~ m/^Odd number of elements in hash assignment/) || ($_[0] =~m/^Use of uninitialized value \$gtype/) || ($_[0] =~ m/^Use of uninitialized value \$buf/)|| ($_[0] =~ m/symlink exists/) || ($_[0] =~ m/gzip: stdout: Broken pipe/) )};
 
 };
 
 use strict;
-use Tabix;
 use Vcf;
 use Data::Dumper;
 use English;
@@ -1339,9 +1337,9 @@ sub compressVcf {
   my ($self,$annot_vcf)=@_;
   my $annot_gz = $annot_vcf.'.gz';
   my $command="vcf-sort ".$annot_vcf;
-  $command .= '| bgzip -c >'.$annot_gz;
+  $command .= "| bgzip -c >".$annot_gz;
   $self->_runExternal($command, 'bgzip', undef, 1, 1); # croakable, quiet, no data
-	$command = 'tabix -p vcf '.$annot_gz;
+	$command = "tabix -p vcf ".$annot_gz;
   $self->_runExternal($command, 'tabix', undef, 1, 1); # croakable, quiet, no data
   my $annot_tabix = "$annot_gz.tbi";
   croak "Tabix index does not appear to exist" unless(-e $annot_tabix);
