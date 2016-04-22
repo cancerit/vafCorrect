@@ -1,4 +1,8 @@
 
+## V4.3.0 ########
+
+* removed database dependecy code for external release
+
 ## V4.2.3 ########
 
 * replaced Tabix with Bio::DB::HTS::Tabix
