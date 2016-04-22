@@ -13,12 +13,6 @@ use FindBin qw($Bin);
 #   Base constants
 ####
 
-
-#paths for CGP only
-const our $GENOME_REF01 => '/nfs/cancer_ref01';
-const our $GENOME_CANPIPE => '/lustre/scratch112/sanger/cgppipe/canpipe/live/ref';
-const our $NST_LINKS => '/nfs/cancer_ref01/nst_links/live';
-
 const our $LIB_MEAN_INS_SIZE => 'mean_insert_size';
 const our $LIB_SD => 'insert_size_sd';
 const our $EXECUTE_EXTERNAL => 1;
