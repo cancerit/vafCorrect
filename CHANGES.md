@@ -1,3 +1,8 @@
+
+## V4.2.3 ########
+
+* replaced Tabix with Bio::DB::HTS::Tabix
+
 ## V4.2.2 ########
 
 * changed Bio::DB::HTS version to 1.12
