@@ -25,9 +25,7 @@ WriteMakefile(
   NAME          => 'Vaf',
   LICENSE       => 'agpl_3', # http://search.cpan.org/~dagolden/CPAN-Meta-2.142690/lib/CPAN/Meta/Spec.pm#license
   VERSION_FROM  => 'lib/Sanger/CGP/Vaf.pm',
-  EXE_FILES     => [qw( bin/cgpVaf.pl
-                        bin/createVafCmd.pl
-												)],
+  EXE_FILES     => [qw( bin/cgpVaf.pl )],
   PREREQ_PM     => {
                     'Attribute::Abstract' => '1.02',
                     'Bio::DB::HTS' => '1.12',
