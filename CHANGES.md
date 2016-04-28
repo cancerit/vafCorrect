@@ -1,4 +1,8 @@
 
+## V4.3.1 ########
+
+* removed legacy script from Makefile
+
 ## V4.3.0 ########
 
 * removed database dependecy code for external release
