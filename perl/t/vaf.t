@@ -222,7 +222,14 @@ subtest 'ReadVcf' => sub {
 		is_deeply($g_pu,$expected_g_pu,'ReadVcf_processMergedLocations:g_pu');
  		$g_pu=$variant->populateHash($g_pu,'PD20515a',$bam_header_data);
  		$g_pu=$variant->getPileup($bam_objects->{'PD20515a'},$g_pu);
- };
+		my($res)=$variant->_check_hdr_overlap('chr1',89499371,89499451,$variant->{'_tabix_hdr'});		
+		is_deeply($res,1,'ReadVcf_processMergedLocations:_check_hdr_overlap_true');
+		$res=$variant->_check_hdr_overlap(1,16902712,16902712,$variant->{'_tabix_hdr'});		
+		is_deeply($res,0,'ReadVcf_processMergedLocations:_check_hdr_overlap_false');
+};
+
+
+
 
 
 subtest 'CleanTestResults' => sub {
