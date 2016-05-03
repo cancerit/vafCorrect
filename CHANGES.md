@@ -1,4 +1,8 @@
 
+## V4.3.3 ########
+
+* updated changes.md and verision information
+
 ## V4.3.2 ########
 
 * corrected tabix syntax as for Bio::DB::HTS::Tabix, added test for high depth region overlap
