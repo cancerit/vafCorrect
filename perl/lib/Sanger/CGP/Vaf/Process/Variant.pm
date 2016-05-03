@@ -376,15 +376,12 @@ sub _check_hdr_overlap {
 	# Querying is ALWAYS half open regardless of the underlying file type
 	###
 		my $i=0;
-		my $res = $tabix->query("chr$chr", $zero_start, $one_end);
-		if(defined $res->get) {
-			#if uncomment if want to loop over the hdr regions
-			#while(my $record = $tabix->read($res)){
-				# the returned data is the ORIGINAL string from the file
-				#print "$i : $record\n";
-			#}
-			$i=1;
-			return $i;
+		my $res = $tabix->query('chr'.$chr.':'.$zero_start.'-'.$one_end);
+		while(my $record=$res->next) {
+			if($record) {
+				$i=1;
+				return $i;
+			}
 		}
 	$i;	
 }

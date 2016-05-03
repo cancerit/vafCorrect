@@ -31,7 +31,7 @@ BEGIN {
 
 use strict;
 
-use Bio::DB::HTS:Tabix;
+use Bio::DB::HTS::Tabix;
 use File::Path qw(mkpath);
 use FindBin qw($Bin);
 use English qw( -no_match_vars );
@@ -83,7 +83,7 @@ try {
 		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
-		'tabix_hdr' 	=> Bio::DB::HTS:Tabix->new(filename => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
+		'tabix_hdr' 	=> Bio::DB::HTS::Tabix->new(filename => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
 		);	
 	
 	my($bed_locations)=$vcf_obj->getBedHash;
