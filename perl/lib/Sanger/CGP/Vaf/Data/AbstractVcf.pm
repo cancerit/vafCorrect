@@ -75,7 +75,7 @@ sub _isValidAbs {
 
 sub getNormalBam {
  	my($self)=shift;
-	return $self->{'_d'}.'/'.$self->getNormalName.'.bam';
+	return $self->{'_d'}.'/'.$self->getNormalName.$self->{'_be'};
 }
 
 sub getVcfFile {
@@ -86,7 +86,7 @@ sub getVcfFile {
 
 sub getTumourBam {
 	my($self)=shift;
-	my @arr=map {$self->{'_d'}.'/'.$_.'.bam'} @{$self->getTumourName};
+	my @arr=map {$self->{'_d'}.'/'.$_.$self->{'_be'}} @{$self->getTumourName};
 	return \@arr;
 }
 

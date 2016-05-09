@@ -159,6 +159,7 @@ sub option_builder {
                 'd|inputDir=s' => \$options{'d'},
                 'b|bedIntervals=s' => \$options{'b'},
                 'e|vcfExtension=s' => \$options{'e'},
+                'be|bamExtension=s' => \$options{'be'},
                 'c|hdr_cutoff=i' => \$options{'c'},
                 'g|genome=s' => \$options{'g'},
                 'a|variant_type=s' => \$options{'a'},
@@ -213,6 +214,10 @@ sub option_builder {
  	# use annotation tags
 	if(!defined $options{'t'}) { 
 		$options{'t'}="VD,VW,VT,VC";
+	}
+	# input alignment file extension
+	if(!defined $options{'be'}) { 
+		$options{'be'}=".bam";
 	}
 	#use tabix file 
 	if(!defined $options{'c'}) {

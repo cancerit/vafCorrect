@@ -315,7 +315,7 @@ sub getMergedLocations {
 }
 
 =head2 _getData
-check and get user input provided data 
+check and get user provided data and populate respective hash values
 Inputs
 =over 2
 =back
@@ -325,20 +325,20 @@ sub _getData {
 	my $self=shift;
 	my $count=0;
 	foreach my $sample (@{$self->getTumourName}) {
-		if( -e ${$self->getTumourBam}[$count]) {
+		if( -e ${$self->getTumourBam}[$count] ) {
 			$self->{'bam'}{$sample}=${$self->getTumourBam}[$count];
 		}
 		else {
-			$log->logcroak("Unble to find TUMOUR BAM file for sample: ".$sample);
+			$log->debug("Skipping analysis, unble to find TUMOUR BAM file for sample: ".$sample);
 		}
-		if((defined ${$self->getVcfFile}[$count]) &&  ( -e ${$self->getVcfFile}[$count]) ) {
-			$self->{'vcf'}{$sample}=${$self->getVcfFile}[$count];		
+		if(${$self->getVcfFile}[$count] &&  -e ${$self->getVcfFile}[$count]) {
+			$self->{'vcf'}{$sample}=${$self->getVcfFile}[$count];
 		}
-		elsif(defined $self->{'_vcf'}) {
+		elsif(${$self->{'_vcf'}}[$count] && -e $self->{'_d'}.'/'.${$self->{'_vcf'}}[$count] ) {
 			$self->{'vcf'}{$sample}=$self->{'_d'}.'/'.${$self->{'_vcf'}}[$count];
 			$log->debug("No default VCF file found, using user defined VCF: ".$self->{'vcf'}{$sample});
 		}
-		elsif(defined $self->{'_bo'} && $self->{'_bo'}==0) {
+		elsif(defined $self->{'_bo'} && $self->{'_bo'}==0 ) {
 			$log->logcroak("Unble to find VCF file for sample: ".$sample);
 		}	
 		$count++;	
