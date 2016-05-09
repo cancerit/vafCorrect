@@ -1,5 +1,9 @@
 
-## V4.3.3 ########
+## v4.3.4 ########
+
+* Appropriate warning message when no vcf file found for a sample
+
+## v4.3.3 ########
 
 * updated changes.md and verision information
 
