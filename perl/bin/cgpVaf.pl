@@ -282,6 +282,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -pid -bo -vcf -v]
    --restrict_flag (-r)  restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
    --augment       (-m)  Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
    --augment_only  (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
+   --bamExtension  (-be) Input read file extension  
    --depth         (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --id_int_project(-pid)Internal project id [WTSI only]
    --bed_only      (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)

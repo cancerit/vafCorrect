@@ -65,6 +65,7 @@ my $options={
 	't'=>"VT,VC",
 	'r'=>0,
 	'c'=>005,
+	'be' => ".bam",
 	'tmp' => "$test_output/tmpvcf_$test_samples[0]",
 	#'b' => "$test_data/test.bed",
 	#'bo' => 1
