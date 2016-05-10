@@ -1,4 +1,8 @@
 
+## v4.3.5 ########
+
+* Minor change to test script
+
 ## v4.3.4 ########
 
 * Appropriate warning message when no vcf file found for a sample
