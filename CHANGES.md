@@ -1,4 +1,9 @@
 
+## v4.3.6 ########
+
+* Creates augmented vcf file even if no records were augmented
+* Corrected processlog in vcf output header
+
 ## v4.3.5 ########
 
 * Minor change to test script
