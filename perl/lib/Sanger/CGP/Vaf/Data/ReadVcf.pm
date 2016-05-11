@@ -517,6 +517,9 @@ sub _getProcessLog {
 		{   
 		   chomp $hash->{$key};
        my $val=$hash->{$key};
+       if (ref($val) eq 'ARRAY') {
+       	$val="@$val";
+       }
 		   $process_log->{$key}=$self->_trim_file_path($val);	
 		}
 	}
