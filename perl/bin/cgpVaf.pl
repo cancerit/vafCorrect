@@ -110,17 +110,16 @@ try {
 		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',$tags,$info_tag_val,$progress_fhw,$progress_data);	
 	}
 	# if augmentation option is selected then write augmented vcf file 
-  if(defined $store_results && defined $options->{'m'}) {
+	
+	if($options->{'m'} == 1) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
-    	$vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
-    	
+      $vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
     	if($options->{'ao'} == 1) {
     	  my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
     	  close $progress_fhw;
     	  exit(0);
 	 		}
-  }
-  
+  }   
   my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
   
   if(defined $outfile_name_no_ext){
