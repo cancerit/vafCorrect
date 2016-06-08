@@ -773,7 +773,7 @@ sub _do_exonerate {
   my $cmd="exonerate -E 0 -S 0".
 	" --score $g_pu->{'exonerate_score_cutoff'} --percent 95 --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
 	" --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
-	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
+	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS %em {%Ps}\n' ";
 	#for testing only
 	#if($test_mode)
 	#{
@@ -792,8 +792,9 @@ sub _do_exonerate {
 	if ($exit) { $log->logcroak("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
 	#----- parse exonerate output ------
 	foreach my $line((split("\n", $exonerate_output))) {
-		my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand)=(split ' ', $line);
-		if ($match_len < ($g_pu->{'read_length'} - $Sanger::CGP::Vaf::VafConstants::READ_LENGTH_CUTOFF)) {
+    my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand,$mismacth,$match_score)=(split ' ', $line);
+		# ignore reads with more than 1 mismatch and alignment length less than cutoff
+		if (($match_len < ($g_pu->{'read_length'} - 2)) || ($mismacth > 1)) {
 		 next;
 		}
 		my $strand=$t_strand;
@@ -802,6 +803,21 @@ sub _do_exonerate {
 		my $org_read=$read;
 		$read=~s/_\d+$//g;
 		if($strand eq '-') { $t_start=$t_end ; $t_end=$temp_start;}
+		# check if there is mismatch in the alignment and if it is at the variant position
+    # @- and @+ holds start and end position of match respectively
+    my $actual_pos;
+    if($match_score=~/-/g) {
+      my $mismathc_pos=$-[0]; 
+      $actual_pos=$mismathc_pos+$t_start;
+      if($strand eq '-') { $actual_pos = ($match_len - $mismathc_pos) + $t_start +1; }
+      #print "------$mismathc_pos ---- $actual_pos \n";
+      if( ($g_pu->{'ref_pos_5p'} <= $actual_pos) && (($g_pu->{'alt_pos_3p'} >= $actual_pos) || ($g_pu->{'ref_pos_3p'} >= $actual_pos)) ) {
+				next;
+			}
+    }
+		#print "#### $line\n $actual_pos\n" if(defined $actual_pos);
+    #print "*** $line\n " if(!defined $actual_pos);
+		
 		if( $target eq 'ref') {	
 			# ref_pos stores the varinat interval relative to subset created using gnomic seq	
 			if( ($t_start < $g_pu->{'ref_pos_5p'} &&  $t_end >$g_pu->{'ref_pos_5p'}) || ($t_start < $g_pu->{'ref_pos_3p'} &&  $t_end >$g_pu->{'ref_pos_3p'}) ) 

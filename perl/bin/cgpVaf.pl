@@ -191,7 +191,7 @@ sub option_builder {
 	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
 	pod2usage(q{'-nn' normal sample name/s must be provided}) unless (defined $options{'nn'});
   pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'} || defined $options{'bo'});
-	pod2usage(q{'-b' bed file must be specified }) unless (!defined $options{'e'} || !defined $options{'bo'});
+	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'e'} && defined $options{'bo'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
   
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
