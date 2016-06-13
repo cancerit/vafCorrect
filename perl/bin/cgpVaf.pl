@@ -1,4 +1,7 @@
-#!/software/perl-5.16.3/bin/perl -w
+#!/software/perl-5.16.2/bin/perl -w
+
+eval 'exec /software/perl-5.16.2/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
 
 ##########LICENCE############################################################
 # Copyright (c) 2016 Genome Research Ltd.
@@ -111,15 +114,17 @@ try {
 	}
 	# if augmentation option is selected then write augmented vcf file 
 	
-	if($options->{'m'} == 1) {
+	if(defined $options->{'m'} && $options->{'m'} == 1) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
       $vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
-    	if($options->{'ao'} == 1) {
+    	if(defined $options->{'ao'} && $options->{'ao'} == 1) {
     	  my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
     	  close $progress_fhw;
     	  exit(0);
 	 		}
   }   
+  
+  
   my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
   
   if(defined $outfile_name_no_ext){
@@ -190,8 +195,8 @@ sub option_builder {
 	pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
 	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
 	pod2usage(q{'-nn' normal sample name/s must be provided}) unless (defined $options{'nn'});
-  pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'} || defined $options{'bo'});
-	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'e'} && defined $options{'bo'});
+  pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'});
+	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
   
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}

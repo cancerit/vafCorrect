@@ -38,11 +38,13 @@ const our $MAX_PILEUP_DEPTH => '1000000';
 const our $SUPP_ALIGNMENT => 0x800;
 const our $DUP_READ => 0x400;
 const our $VENDER_FAIL => 0x200;
+const our @FORMAT_TYPE => qw(MTR WTR AMB UNK VAF);
 
-
+const our	@BED_HEADER_SNP=> qw(chr pos ref alt FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_NORMAL WTR_NORMAL AMB_NORMAL VAF_NORMAL FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR VAF_TUMOUR);
+const our @BED_HEADER_INDEL=> qw(chr pos ref alt  MTR_NORMAL WTR_NORMAL AMB_NORMAL UNK_NORMAL VAF_NORMAL MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR UNK_TUMOUR VAF_TUMOUR);
 
 const our $SNP_TAGS => ['FAZ','FCZ','FGZ','FTZ','RAZ','RCZ','RGZ','RTZ','MTR','WTR','DEP','MDR','WDR','VAF','OFS'];
-const our $INDEL_TAGS => ['MTR','WTR','DEP','AMB','MDR','WDR','VAF','OFS'];
+const our $INDEL_TAGS => ['MTR','WTR','DEP','AMB','UNK','MDR','WDR','VAF','OFS'];
 const our $VERSION => Sanger::CGP::Vaf->VERSION;
 
 const our $BASIC_COLUMN_TITLES => ['Normal', 'VariantID','Chrom','Pos','Ref','Alt','Qual','Filter','Gene','Transcript','RNA', 'CDS','Protein', 'Type', 'Effect'];

@@ -116,12 +116,14 @@ sub storeResults {
 	my ($self,$store_results,$g_pu,$sample)=@_;
 	my $results = {'tMTR'=> '.', 
 							   'tWTR'=> '.',
+							   'tUNK'=> '.',	
 							 	 'tAMB'=> '.',
 							 	 'tVAF'=> '.',
 							 	 'nMTR'=> '.',
 							 	 'nWTR'=> '.',
 							 	 'nAMB'=> '.',
-							 	 'nVAF'=> '.',								  
+							 	 'nVAF'=> '.',
+							 	 'nUNK'=> '.',								  
 		};	
 	if (!exists $g_pu->{'alt_p'}) {
 		$store_results->{$sample}{$self->getLocation}=$results;
@@ -141,10 +143,12 @@ sub storeResults {
 									 $g_pu->{'normal_MTR'}."\t".
 									 $g_pu->{'normal_WTR'}."\t".
 									 $g_pu->{'normal_AMB'}."\t".
+									 $g_pu->{'normal_UNK'}."\t".
 									 $g_pu->{'normal_VAF'}."\t".
 									 $MTR."\t".
 									 $WTR."\t".
 									 $g_pu->{'amb'}."\t".
+									 $g_pu->{'unk'}."\t".
 									 $g_pu->{'VAF'}."\n";
 									 
 			$store_results->{"$sample\_bed"}{$self->getLocation}=$bed_line;		
@@ -153,10 +157,12 @@ sub storeResults {
 	$results->{'tMTR'}=$MTR;
 	$results->{'tWTR'}=$WTR;
 	$results->{'tAMB'}=$g_pu->{'amb'};
+	$results->{'tUNK'}=$g_pu->{'unk'};
 	$results->{'tVAF'}=$VAF;
 	
 	$results->{'nMTR'}=$g_pu->{'normal_MTR'};
 	$results->{'nWTR'}=$g_pu->{'normal_WTR'};
+	$results->{'nUNK'}=$g_pu->{'normal_UNK'};
 	$results->{'nAMB'}=$g_pu->{'normal_AMB'};
 	$results->{'nVAF'}=$g_pu->{'normal_VAF'};
   $store_results->{$sample}{$self->getLocation}=$results;
@@ -517,6 +523,7 @@ sub populateHash {
 	$g_pu->{'RTZ'} = 0;
 	 
 	$g_pu->{'amb'} = 0;  
+	$g_pu->{'unk'} = 0; 
 	$g_pu->{'sample'} = $sample; 
 	
 	return $g_pu if($self->{'_varType'} eq 'snp');
@@ -756,13 +763,14 @@ Inputs
 
 sub _do_exonerate {
 	my($self,$ref_seq_file,$temp_read_file,$g_pu)=@_;
-	my $ref_count_p=undef;
-	my $ref_count_n=undef;
-	my $alt_count_p=undef;
-	my $alt_count_n=undef;
-	my $read_track_alt=undef;
-	my $read_track_ref=undef;
-	my $amb_reads=undef;
+	my $ref_count_p;
+	my $ref_count_n;
+	my $alt_count_p;
+	my $alt_count_n;
+	my $read_count_unk;
+	my $read_track_alt;
+	my $read_track_ref;
+	my $amb_reads;
 		
 	# -E | --exhaustive <boolean>
   #Specify whether or not exhaustive alignment should be used.  By default, this is FALSE, and alignment heuristics will be used.  If it is set to TRUE, an exhaus‐
@@ -794,7 +802,7 @@ sub _do_exonerate {
 	foreach my $line((split("\n", $exonerate_output))) {
     my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand,$mismacth,$match_score)=(split ' ', $line);
 		# ignore reads with more than 1 mismatch and alignment length less than cutoff
-		if (($match_len < ($g_pu->{'read_length'} - 2)) || ($mismacth > 1)) {
+		if ( $match_len < ($g_pu->{'read_length'} - 2) ) {
 		 next;
 		}
 		my $strand=$t_strand;
@@ -812,7 +820,10 @@ sub _do_exonerate {
       if($strand eq '-') { $actual_pos = ($match_len - $mismathc_pos) + $t_start +1; }
       #print "------$mismathc_pos ---- $actual_pos \n";
       if( ($g_pu->{'ref_pos_5p'} <= $actual_pos) && (($g_pu->{'alt_pos_3p'} >= $actual_pos) || ($g_pu->{'ref_pos_3p'} >= $actual_pos)) ) {
-				next;
+				if($target eq 'alt') {
+					$read_count_unk->{$read}++;
+					next;
+				}
 			}
     }
 		#print "#### $line\n $actual_pos\n" if(defined $actual_pos);
@@ -845,7 +856,7 @@ sub _do_exonerate {
 		}
 	}	
 
-$g_pu=$self->_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n); 
+$g_pu=$self->_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n,$read_count_unk); 
 
 return $g_pu;
 
@@ -868,7 +879,7 @@ Inputs
 =cut
 
 sub _cleanup_read_ambiguities {
-	my ($self,$g_pu,$read_track_alt,$read_track_ref,$alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n)=@_;
+	my ($self,$g_pu,$read_track_alt,$read_track_ref,$alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n,$read_count_unk)=@_;
 	my $amb_reads;
 	foreach my $read (sort keys %$read_track_alt) {
 			if(exists $read_track_ref->{$read}) {
@@ -906,12 +917,12 @@ sub _cleanup_read_ambiguities {
 		}
 	}
 
-		if($ref_count_p) { $g_pu -> {'ref_p'}=keys %$ref_count_p; }
-		if($ref_count_n) { $g_pu -> {'ref_n'}=keys %$ref_count_n; }
-		if($alt_count_p) { $g_pu -> {'alt_p'}=keys %$alt_count_p; }
-		if($alt_count_n) { $g_pu -> {'alt_n'}=keys %$alt_count_n; }
-		if($amb_reads)	 { $g_pu -> {'amb'}=keys %$amb_reads; }
-			
+		if($ref_count_p) { $g_pu->{'ref_p'}=keys %$ref_count_p; }
+		if($ref_count_n) { $g_pu->{'ref_n'}=keys %$ref_count_n; }
+		if($alt_count_p) { $g_pu->{'alt_p'}=keys %$alt_count_p; }
+		if($alt_count_n) { $g_pu->{'alt_n'}=keys %$alt_count_n; }
+		if($amb_reads)	 { $g_pu->{'amb'}=keys %$amb_reads; }
+		if($read_count_unk) {$g_pu->{'unk'}=keys %$read_count_unk; }
 return $g_pu;
 
 }
@@ -932,6 +943,7 @@ sub addNormalCount {
 						$g_pu->{'normal_WTR'}=$g_pu->{'ref_p'} + $g_pu->{'ref_n'};
 						eval{$VAF=$g_pu->{'normal_MTR'}/($g_pu->{'normal_WTR'}+$g_pu->{'normal_MTR'}); };
 						$g_pu->{'normal_VAF'}=defined $VAF?sprintf("%.2f",$VAF):'0.00';
+						$g_pu->{'normal_UNK'}=$g_pu->{'unk'};
 						$g_pu->{'normal_AMB'}=$g_pu->{'amb'};
 						
 	return $g_pu;
@@ -1029,7 +1041,7 @@ sub formatResults {
 	}
 	my $MTR = $g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 	my $WTR = $g_pu->{'ref_p'} + $g_pu->{'ref_n'};
-	my $DEP = $MTR + $WTR + $g_pu->{'amb'};
+	my $DEP = $MTR + $WTR + $g_pu->{'amb'} + $g_pu->{'unk'};
 	
 	## determine read direction
 	my $MDR =0;
@@ -1086,7 +1098,8 @@ sub formatResults {
 										'WDR'	=>$WDR,
 										'OFS'	=>$VCF_OFS,
 										'AMB'	=>$g_pu->{'amb'},
-										'VAF'	=>$VAF
+										'UNK' =>$g_pu->{'unk'},
+										'VAF'	=>$VAF,
 										};
 	}
 		
