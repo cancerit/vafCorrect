@@ -91,6 +91,7 @@ my ($self)=@_;
 			my $vcf = Vcf->new(file => $self->{'vcf'}{$sample});
 			$vcf->parse_header();	
 			$vcf->recalc_ac_an(0);
+		
 			($info_tag_val,$vcf_normal_sample,$updated_info_tags)=$self->_getOriginalHeader($vcf,$info_tag_val,$vcf_normal_sample,$tumour_count,$sample,$updated_info_tags);
 			$vcf->close();
 			$vcf_file_obj->{$sample}=$vcf;
@@ -193,7 +194,7 @@ sub _populateBedHeader {
 	}
 	my %bed_vcf_info=(key=>'FILTER',ID=>'BD', Description=>"Location from bed file");
 	push(@$info_tag_val,\%bed_vcf_info);
-
+	
 	return $info_tag_val;
 }
 
@@ -215,7 +216,7 @@ sub writeFinalFileHeaders {
   my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';	
 	# return if no VCF file found or augment only option is provided for indel data ...
 	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || ( $self->{'_ao'} == 1) || (-e "$outfile_name.vcf.gz")); 
-	my $vcf=$self->_getVCFObject($info_tag_val);
+	my ($vcf)=$self->_getVCFObject($info_tag_val);
 	#my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';	
 	$log->debug("VCF outfile:$outfile_name.vcf");
 	$log->debug("TSV outfile:$outfile_name.tsv");
@@ -227,6 +228,7 @@ sub writeFinalFileHeaders {
 	open(my $tmp_vcf,'>',$tmp_file);
 	print $tmp_vcf $vcf->format_header();
 	close($tmp_vcf);
+
 	my($col_names,$header,$format_col)=$self->_get_tab_sep_header($tmp_file);
 	my $temp_cols=$col_names->{'cols'};
 		
@@ -476,11 +478,12 @@ sub _getCustomHeader {
 	$vcf_format->{'DEP'}={(key=>'FORMAT',ID=>'DEP', Number=>'1',Type=>'Integer',Description=>"Total reads covering this position (for subs del positions should be ignored)")};
 	$vcf_format->{'MDR'}={(key=>'FORMAT',ID=>'MDR', Number=>'1',Type=>'Integer',Description=>"Variant allele read directions 0=no reads; 1=Forward; 2=Reverse; 3=Forward + Reverse")};
 	$vcf_format->{'WDR'}={(key=>'FORMAT',ID=>'WDR', Number=>'1',Type=>'Integer',Description=>"Reference allele read directions 0=no reads; 1=Forward; 2=Reverse; 3=Forward + Reverse")};
-	$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'Float',Description=>"Variant Allele Fraction (excludes ambiguous reads if any)")};
+	$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'Float',Description=>"Variant Allele Fraction (excludes ambiguous:AMB and unknown:UNK reads if any)")};
 	$vcf_format->{'OFS'}={(key=>'FORMAT',ID=>'OFS', Number=>'1',Type=>'String',Description=>"Original filter status as defined in input vcf FILTER field")};
-	
+
 	if ($self->{'_a'} eq 'indel') {
 		$vcf_format->{'AMB'}={(key=>'FORMAT',ID=>'AMB', Number=>'1',Type=>'Integer',Description=>"Reads mapping on both the alleles with same specificity")};
+		$vcf_format->{'UNK'}={(key=>'FORMAT',ID=>'UNK', Number=>'1',Type=>'Integer',Description=>"Reads containing mismatch in the variant position and don't align to ref as first hit")};
 	}
 	
 	if ($self->{'_a'} eq 'snp') {
@@ -517,10 +520,13 @@ sub _getProcessLog {
 		{   
 		   chomp $hash->{$key};
        my $val=$hash->{$key};
+       
        if (ref($val) eq 'ARRAY') {
        	$val="@$val";
        }
-		   $process_log->{$key}=$self->_trim_file_path($val);	
+      	if($val){
+		   		$process_log->{$key}=$self->_trim_file_path($val);	
+		   	}
 		}
 	}
 return ($log_key,$process_log);
@@ -960,10 +966,10 @@ sub WriteAugmentedHeader {
 					}
 				}
 			}	
-			$vcf_aug->add_header_line($vcf_format->{'MTR'});
-			$vcf_aug->add_header_line($vcf_format->{'WTR'});
-			$vcf_aug->add_header_line($vcf_format->{'AMB'});
-			$vcf_aug->add_header_line($vcf_format->{'VAF'});
+			
+			foreach my $format_type(@Sanger::CGP::Vaf::VafConstants::FORMAT_TYPE) {
+					$vcf_aug->add_header_line($vcf_format->{$format_type});
+			}
 			$vcf_aug->add_header_line($vcf_format->{'process_log'});
 
 			print $tmp_vcf $vcf_aug->format_header();
@@ -974,9 +980,9 @@ sub WriteAugmentedHeader {
     
 	if(defined $self->{'_b'} && defined $self->{'_m'}) {
 		my $input_bam_files=$self->{'bam'};
-		my @bed_header=qw(chr pos ref alt FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_NORMAL WTR_NORMAL AMB_NORMAL VAF_NORMAL FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR VAF_TUMOUR);
+		my @bed_header=@Sanger::CGP::Vaf::VafConstants::BED_HEADER_SNP;
 		if($self->{'_a'} eq 'indel') {
-			@bed_header=qw(chr pos ref alt  MTR_NORMAL WTR_NORMAL AMB_NORMAL VAF_NORMAL MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR VAF_TUMOUR);
+			@bed_header=@Sanger::CGP::Vaf::VafConstants::BED_HEADER_INDEL;
 		}
 		foreach my $sample (keys %$input_bam_files) {
 			if ($sample ne $self->getNormalName) {
@@ -1011,7 +1017,9 @@ sub _getVCFObject {
 	$vcf->add_header_line({key=>'Date', value=>scalar(localtime)});
 	if(defined $info_tag_val) {
 		foreach my $hash_val(@$info_tag_val) {
-			$vcf->add_header_line($hash_val);	
+			if(defined $hash_val) {
+				$vcf->add_header_line($hash_val);
+			}	
 		}
 	}
 	else {
@@ -1120,6 +1128,7 @@ sub _writeOutput {
   if ((!$vcf && !$self->{'_b'})|| ($self->{'_ao'}==1)) {
 		return 1;
 	}
+	
   if (!defined $original_vcf_info) {$original_vcf_info=['.'];}
   my $out;
 	$out->{CHROM}  = $g_pu->{'chr'};
@@ -1135,13 +1144,15 @@ sub _writeOutput {
 	foreach my $sample (@{$self->{'allSamples'}}) {
 	  $out->{gtypes}{$sample} = $new_pileup_results->{$sample};
 	}
+	
 	$vcf->format_genotype_strings($out);
+	
 	# write to VCF at very end.....
 	print $WFH_VCF $vcf->format_line($out);
 	my ($line)=$self->_parse_info_line($vcf->format_line($out),$original_vcf_info);
 	# write to TSV at very end.....
 	print $WFH_TSV $self->getNormalName."\t".join("\t",@$line)."\n";
-return 1;
+	return 1;
 }
 
 
@@ -1287,7 +1298,6 @@ Inputs
 
 sub _writeFinalVcf {
 	  my ($self,$vcf_file,$aug_vcf_fh,$sample,$store_results,$aug_vcf_name)=@_;
-	  
 	  if ($aug_vcf_fh->{"$sample\_bed"}) {
 	      foreach my $key (keys %{$store_results->{"$sample\_bed"}}) {
 	   			my $bed_line=$store_results->{"$sample\_bed"}{$key};		
@@ -1300,20 +1310,11 @@ sub _writeFinalVcf {
 			my $location="$$x{'CHROM'}:$$x{'POS'}:$$x{'REF'}:@{$$x{'ALT'}}[0]";
 			my $result_line=$store_results->{$sample}{$location};
 			if ($store_results->{$sample}{$location}) { 
-				$vcf->add_format_field($x,'MTR');
-				$vcf->add_format_field($x,'WTR');
-				$vcf->add_format_field($x,'AMB');
-		    $vcf->add_format_field($x,'VAF');
-		    
-				$$x{gtypes}{'TUMOUR'}{'MTR'}=$result_line->{'tMTR'};
-				$$x{gtypes}{'TUMOUR'}{'WTR'}=$result_line->{'tWTR'};
-				$$x{gtypes}{'TUMOUR'}{'AMB'}=$result_line->{'tAMB'};
-		    $$x{gtypes}{'TUMOUR'}{'VAF'}=$result_line->{'tVAF'};
-		    
-				$$x{gtypes}{'NORMAL'}{'MTR'}=$result_line->{'nMTR'};
-				$$x{gtypes}{'NORMAL'}{'WTR'}=$result_line->{'nWTR'};
-				$$x{gtypes}{'NORMAL'}{'AMB'}=$result_line->{'nAMB'};
-				$$x{gtypes}{'NORMAL'}{'VAF'}=$result_line->{'nVAF'};
+				foreach my $format_type(@Sanger::CGP::Vaf::VafConstants::FORMAT_TYPE) {
+					$vcf->add_format_field($x,$format_type);
+					$$x{gtypes}{'TUMOUR'}{$format_type}=$result_line->{'t'.$format_type};
+					$$x{gtypes}{'NORMAL'}{$format_type}=$result_line->{'n'.$format_type};
+				}
 				$aug_vcf_fh->{$sample}->print($vcf->format_line($x));
 			}
 	}

@@ -1,4 +1,9 @@
 
+## v4.4.0 ########
+* added additional condition to check mismatch at the variant region in the alignment
+* reads mapping on alternate sequence and have mismatch at variant region were categorised into UNK [ unknown ] reads
+* updated option to correctly read bed file
+
 ## v4.3.6 ########
 
 * Creates augmented vcf file even if no records were augmented
