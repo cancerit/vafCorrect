@@ -799,11 +799,11 @@ sub _do_exonerate {
 	my ($exonerate_output, $stderr, $exit) = capture {system("$cmd")};
 	if ($exit) { $log->logcroak("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
 	#----- parse exonerate output ------
-	foreach my $line((split("\n", $exonerate_output))) {
+	LINE:foreach my $line((split("\n", $exonerate_output))) {
     my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand,$mismacth,$match_score)=(split ' ', $line);
 		# ignore reads with more than 1 mismatch and alignment length less than cutoff
 		if ( $match_len < ($g_pu->{'read_length'} - 2) ) {
-		 next;
+		 next LINE;
 		}
 		my $strand=$t_strand;
 		#<--5p--|*******|--3p-->
@@ -812,22 +812,26 @@ sub _do_exonerate {
 		$read=~s/_\d+$//g;
 		if($strand eq '-') { $t_start=$t_end ; $t_end=$temp_start;}
 		# check if there is mismatch in the alignment and if it is at the variant position
-    # @- and @+ holds start and end position of match respectively
-    my $actual_pos;
-    if($match_score=~/-/g) {
-      my $mismathc_pos=$-[0]; 
-      $actual_pos=$mismathc_pos+$t_start;
-      if($strand eq '-') { $actual_pos = ($match_len - $mismathc_pos) + $t_start +1; }
-      #print "------$mismathc_pos ---- $actual_pos \n";
-      if( ($g_pu->{'ref_pos_5p'} <= $actual_pos) && (($g_pu->{'alt_pos_3p'} >= $actual_pos) || ($g_pu->{'ref_pos_3p'} >= $actual_pos)) ) {
+    my $aln_offset=0;
+    
+    my $result=index($match_score,'-',0);
+    while($result != -1 ) {
+    	my $mismathc_pos=$result + $aln_offset;
+    	$aln_offset--;
+    	#print " $aln_offset: Found mismatch at :$result: $mismathc_pos\n";
+    	my $actual_pos=$mismathc_pos+$t_start;
+    	if($strand eq '-') { $actual_pos = ($match_len - $mismathc_pos) + $t_start +1; }
+    	#print "$target: $match_score: $actual_pos:  ($g_pu->{'ref_pos_5p'} :$g_pu->{'alt_pos_3p'}) BEFORE $org_read \n";
+    	if( ($g_pu->{'ref_pos_5p'} <= $actual_pos) && (($g_pu->{'alt_pos_3p'} >= $actual_pos) || ($g_pu->{'ref_pos_3p'} >= $actual_pos)) ) {
 				if($target eq 'alt') {
-					$read_count_unk->{$read}++;
-					next;
-				}
-			}
+						$read_count_unk->{$read}++;
+						#print "$target: $match_score: $actual_pos ($g_pu->{'ref_pos_5p'} :$g_pu->{'alt_pos_3p'}): AFTER $org_read \n";
+						next LINE;
+					}
+			}	
+    	my $offset = $result + 1;
+    	$result=index($match_score,'-',$offset);
     }
-		#print "#### $line\n $actual_pos\n" if(defined $actual_pos);
-    #print "*** $line\n " if(!defined $actual_pos);
 		
 		if( $target eq 'ref') {	
 			# ref_pos stores the varinat interval relative to subset created using gnomic seq	

@@ -1,5 +1,11 @@
 
 ## v4.4.0 ########
+
+* Exonerate --percent threshold reduced to 90 from 95 to allow 4 mismatches
+* More robust check for mismatches at varinat positions in the alignment  
+
+## v4.4.0 ########
+
 * added additional condition to check mismatch at the variant region in the alignment
 * reads mapping on alternate sequence and have mismatch at variant region were categorised into UNK [ unknown ] reads
 * updated option to correctly read bed file
