@@ -1,5 +1,5 @@
 
-## v4.4.0 ########
+## v4.4.1 ########
 
 * Exonerate --percent threshold reduced to 90 from 95 to allow 4 mismatches
 * More robust check for mismatches at varinat positions in the alignment  
