@@ -779,7 +779,7 @@ sub _do_exonerate {
   # using exhaustive OFF as it is fast and gives identical answer 
   
   my $cmd="exonerate -E 0 -S 0".
-	" --score $g_pu->{'exonerate_score_cutoff'} --percent 95 --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
+	" --score $g_pu->{'exonerate_score_cutoff'} --percent 90 --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
 	" --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
 	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS %em {%Ps}\n' ";
 	#for testing only
