@@ -620,10 +620,10 @@ my $read_counter=0;
 		my $a = shift;
 		my $paired=0;
 		my $flags = $a->flag;
-		# & bitwise comparison
-		## Ignore reads if they match the following flags:
-		#Brass/ReadSelection.pm
-		
+		# \& bitwise comparison
+		##Ignore read if it matches the following flags:
+		#Brass-ReadSelection.pm
+		return if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
 		return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
 		return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
 		return if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED;
@@ -673,6 +673,7 @@ sub _fetch_mate_seq {
 	my $callback= sub {
 		my $a = shift; 
 		my $flags = $a->flag;
+		return if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
 		return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
 		return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
 		return if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED;
@@ -712,9 +713,10 @@ my $read_counter=0;
 		my $a = shift;
 		my $paired=0;
 		my $flags = $a->flag;
-		# & bitwise comparison
-		## Ignore reads if they match the following flags:
-		#Brass/ReadSelection.pm
+		# \& bitwise comparison
+		##Ignore read if it matches the following flags:
+		#Brass-ReadSelection.pm
+		#return if($self->{'_mq'} && ($a->qual < $self->{'_mq'}) ); # no applied
 		return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
 		return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
 	  #return if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
@@ -974,18 +976,19 @@ sub getPileup {
 										my $a = $p->alignment;
 										my $flags = $a->flag;
 										# \& bitwise comparison
-										##Ignore reads if they match the following flags:
+										##Ignore read if it matches the following flags:
 										#Brass-ReadSelection.pm
+										next if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
 										next if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
 										next if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
 										next if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
 										next if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
-										#next if($g_pu_mapq && $a->qual < $g_pu_mapq);
-										#if($g_pu_baseq) {
-										#	my $fa = Bio::DB::Bam::AlignWrapper->new($a, $bam_object);
-										#	my $qual = ($fa->qscore)[$p->qpos];
-											#next if($qual <= $g_pu_baseq);
-										#}
+										
+										if($self->{'_bq'}) {
+											my $fa = Bio::DB::HTS::AlignWrapper->new($a, $bam_object);
+											my $qual = ($fa->qscore)[$p->qpos];
+											next if($qual <= $self->{'_bq'});
+										}
 										# get the base at this pos
 										#my $refbase = $bam_object->segment($seqid,$pos,$pos)->dna;
 										my $qbase  = substr($a->qseq, $p->qpos, 1);

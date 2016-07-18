@@ -1,4 +1,8 @@
 
+## v4.5.0 ########
+
+* Added option to restrict reads based on mapping quality threshold
+
 ## v4.4.2 ########
 
 * Exonerate --percent threshold reduced to 90 from 95 to allow 4 mismatches
