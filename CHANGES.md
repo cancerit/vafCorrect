@@ -1,4 +1,8 @@
 
+## v4.5.1 ########
+
+* Updated test data set files 
+
 ## v4.5.0 ########
 
 * Added option to restrict reads based on mapping quality threshold
