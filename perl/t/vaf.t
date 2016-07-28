@@ -35,12 +35,12 @@ const my $test_variant_type2 => 'indel';
 const my $test_genome => $test_data."/"."genome.fa";
 const my $test_reads => $test_data."/"."temp.reads";
 
-const my @test_samples => qw(PD20515a PD20515c);
-const my @all_samples => qw(PD20515b PD20515a PD20515c);
-const my $normal_sample => 'PD20515b'; 
-const my $test_bam1 => "$Bin/testData/PD20515a.bam";
-const my $test_bam2 => "$Bin/testData/PD20515c.bam";
-const my $test_bam3 => "$Bin/testData/PD20515b.bam";
+const my @test_samples => qw(samplea samplec);
+const my @all_samples => qw(sampleb samplea samplec);
+const my $normal_sample => 'sampleb'; 
+const my $test_bam1 => "$Bin/testData/samplea.bam";
+const my $test_bam2 => "$Bin/testData/samplec.bam";
+const my $test_bam3 => "$Bin/testData/sampleb.bam";
 const my $test_bed => "$Bin/testData/test.bed";
 
 subtest 'Initialisation checks' => sub {
@@ -52,6 +52,8 @@ subtest 'Initialisation checks' => sub {
 const my $tags => $Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
 mkpath("$test_output/tmpvcf_$test_samples[0]");
+
+system("gunzip -c $test_genome.gz >$test_genome");
 
 my $options={
 	'd'	=>	$test_data,
@@ -74,22 +76,18 @@ my $options={
 my (%data_for_all_samples);
 	my $info={'VT'=>'Sub','VC' =>'intronic'};
 	
-	$data_for_all_samples{'PD20515a'}{'1:16901544:C:T'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ;TI;HSD', 'RD'=>0};																									
-	$data_for_all_samples{'PD20515a'}{'1:16901564:G:A'}={'INFO'=>$info,'FILTER'=>'UM;MN;TI;HSD', 'RD'=>0};
-	$data_for_all_samples{'PD20515a'}{'1:16902712:T:C'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ', 'RD'=>0};
-	$data_for_all_samples{'PD20515c'}{'1:16903781:C:T'}={'INFO'=>$info,'FILTER'=>'UM;MN;HSD', 'RD'=>0};
-	$data_for_all_samples{'PD20515c'}{'1:16907525:G:C'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ', 'RD'=>0};
-	$data_for_all_samples{'PD20515c'}{'1:2212488:A:G'}={'INFO'=>$info,'FILTER'=>'PASS', 'RD'=>0};
+	$data_for_all_samples{'samplea'}{'1:16901544:C:T'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ;TI;HSD', 'RD'=>0};																									
+	$data_for_all_samples{'samplea'}{'1:16901564:G:A'}={'INFO'=>$info,'FILTER'=>'UM;MN;TI;HSD', 'RD'=>0};
+	$data_for_all_samples{'samplea'}{'1:16902712:T:C'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ', 'RD'=>0};
+	$data_for_all_samples{'samplec'}{'1:16903781:C:T'}={'INFO'=>$info,'FILTER'=>'UM;MN;HSD', 'RD'=>0};
+	$data_for_all_samples{'samplec'}{'1:16907525:G:C'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ', 'RD'=>0};
+	$data_for_all_samples{'samplec'}{'1:2212488:A:G'}={'INFO'=>$info,'FILTER'=>'PASS', 'RD'=>0};
 	#bed locations
 	my $bed_info={'VT' => '-','VC' => '-'};
-	#$data_for_all_samples{'PD20515a'}{'1:148021700:G:A'}={'INFO'=>$bed_info,'FILTER'=>'NA','RD'=>1};
-	#$data_for_all_samples{'PD20515a'}{'1:148594340:G:A'}={'INFO'=>$bed_info,'FILTER'=>'NA','RD'=>1};
-	#$data_for_all_samples{'PD20515c'}{'1:148021700:G:A'}={'INFO'=>$bed_info,'FILTER'=>'NA','RD'=>1};
-	#$data_for_all_samples{'PD20515c'}{'1:148594340:G:A'}={'INFO'=>$bed_info,'FILTER'=>'NA','RD'=>1};
-														
+															
 const my $normal_bam => $options->{'d'}.'/'.$normal_sample.'.bam';
 
-const my @chr => qw(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y MT);
+const my @chr => qw(1);
 
 subtest 'AbstractVcf' => sub {
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
@@ -106,12 +104,12 @@ my $expected_store_results;
 my $data_for_all_samples_res;
 my $unique_locations;
 my $expected_unique_locations =  {
-   '1:16902712:T:C' => 'PD20515a-UM;MN;MQ',
-   '1:16901564:G:A' => 'PD20515a-UM;MN;TI;HSD',
-   '1:16901544:C:T' => 'PD20515a-UM;MN;MQ;TI;HSD',
-   '1:16903781:C:T' => 'PD20515c-UM;MN;HSD',
-   '1:16907525:G:C' => 'PD20515c-UM;MN;MQ',
-   '1:2212488:A:G' => 'PD20515c-PASS'
+   '1:16902712:T:C' => 'samplea-UM;MN;MQ',
+   '1:16901564:G:A' => 'samplea-UM;MN;TI;HSD',
+   '1:16901544:C:T' => 'samplea-UM;MN;MQ;TI;HSD',
+   '1:16903781:C:T' => 'samplec-UM;MN;HSD',
+   '1:16907525:G:C' => 'samplec-UM;MN;MQ',
+   '1:2212488:A:G' => 'samplec-PASS'
  };
 
 subtest 'ReadVcf' => sub {
@@ -173,7 +171,7 @@ subtest 'ReadVcf' => sub {
 	# test 
 	#my $expected_ref_seq=qw(CACCAGCAACTACCTCAGCCAGTCAGCTCCGTTCTACCTCTGTCATCTCAGATGAGAAGAGCAGGCCAGTATCTCTGGCCTTACCTGAAATATCTTAAGGCCGTAATTTACATTTTAGGCATGAATGATTTTCTAAAACCCACGATCAGAGTTTCTCTGGGAATCGGCGTCTGGCTTAGGAACACATTCATTTGTTTGACAAATACCTTCCCAAAACTATTTTAAAACACAGCTGCTGGGCGGGACGCAGTGGCTCACACCTGTAATCCCAGGACTTTGGGTGGCCGAGGCGGGTGAATCACTTGAGGTCAGCAGTTCAAGACCAGCTTGGCCAACATAGTGAAATCCTGTCTCTACTAAAAATACAAAAATTAGCCGGGTGTGGCAGTGCATGCCTATAATCCCAGCTACTCAGGAGGCTGAGGCAGGAGAATCGTTTGAACCTGGGAGGCGGAGGTTGCAGTGAGCCGAGATTGCACCACTGCACTCCAGCCTGGGCGACAGAACAAGACTCTGTCTCAAAAAAGTAAATAAATAAATAAATAAATAAAGCTTCATATCAGCATTTCCTTTTTGGGAACTATACTATTCATCTGAATTAGCATATATATATATATGGGGCCGGACACAGCGGCTCACACCTGTAATCTCAAAACTTTGGAAGGCCAAAACAGGTGGTTCACCGGAGGTCAGGTGTTTTGAGACATGTCTGGCCAACGTGGTGAAACCCCATCTCTACTAAAAATACCAAAATTAGCCAGGCGTGGTGGTACGCCGCACCTGTAATCCCAGCTACTCAGGATGCTGAGGCAGGAGAATCGCTTGAACCCGGGAGGCAAAGATTGCAGTGAGCCGAGATCACGCCATTGCACTCCAGCAGGGGTGACAGACTGAGACTCCATCTCAAAAAAGAAGTCTACCACATTTTACTCTGAGACAAGGAAATGTCCACAGGGAAGTGGCCACACACAGAAGTTAACCTAAAAGACAATGAATTCAGAGGACGGACATGAACAAATGTGCAATTTAAAACACAGGCCAGGTGCAGTGGCAACCCCTATAATCCCAGAGCTTTGGGAGGCCAAGGCGGGCTCATCACATGAGGTCAGGACCAGCCTGGCCAACATGGTGAAACCCCATCTCTACTAAAAGTACAAAAATTAGCCAGGCGTGGTGGCACATGCCTGAAATCCCAGCTACTCGGG);
 	#my $expected_reconstructed_alt_seq=qw(CACCAGCAACTACCTCAGCCAGTCAGCTCCGTTCTACCTCTGTCATCTCAGATGAGAAGAGCAGGCCAGTATCTCTGGCCTTACCTGAAATATCTTAAGGCCGTAATTTACATTTTAGGCATGAATGATTTTCTAAAACCCACGATCAGAGTTTCTCTGGGAATCGGCGTCTGGCTTAGGAACACATTCATTTGTTTGACAAATACCTTCCCAAAACTATTTTAAAACACAGCTGCTGGGCGGGACGCAGTGGCTCACACCTGTAATCCCAGGACTTTGGGTGGCCGAGGCGGGTGAATCACTTGAGGTCAGCAGTTCAAGACCAGCTTGGCCAACATAGTGAAATCCTGTCTCTACTAAAAATACAAAAATTAGCCGGGTGTGGCAGTGCATGCCTATAATCCCAGCTACTCAGGAGGCTGAGGCAGGAGAATCGTTTGAACCTGGGAGGCGGAGGTTGCAGTGAGCCGAGATTGCACCACTGCACTCCAGCCTGGGCGACAGAACAAGACTCTGTCTCAAAAAAGTAAATAAATAAATAAATAAATAAAGCTTCATATCAGCATTTCCTTTTTGGGAACTATACTATTCATCTGAATTAGCATATATATATATGGGGCCGGACACAGCGGCTCACACCTGTAATCTCAAAACTTTGGAAGGCCAAAACAGGTGGTTCACCGGAGGTCAGGTGTTTTGAGACATGTCTGGCCAACGTGGTGAAACCCCATCTCTACTAAAAATACCAAAATTAGCCAGGCGTGGTGGTACGCCGCACCTGTAATCCCAGCTACTCAGGATGCTGAGGCAGGAGAATCGCTTGAACCCGGGAGGCAAAGATTGCAGTGAGCCGAGATCACGCCATTGCACTCCAGCAGGGGTGACAGACTGAGACTCCATCTCAAAAAAGAAGTCTACCACATTTTACTCTGAGACAAGGAAATGTCCACAGGGAAGTGGCCACACACAGAAGTTAACCTAAAAGACAATGAATTCAGAGGACGGACATGAACAAATGTGCAATTTAAAACACAGGCCAGGTGCAGTGGCAACCCCTATAATCCCAGAGCTTTGGGAGGCCAAGGCGGGCTCATCACATGAGGTCAGGACCAGCCTGGCCAACATGGTGAAACCCCATCTCTACTAAAAGTACAAAAATTAGCCAGGCGTGGTGGCACATGCCTGAAATCCCAGCTACTCGGG);
-	#my $resulted_ref_seq = Sanger::CGP::VcfCompare::VcfMergeAndPileup::_get_dna_segment($expected_obj->{'PD20515c'},$g_pu_new->{'chr'},$g_pu_new->{'pos_5p'},$g_pu_new->{'pos_3p'});
+	#my $resulted_ref_seq = Sanger::CGP::VcfCompare::VcfMergeAndPileup::_get_dna_segment($expected_obj->{'samplec'},$g_pu_new->{'chr'},$g_pu_new->{'pos_5p'},$g_pu_new->{'pos_3p'});
 	
 };
 
@@ -218,20 +216,16 @@ subtest 'ReadVcf' => sub {
 		);
 	 		
  	  $variant->setLocation('1:16902712:T:C');
-		$variant->setVarLine('PD20515a-UM;MN;MQ');
+		$variant->setVarLine('samplea-UM;MN;MQ');
 		my($g_pu)=$variant->formatVarinat();
 		is_deeply($g_pu,$expected_g_pu,'ReadVcf_processMergedLocations:g_pu');
- 		$g_pu=$variant->populateHash($g_pu,'PD20515a',$bam_header_data);
- 		$g_pu=$variant->getPileup($bam_objects->{'PD20515a'},$g_pu);
+ 		$g_pu=$variant->populateHash($g_pu,'samplea',$bam_header_data);
+ 		$g_pu=$variant->getPileup($bam_objects->{'samplea'},$g_pu);
 		my($res)=$variant->_check_hdr_overlap('chr1',89499371,89499451,$variant->{'_tabix_hdr'});		
 		is_deeply($res,1,'ReadVcf_processMergedLocations:_check_hdr_overlap_true');
 		$res=$variant->_check_hdr_overlap(1,16902712,16902712,$variant->{'_tabix_hdr'});		
 		is_deeply($res,0,'ReadVcf_processMergedLocations:_check_hdr_overlap_false');
 };
-
-
-
-
 
 subtest 'CleanTestResults' => sub {
 	  my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
@@ -241,5 +235,5 @@ subtest 'CleanTestResults' => sub {
 		is_deeply($cleaned2,$test_output,'CleanTestResults:testOutdir');
 };
 
-
+system("rm $test_genome");
 done_testing();
