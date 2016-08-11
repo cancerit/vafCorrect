@@ -1,6 +1,10 @@
 
 ## v4.5.1 ########
 
+* Updated .gitignore to allow test data to be added to git 
+
+## v4.5.1 ########
+
 * Updated test data set files 
 
 ## v4.5.0 ########
