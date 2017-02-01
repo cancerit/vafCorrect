@@ -1,7 +1,4 @@
-#!/software/perl-5.16.2/bin/perl -w
-
-eval 'exec /software/perl-5.16.2/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
+#!/use/bin/perl
 
 ##########LICENCE############################################################
 # Copyright (c) 2016 Genome Research Ltd.
@@ -25,10 +22,10 @@ eval 'exec /software/perl-5.16.2/bin/perl -w -S $0 ${1+"$@"}'
 ##########LICENCE##############################################################
 
 BEGIN {
-  use Cwd qw(abs_path);
-  use File::Basename;
-  $ENV{POSIXLY_CORRECT}=1;
-  unshift (@INC,dirname(abs_path($0)).'/../lib');
+  #use Cwd qw(abs_path);
+  #use File::Basename;
+  #$ENV{POSIXLY_CORRECT}=1;
+  #unshift (@INC,dirname(abs_path($0)).'/../lib');
   $SIG{__WARN__} = sub {warn $_[0] unless(($_[0] =~ m/^Use of uninitialized value \$buf/) || ($_[0] =~ m/gzip: stdout: Broken pipe/))};
 };
 
@@ -43,14 +40,14 @@ use warnings FATAL => 'all';
 use Carp;
 use Const::Fast qw(const);
 use Getopt::Long;
+use Getopt::Long::config qw(auto_abbrev);
 use Data::Dumper;
 use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
 
-
-
 use Log::Log4perl;
 
+use lib "$Bin/../lib";
 use Sanger::CGP::Vaf::Data::ReadVcf;
 use Sanger::CGP::Vaf::VafConstants;
 

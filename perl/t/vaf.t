@@ -1,4 +1,3 @@
-#!/usr/bin/perl-5.16.3
 use strict;
 use Test::More;
 use Test::Fatal;

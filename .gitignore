@@ -6,3 +6,6 @@ out*
 MYMETA*
 Makefile
 install_tmp
+perl/docs.tar.gz
+perl/docs
+perl/MANIFEST
