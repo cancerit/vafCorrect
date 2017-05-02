@@ -43,7 +43,7 @@ Some of the code included in this package has dependencies on several C packages
  * [vcftools](http://vcftools.sourceforge.net/)
  * [Bio-HTS] (https://github.com/Ensembl/Bio-DB-HTS)
  
-User has to install exonerate-2.2.0 before running cgpVaf.pl script and set path to .bashrc or .cshrc
+User has to install exonerate-2.2.0 before running cgpVaf.pl script and set path into .bashrc or .cshrc files.
 http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate
 
 And various perl modules.

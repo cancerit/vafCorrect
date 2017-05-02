@@ -67,10 +67,20 @@ get_file () {
   fi
 }
 
-if [ "$#" -ne "1" ] ; then
-  echo "Please provide an installation path  such as /software/peakrescue"
+if [[ ($# -ne 1 && $# -ne 2) ]] ; then
+  echo "Please provide an installation path and optionally perl lib paths to allow, e.g."
+  echo "  ./setup.sh /opt/myBundle"
+  echo "OR all elements versioned:"
+  echo "  ./setup.sh /opt/cgpVafCorrect-X.X.X /opt/PCAP-X.X.X/lib/perl"
   exit 0
 fi
+
+INST_PATH=$1
+
+if [[ $# -eq 2 ]] ; then
+  CGP_PERLLIBS=$2
+fi
+
 
 CPU=`grep -c ^processor /proc/cpuinfo`
 if [ $? -eq 0 ]; then
@@ -81,8 +91,6 @@ else
   CPU=1
 fi
 echo "Max compilation CPUs set to $CPU"
-
-INST_PATH=$1
 
 # get current directory
 INIT_DIR=`pwd`
@@ -101,9 +109,18 @@ INST_PATH=`pwd`
 cd $INIT_DIR
 
 # make sure that build is self contained
-unset PERL5LIB
 PERLROOT=$INST_PATH/lib/perl5
-export PERL5LIB="$PERLROOT"
+
+# allows user to knowingly specify other PERL5LIB areas.
+if [ -z ${CGP_PERLLIBS+x} ]; then
+  export PERL5LIB="$PERLROOT"
+else
+  export PERL5LIB="$PERLROOT:$CGP_PERLLIBS"
+fi
+
+
+#add bin path for install tests
+export PATH=$INST_PATH/bin:$PATH
 
 # log information about this system
 
