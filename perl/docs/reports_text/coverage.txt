@@ -1,0 +1,528 @@
+------------------------------------------------- ------ ------ ------ ------
+File                                                bran    sub    pod  total
+------------------------------------------------- ------ ------ ------ ------
+lib/Sanger/CGP/Vaf.pm                                n/a   66.6    0.0   50.0
+lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm              25.0   79.1    8.3   50.0
+lib/Sanger/CGP/Vaf/Data/ReadVcf.pm                  31.4   72.7   87.5   42.0
+lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm        0.0   69.5    8.3   43.5
+lib/Sanger/CGP/Vaf/Process/Variant.pm               27.0   58.1   66.6   33.3
+lib/Sanger/CGP/Vaf/VafConstants.pm                   n/a  100.0    n/a  100.0
+Total                                               29.1   70.3   44.0   39.8
+------------------------------------------------- ------ ------ ------ ------
+
+
+Run:          t/vaf.t
+Perl version: 5.16.3
+OS:           linux
+Start:        Tue May 23 11:09:28 2017
+Finish:       Tue May 23 11:09:28 2017
+
+Covered Subroutines
+-------------------
+
+Subroutine Count Pod Location                
+---------- ----- --- ------------------------
+BEGIN          1     lib/Sanger/CGP/Vaf.pm:2 
+BEGIN          1     lib/Sanger/CGP/Vaf.pm:3 
+
+Uncovered Subroutines
+---------------------
+
+Subroutine Count Pod Location                
+---------- ----- --- ------------------------
+license        0   0 lib/Sanger/CGP/Vaf.pm:15
+
+
+Branches
+--------
+
+line  err      %   true  false   branch
+----- --- ------ ------ ------   ------
+62    ***     50     52      0   if (defined $$options{$k})
+72    ***     50      0      4   unless defined $$self{'_o'}
+129   ***      0      0      0   if (exists $$self{'_debug'} and defined $$self{'_debug'} and $$self{'_debug'}) { }
+138   ***      0      0      0   if defined $$self{'_msg'}
+
+
+Covered Subroutines
+-------------------
+
+Subroutine        Count Pod Location                                  
+----------------- ----- --- ------------------------------------------
+BEGIN                 1     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:25 
+BEGIN                 1     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:27 
+BEGIN                 1     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:28 
+BEGIN                 1     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:29 
+BEGIN                 1     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:30 
+BEGIN                 1     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:31 
+BEGIN                 1     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:33 
+BEGIN                 1     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:68 
+_init                 4     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:59 
+_isValidAbs           4     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:71 
+getAllSampleNames     2   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:103
+getGenome             8   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:110
+getNormalBam          5   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:77 
+getNormalName        55   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:99 
+getOutputDir          3   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:114
+getTumourBam          8   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:88 
+getTumourName        28   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:94 
+getVcfFile           12   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:82 
+new                   4   1 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:40 
+
+Uncovered Subroutines
+---------------------
+
+Subroutine        Count Pod Location                                  
+----------------- ----- --- ------------------------------------------
+_clearMessages        0     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:143
+_debug                0     lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:128
+addMessage            0   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:123
+getBedIntervals       0   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:118
+getMessages           0   0 lib/Sanger/CGP/Vaf/Data/AbstractVcf.pm:137
+
+
+Branches
+--------
+
+line  err      %   true  false   branch
+----- --- ------ ------ ------   ------
+26    ***      0      0      0   unless $_[0] =~ /^Odd number of elements in hash assignment/ or $_[0] =~ /^Use of uninitialized value \$gtype/ or $_[0] =~ /^Use of uninitialized value \$buf/ or $_[0] =~ /symlink exists/ or $_[0] =~ /gzip: stdout: Broken pipe/
+71    ***     50      0      4   unless defined $$self{'_d'} and -e $$self{'_g'}
+72    ***     50      0      4   unless defined $$self{'_a'}
+73    ***     50      0      4   unless defined $$self{'_tn'}
+74    ***     50      0      4   unless defined $$self{'_nn'}
+75    ***     50      0      4   unless defined $$self{'_e'}
+76    ***     50      0      4   unless defined $$self{'_g'} and -e $$self{'_g'}
+99    ***     50      4      0   if (-e $$self{'vcf'}{$sample}) { }
+115   ***     50      0      2   if ($$self{'_bo'} and $$self{'_bo'} == 0)
+116   ***      0      0      0   if scalar keys %$vcf_normal_sample > 1
+120   ***     50      0      2   if ($$self{'_b'})
+139   ***      0      0      0   if ($key eq $self->getNormalName) { }
+161   ***     50      0      1   if (-e $file_name) { }
+163   ***      0      0      0   unless open $progress_fhw, '>>', $file_name
+166   ***     50      0      1   unless open $progress_fhw, '>', $file_name
+168   ***     50      0      1   unless open my $progress_fhr, '<', $file_name
+192   ***      0      0      0   if (not defined $$self{'vcf'} and $$self{'_ao'} == 0)
+227   ***     50      0      1   if not defined $$self{'vcf'} || defined $$self{'_b'} or $$self{'_ao'} == 1 or -e "$outfile_name.vcf.gz"
+232   ***     50      1      0   unless -e "$outfile_name.vcf.gz"
+233   ***     50      1      0   unless -e "$outfile_name.tsv"
+269   ***     50      0      2   if $_ =~ /^#/
+294   ***     50      0      1   if (defined $$self{'_bo'} and $$self{'_bo'} == 1)
+308   ***     50      6      0   if (defined $$self{'_t'})
+313   ***     50      0      6   if (defined $$self{'_p'})
+317   ***     50      6      0   if (not exists $$unique_locations{$location_key}) { }
+339   ***     50      4      0   if (-e ${$self->getTumourBam;}[$count]) { }
+345   ***     50      4      0   if (${$self->getVcfFile;}[$count] and -e ${$self->getVcfFile;}[$count]) { }
+      ***      0      0      0   elsif (${$$self{'_vcf'};}[$count] and -e $$self{'_d'} . '/' . ${$$self{'_vcf'};}[$count]) { }
+      ***      0      0      0   elsif (defined $$self{'_bo'} and $$self{'_bo'} == 0) { }
+357   ***     50      0      2   unless (-e $self->getNormalBam)
+380          100      2      2   if ($tumour_count == 1)
+390   ***     50      2      0   if (defined $$self{'_t'})
+393   ***     50      4      0   if (@$line > 0)
+410          100     26     52   if ($$filter_info{$filter_id}{$key} eq 'FILTER')
+431          100      4      4   if ($sample_data eq 'TUMOUR')
+441          100      4     28   if (defined $$sample_line{$key} and $key eq 'SampleName')
+493   ***     50      0      2   if ($$self{'_a'} eq 'indel')
+498   ***     50      2      0   if ($$self{'_a'} eq 'snp')
+528   ***     50     26      0   if (defined $$hash{$key})
+533          100      2     24   if (ref $val eq 'ARRAY')
+536          100     22      4   if ($val)
+556          100      2     26   unless defined $string
+577   ***     50     12      0   if ($info_val) { }
+606   ***      0      0      0   unless $idx == -1
+623   ***     50      1      0   unless defined $$self{'_b'}
+628   ***      0      0      0   if $_ =~ /^#/
+630   ***      0      0      0   if ($fields < 3)
+653   ***      0      0      0   if (exists $$unique_locations{$location_key}) { }
+715   ***      0      0      0   if ($progress_line eq "$$self{'_tmp'}/tmp_$chr.vcf" and $$self{'_ao'} == 0)
+721   ***     50      1      0   if $$self{'_ao'} == 0
+722   ***     50      1      0   if $$self{'_ao'} == 0
+734   ***      0      0      0   if ($$self{'_r'} and not $variant->getVarLine =~ /PASS/ and not $variant->getVarLine =~ /BEDFILE/)
+735   ***      0      0      0   if ($$self{'_ao'} == 1 or defined $$self{'_m'})
+743   ***     50      0      6   if ($$self{'_a'} eq 'indel')
+751   ***     50      0     18   if ($$self{'_a'} eq 'indel') { }
+753   ***      0      0      0   if ($sample eq $self->getNormalName and defined $$self{'_m'}) { }
+      ***      0      0      0   elsif ($$self{'_m'} and $$data_for_all_samples{$sample}{$location}) { }
+763   ***     50     18      0   if ($$self{'_ao'} == 0)
+766          100      6     12   if ($$g_pu{'sample'} ne $self->getNormalName and $$pileup_line{'MTR'} > 0)
+770          100      6     12   if ($$g_pu{'sample'} ne $self->getNormalName and $$pileup_line{'DEP'} > 0)
+781   ***     50      6      0   if ($$self{'_ao'} == 0)
+788   ***     50      0      6   if ($count % 100 == 0)
+793   ***     50      1      0   if defined $merged_vcf
+795   ***     50      1      0   if $$self{'_ao'} == 0
+796   ***     50      1      0   if $$self{'_ao'} == 0
+797   ***     50      1      0   if $$self{'_ao'} == 0
+814   ***     50      0      6   unless -e $$files{$sample}
+836   ***     50      2      0   if $$self{'_a'} ne 'indel'
+841   ***      0      0      0   $$mapped_length{$a} > $$mapped_length{$b} ? :
+848   ***      0      0      0   if (defined $chr_name and defined $chr_length)
+857   ***      0      0      0   unless /^\@RG.*/
+858   ***      0      0      0   if (/.*\tMI:(?:Z:)?(\d+).*/)
+859   ***      0      0      0   if $1 > $max
+861   ***      0      0      0   if $max > $lib_size
+863   ***      0      0      0   if /.*\tSM:([^\t]+).*/
+865   ***      0      0      0   if scalar keys %sample_names > 1
+870   ***      0      0      0   if ($lib_size == 0)
+872   ***      0      0      0   if (-e $$bas_files{$key}) { }
+      ***      0      0      0   elsif ($lib_size == 0) { }
+880   ***      0      0      0   if (defined $read_len)
+897   ***      0      0      0   unless open my $bas, '<', $bas_file
+903   ***      0      0      0   if (defined $index_mi and $index_sd)
+907   ***      0      0      0   unless ($index_mi or $index_sd)
+930   ***      0      0      0   if (defined $qseq)
+934   ***      0      0      0   if ($read_counter > 100)
+954   ***      0      0      0   unless defined $$self{'vcf'}
+956   ***      0      0      0   if (defined $$self{'_m'})
+964   ***      0      0      0   unless open my $tmp_vcf, '>', $aug_vcf
+990   ***      0      0      0   if (defined $$self{'_b'} and defined $$self{'_m'})
+993   ***      0      0      0   if ($$self{'_a'} eq 'indel')
+997   ***      0      0      0   if ($sample ne $self->getNormalName)
+1019  ***     50      0      2   if not defined $$self{'vcf'} || defined $$self{'_b'} or $$self{'_ao'} == 1
+1027  ***     50      2      0   if (defined $info_tag_val) { }
+1029  ***     50    138      0   if (defined $hash_val)
+1038  ***     50      0      2   unless (defined $$self{'vcf'})
+1041  ***      0      0      0   if ($sample eq $self->getNormalName) { }
+1078         100      2      6   if $key eq 'VT' or $key eq 'VC'
+1088  ***     50      1      0   if ($org_filter)
+1137  ***     50      0      6   if (not $vcf || $$self{'_b'} or $$self{'_ao'} == 1)
+1141  ***     50      0      6   unless (defined $original_vcf_info)
+1197  ***     50      0     48   if ($$d[0] eq 'VD')
+1202  ***      0      0      0   if (defined $anno_data[$i]) { }
+1211  ***     50      6      0   if ($vdseen == 0)
+1217  ***     50      6      0   if ($vtseen == 0)
+1220  ***     50      6      0   if (length $ref > 0 and length $alt > 0) { }
+1221  ***     50      6      0   if (length $ref == 1) { }
+1222  ***     50      0      6   if (length $alt > 1) { }
+1228  ***      0      0      0   if (length $alt == 1) { }
+1240  ***     50      0      6   if ($vdseen == 1) { }
+1243  ***      0      0      0   if ($$d[0] eq 'VC')
+1248  ***      0      0      0   if ($vcseen == 0)
+1256         100     12     36   if $info_key eq 'VT' or $info_key eq 'VC'
+1257  ***     50     36      0   if (defined $$original_vcf_info{$info_key}) { }
+1310  ***      0      0      0   if ($$aug_vcf_fh{"${sample}_bed"})
+1321  ***      0      0      0   if ($$store_results{$sample}{$location})
+1334  ***      0      0      0   if (-e $aug_gz and -e $aug_tabix)
+1335  ***      0      0      0   if -e $$aug_vcf_name{$sample}
+1396  ***      0      0      0   unless -d $dir or $dir =~ /^./
+1400  ***     50      0      2   if -d $dir
+1408  ***      0      0      0   if (-e $dir and -d $dir)
+1432  ***      0      0      0   if (scalar @dirs > 0)
+1434  ***      0      0      0   unless opendir my $CLEAN, $curr_path
+1436  ***      0      0      0   if $thing =~ /^\.{1,2}$/
+1437  ***      0      0      0   if $thing =~ /^\.nfs/
+1440  ***      0      0      0   if (-d $full_path) { }
+1445  ***      0      0      0   unless unlink $full_path
+1449  ***      0      0      0   unless remove_tree($root_path)
+1459  ***      0      0      0   if (defined $$hash{$key})
+1468  ***      0      0      0   if (-l $symlink_path)
+
+
+Covered Subroutines
+-------------------
+
+Subroutine             Count Pod Location                               
+---------------------- ----- --- ---------------------------------------
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:26  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:30  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:31  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:32  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:33  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:34  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:35  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:36  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:37  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:38  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:39  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:40  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:41  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:42  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:44  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:45  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:46  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:47  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:49  
+BEGIN                      1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:53  
+__ANON__                   3     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1371
+__ANON__                   2     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:523 
+_getCustomHeader           2     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:466 
+_getData                   2     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:336 
+_getInfo                   6     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:572 
+_getOriginalHeader         4     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:378 
+_getProcessLog             2     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:521 
+_getVCFObject              2     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1017
+_get_bam_header_data       2     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:835 
+_get_bam_object            2     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:810 
+_get_header_lines          4     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1109
+_get_tab_sep_header        1     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1066
+_isValid                   4     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:70  
+_localInit                 4     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:65  
+_parse_info_line           6     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1179
+_runCommand                3     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1369
+_trim_file_path           28     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:554 
+_writeOutput               6     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1136
+catFiles                   2   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1387
+cleanTempdir               2   0 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1394
+getBedHash                 1   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:621 
+getChromosomes             2   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:265 
+getMergedLocations         1   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:289 
+getProgress                1   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:156 
+getVcfHeaderData           2   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:90  
+gzipAndIndexVcf            1   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1350
+processMergedLocations     1   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:709 
+writeFinalFileHeaders      1   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:221 
+
+Uncovered Subroutines
+---------------------
+
+Subroutine             Count Pod Location                               
+---------------------- ----- --- ---------------------------------------
+WriteAugmentedHeader       0   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:950 
+__ANON__                   0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1374
+__ANON__                   0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:841 
+__ANON__                   0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:908 
+__ANON__                   0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:909 
+_checkNormal               0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:137 
+_createSymlink             0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1467
+_getReadDepth              0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:601 
+_get_lib_size_from_bas     0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:896 
+_get_read_length           0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:925 
+_populateBedHeader         0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:186 
+_print_hash                0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1457
+_writeFinalVcf             0     lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1309
+check_and_cleanup_dir      0   0 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1407
+clear_path                 0   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1428
+filterBedLocations         0   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:650 
+populateBedLocations       0   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:672 
+writeResults               0   1 lib/Sanger/CGP/Vaf/Data/ReadVcf.pm:1288
+
+
+Branches
+--------
+
+line  err      %   true  false   branch
+----- --- ------ ------ ------   ------
+118   ***      0      0      0   if (exists $$self{'_debug'} and defined $$self{'_debug'} and $$self{'_debug'}) { }
+127   ***      0      0      0   if defined $$self{'_msg'}
+
+
+Covered Subroutines
+-------------------
+
+Subroutine     Count Pod Location                                         
+-------------- ----- --- -------------------------------------------------
+BEGIN              1     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:25 
+BEGIN              1     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:27 
+BEGIN              1     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:28 
+BEGIN              1     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:29 
+BEGIN              1     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:30 
+BEGIN              1     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:32 
+BEGIN              1     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:66 
+_init              2     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:58 
+_isValidAbs        2     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:69 
+getLocation       37   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:74 
+getVarLine         6   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:83 
+getVarType        25   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:92 
+getVcfStatus       6   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:100
+new                2   1 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:38 
+setLocation        7   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:78 
+setVarLine         7   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:87 
+
+Uncovered Subroutines
+---------------------
+
+Subroutine     Count Pod Location                                         
+-------------- ----- --- -------------------------------------------------
+_clearMessages     0     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:132
+_debug             0     lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:117
+addMessage         0   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:112
+getBamObj          0   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:104
+getLibSize         0   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:96 
+getMessages        0   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:126
+getSample          0   0 lib/Sanger/CGP/Vaf/Process/AbstractVariant.pm:108
+
+
+Branches
+--------
+
+line  err      %   true  false   branch
+----- --- ------ ------ ------   ------
+26    ***     50      3      0   unless $_[0] =~ /^Odd number of elements in hash assignment/ or $_[0] =~ /^Use of uninitialized value \$gtype/ or $_[0] =~ /^Use of uninitialized value \$buf/ or $_[0] =~ /symlink exists/ or $_[0] =~ /gzip: stdout: Broken pipe/
+75    ***     50      0      7   if ($self->getVarType eq 'indel')
+81    ***      0      0      0   if (defined $ref and length $ref > 1)
+87    ***      0      0      0   if (defined $ref and length $alt > 1)
+128   ***      0      0      0   unless (exists $$g_pu{'alt_p'})
+137   ***      0      0      0   defined $VAF ? :
+138   ***      0      0      0   if ($self->getVarLine =~ /BEDFILE/)
+185   ***      0      0      0   unless defined $self->getVcfStatus or $self->getVarLine =~ /BEDFILE/
+191          100      6      6   if (exists $$data_for_all_samples{$sample}{$self->getLocation}) { }
+195   ***     50      0      6   if $max_rd > $max_depth
+229          100      1     11   if ($$flag_val{$key} eq 'PASS') { }
+             100      6      5   elsif ($$flag_val{$key} eq 'NA') { }
+236   ***     50      0      6   if ($self->getVarLine =~ /BEDFILE/)
+247   ***     50      0      6   if ($passed == $samples and $passed > 0) { }
+      ***     50      0      6   elsif ($called == $samples and $passed > 0) { }
+      ***     50      0      6   elsif ($not_called == $samples and $not_called > 0) { }
+             100      1      5   elsif ($not_called + $passed == $samples and $passed > 0) { }
+      ***     50      0      5   elsif ($passed + $called + $not_called == $samples and ($passed > 0 and $called > 0)) { }
+      ***     50      5      0   elsif ($not_called + $called == $samples and $called > 0) { }
+279          100      6      6   if not defined $$original_vcf_info{$sample} or $$original_vcf_info{$sample} eq 'NA'
+310   ***      0      0      0   unless open my $ref_n_alt_FH, '>' . $$self{'_tmp'} . '/temp.ref'
+329   ***      0      0      0   unless $self->getVarType eq 'indel'
+335   ***      0      0      0   if ($hdr_flag and $max_depth > 1000) { }
+338   ***      0      0      0   if (defined $lib_size and defined $chr_len) { }
+342   ***      0      0      0   if ($spanned_region < $$g_pu{'start'} and $chr_len - $$g_pu{'end'} > $spanned_region) { }
+359   ***      0      0      0   if ($$g_pu{'ins_flag'} and not $$g_pu{'del_flag'}) { }
+387   ***     50      1      0   if ($record)
+430   ***      0      0      0   if ($$g_pu{'ins_flag'} == 1 and $$g_pu{'del_flag'} == 0)
+435   ***      0      0      0   if ($$g_pu{'del_flag'} == 1 and $$g_pu{'ins_flag'} == 1)
+444   ***      0      0      0   if (defined $$g_pu{'ins_flag'} and $$g_pu{'ins_flag'} == 1) { }
+471   ***      0      0      0   if ($exclusive_OR =~ /[^\0]/g)
+475   ***      0      0      0   if ($$g_pu{'ins_flag'} and $new_pos != $$g_pu{'ref_pos_5p'})
+529   ***     50     19      0   if $$self{'_varType'} eq 'snp'
+564   ***      0      0      0   unless open my $Reads_FH, '>', $$self{'_tmp'} . '/temp.reads'
+583   ***      0      0      0   if ($$g_pu{'end'} - $$g_pu{'start'} < $$g_pu{'lib_size'}) { }
+594   ***      0      0      0   if ($$g_pu{'hdr'} == 0 and $$self{'_passedOnly'} == 1)
+626   ***      0      0      0   if $$self{'_mq'} and $a->qual <= $$self{'_mq'}
+627   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN
+628   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL
+629   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED
+631   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT
+639   ***      0      0      0   if $qseq =~ /[nN]/
+647   ***      0      0      0   if (defined $mseqid and defined $seqid and $seqid ne $mseqid)
+676   ***      0      0      0   if $$self{'_mq'} and $a->qual <= $$self{'_mq'}
+677   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN
+678   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL
+679   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED
+681   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT
+683   ***      0      0      0   if ($readname eq $a->display_name)
+685   ***      0      0      0   if $tmp_seq =~ /[nN]/
+693   ***      0      0      0   if ($read)
+720   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN
+721   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL
+723   ***      0      0      0   if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT
+725   ***      0      0      0   if ($flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED)
+727   ***      0      0      0   if $qseq =~ /[nN]/
+739   ***      0      0      0   if (defined $mseqid and defined $seqid and $seqid ne $mseqid)
+802   ***      0      0      0   if ($exit)
+807   ***      0      0      0   if ($match_len < $$g_pu{'read_length'} - 2)
+815   ***      0      0      0   if ($strand eq '-')
+825   ***      0      0      0   if ($strand eq '-')
+827   ***      0      0      0   if ($$g_pu{'ref_pos_5p'} <= $actual_pos and $$g_pu{'alt_pos_3p'} >= $actual_pos || $$g_pu{'ref_pos_3p'} >= $actual_pos)
+828   ***      0      0      0   if ($target eq 'alt')
+838   ***      0      0      0   if ($target eq 'ref') { }
+      ***      0      0      0   elsif ($t_start < $$g_pu{'ref_pos_5p'} and $t_end > $$g_pu{'ref_pos_5p'} or $t_start < $$g_pu{'alt_pos_3p'} and $t_end > $$g_pu{'alt_pos_3p'}) { }
+840   ***      0      0      0   if ($t_start < $$g_pu{'ref_pos_5p'} and $t_end > $$g_pu{'ref_pos_5p'} or $t_start < $$g_pu{'ref_pos_3p'} and $t_end > $$g_pu{'ref_pos_3p'})
+843   ***      0      0      0   if ($strand eq '+') { }
+856   ***      0      0      0   if ($strand eq '+') { }
+891   ***      0      0      0   if (exists $$read_track_ref{$read})
+894   ***      0      0      0   if $$ref_count_n{$read}
+895   ***      0      0      0   if $$ref_count_p{$read}
+896   ***      0      0      0   if $$alt_count_n{$read}
+897   ***      0      0      0   if $$alt_count_p{$read}
+905   ***      0      0      0   if ($$ref_count_n{$read})
+906   ***      0      0      0   if ($$ref_count_p{$read} < $$ref_count_n{$read}) { }
+916   ***      0      0      0   if ($$alt_count_n{$read})
+917   ***      0      0      0   if ($$alt_count_p{$read} < $$alt_count_n{$read}) { }
+926   ***      0      0      0   if ($ref_count_p)
+927   ***      0      0      0   if ($ref_count_n)
+928   ***      0      0      0   if ($alt_count_p)
+929   ***      0      0      0   if ($alt_count_n)
+930   ***      0      0      0   if ($amb_reads)
+931   ***      0      0      0   if ($read_count_unk)
+951   ***      0      0      0   defined $VAF ? :
+972          100   1880     13   if $pos != $$g_pu{'start'}
+975   ***     50      0   1077   if $p->is_del or $p->is_refskip
+981   ***     50      0   1077   if $$self{'_mq'} and $a->qual <= $$self{'_mq'}
+982   ***     50      0   1077   if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN
+983   ***     50      0   1077   if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL
+984   ***     50      0   1077   if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ
+985   ***     50      0   1077   if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT
+987   ***     50      0   1077   if ($$self{'_bq'})
+990   ***      0      0      0   if $qual <= $$self{'_bq'}
+996   ***     50      0   1077   if $qbase =~ /[nN]/
+999          100    900    177   if ($refbase eq $qbase and $strand > 0) { }
+             100     69    108   elsif ($refbase eq $qbase and $strand < 0) { }
+             100     92     16   elsif ($$g_pu{'alt_seq'} eq $qbase and $strand > 0) { }
+             100      6     10   elsif ($$g_pu{'alt_seq'} eq $qbase and $strand < 0) { }
+             100      7      3   elsif ($strand > 0) { }
+      ***     50      3      0   elsif ($strand < 0) { }
+1043         100     12      6   if (defined $$original_flag{$$g_pu{'sample'}}) { }
+1056         100      8     10   if ($$g_pu{'alt_p'} > 0 and $$g_pu{'alt_n'} == 0) { }
+             100      2      8   elsif ($$g_pu{'alt_p'} == 0 and $$g_pu{'alt_n'} > 0) { }
+             100      1     14   elsif ($$g_pu{'alt_p'} > 0 and $$g_pu{'alt_n'} > 0) { }
+1067         100      2     16   if ($$g_pu{'ref_p'} > 0 and $$g_pu{'ref_n'} == 0) { }
+             100      2     14   elsif ($$g_pu{'ref_p'} == 0 and $$g_pu{'ref_n'} > 0) { }
+             100      6     16   elsif ($$g_pu{'ref_p'} > 0 and $$g_pu{'ref_n'} > 0) { }
+1078         100     11      7   defined $VAF ? :
+1080  ***     50     18      0   if ($self->getVarType ne 'indel') { }
+
+
+Covered Subroutines
+-------------------
+
+Subroutine                Count Pod Location                                  
+------------------------- ----- --- ------------------------------------------
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:26  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:31  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:32  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:33  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:34  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:35  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:36  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:37  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:38  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:40  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:41  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:42  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:44  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:46  
+BEGIN                         1     lib/Sanger/CGP/Vaf/Process/Variant.pm:50  
+__ANON__                   1893     lib/Sanger/CGP/Vaf/Process/Variant.pm:971 
+_check_hdr_overlap            2     lib/Sanger/CGP/Vaf/Process/Variant.pm:379 
+_getFlagStatus                6     lib/Sanger/CGP/Vaf/Process/Variant.pm:220 
+_getINFO                      6     lib/Sanger/CGP/Vaf/Process/Variant.pm:276 
+_localInit                    2     lib/Sanger/CGP/Vaf/Process/Variant.pm:56  
+formatResults                18   1 lib/Sanger/CGP/Vaf/Process/Variant.pm:1040
+formatVarinat                 7   1 lib/Sanger/CGP/Vaf/Process/Variant.pm:68  
+getPileup                    19   0 lib/Sanger/CGP/Vaf/Process/Variant.pm:969 
+getVcfFields                  6   1 lib/Sanger/CGP/Vaf/Process/Variant.pm:183 
+populateHash                 19   1 lib/Sanger/CGP/Vaf/Process/Variant.pm:509 
+
+Uncovered Subroutines
+---------------------
+
+Subroutine                Count Pod Location                                  
+------------------------- ----- --- ------------------------------------------
+__ANON__                      0     lib/Sanger/CGP/Vaf/Process/Variant.pm:620 
+__ANON__                      0     lib/Sanger/CGP/Vaf/Process/Variant.pm:674 
+__ANON__                      0     lib/Sanger/CGP/Vaf/Process/Variant.pm:713 
+__ANON__                      0     lib/Sanger/CGP/Vaf/Process/Variant.pm:801 
+_cleanup_read_ambiguities     0     lib/Sanger/CGP/Vaf/Process/Variant.pm:888 
+_do_exonerate                 0     lib/Sanger/CGP/Vaf/Process/Variant.pm:767 
+_fetch_features               0     lib/Sanger/CGP/Vaf/Process/Variant.pm:582 
+_fetch_mate_seq               0     lib/Sanger/CGP/Vaf/Process/Variant.pm:671 
+_fetch_reads                  0     lib/Sanger/CGP/Vaf/Process/Variant.pm:616 
+_fetch_unmapped_reads         0     lib/Sanger/CGP/Vaf/Process/Variant.pm:709 
+_getRange                     0     lib/Sanger/CGP/Vaf/Process/Variant.pm:327 
+_get_alt_seq                  0     lib/Sanger/CGP/Vaf/Process/Variant.pm:424 
+_get_dna_segment              0     lib/Sanger/CGP/Vaf/Process/Variant.pm:409 
+_get_ref_5p_pos               0     lib/Sanger/CGP/Vaf/Process/Variant.pm:468 
+addNormalCount                0   1 lib/Sanger/CGP/Vaf/Process/Variant.pm:946 
+createExonerateInput          0   1 lib/Sanger/CGP/Vaf/Process/Variant.pm:305 
+getIndelResults               0   0 lib/Sanger/CGP/Vaf/Process/Variant.pm:563 
+storeResults                  0   0 lib/Sanger/CGP/Vaf/Process/Variant.pm:116 
+
+
+Covered Subroutines
+-------------------
+
+Subroutine Count Location                             
+---------- ----- -------------------------------------
+BEGIN          1 lib/Sanger/CGP/Vaf/VafConstants.pm:10
+BEGIN          1 lib/Sanger/CGP/Vaf/VafConstants.pm:3 
+BEGIN          1 lib/Sanger/CGP/Vaf/VafConstants.pm:5 
+BEGIN          1 lib/Sanger/CGP/Vaf/VafConstants.pm:6 
+BEGIN          1 lib/Sanger/CGP/Vaf/VafConstants.pm:7 
+BEGIN          1 lib/Sanger/CGP/Vaf/VafConstants.pm:9 
+
+

@@ -1,7 +1,7 @@
 #!/use/bin/perl
 
 ##########LICENCE############################################################
-# Copyright (c) 2016 Genome Research Ltd.
+# Copyright (c) 2016-2017 Genome Research Ltd.
 # 
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 # 
@@ -22,10 +22,6 @@
 ##########LICENCE##############################################################
 
 BEGIN {
-  #use Cwd qw(abs_path);
-  #use File::Basename;
-  #$ENV{POSIXLY_CORRECT}=1;
-  #unshift (@INC,dirname(abs_path($0)).'/../lib');
   $SIG{__WARN__} = sub {warn $_[0] unless(($_[0] =~ m/^Use of uninitialized value \$buf/) || ($_[0] =~ m/gzip: stdout: Broken pipe/))};
 };
 
