@@ -1,10 +1,7 @@
-#!/software/perl-5.16.2/bin/perl -w
-
-eval 'exec /software/perl-5.16.2/bin/perl -w -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
+#!/use/bin/perl
 
 ##########LICENCE############################################################
-# Copyright (c) 2016 Genome Research Ltd.
+# Copyright (c) 2016-2017 Genome Research Ltd.
 # 
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 # 
@@ -25,10 +22,6 @@ eval 'exec /software/perl-5.16.2/bin/perl -w -S $0 ${1+"$@"}'
 ##########LICENCE##############################################################
 
 BEGIN {
-  use Cwd qw(abs_path);
-  use File::Basename;
-  $ENV{POSIXLY_CORRECT}=1;
-  unshift (@INC,dirname(abs_path($0)).'/../lib');
   $SIG{__WARN__} = sub {warn $_[0] unless(($_[0] =~ m/^Use of uninitialized value \$buf/) || ($_[0] =~ m/gzip: stdout: Broken pipe/))};
 };
 
@@ -47,10 +40,9 @@ use Data::Dumper;
 use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
 
-
-
 use Log::Log4perl;
 
+use lib "$Bin/../lib";
 use Sanger::CGP::Vaf::Data::ReadVcf;
 use Sanger::CGP::Vaf::VafConstants;
 
@@ -86,7 +78,7 @@ try {
 		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
-		'tabix_hdr' 	=> Bio::DB::HTS::Tabix->new(filename => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz'),
+		'tabix_hdr' 	=> Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}),
 		'mq' 					=> $vcf_obj->{'_mq'},
 		'bq' 					=> $vcf_obj->{'_bq'},
 		);	
@@ -140,7 +132,8 @@ try {
 		$vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
 		$vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
 		$log->debug("Compressing and Validating VCF file");
-		my($outfile_gz,$outfile_tabix)=$vcf_obj->compressVcf("$outfile_name_no_ext.vcf");
+		my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
+		
 		print $progress_fhw "$outfile_name_no_ext.tsv\n";
 		close $progress_fhw;
 		if ((-e $outfile_gz) && (-e $outfile_tabix)) {
@@ -181,6 +174,7 @@ sub option_builder {
                 'oe|output_vcfExtension=s' => \$options{'oe'},
                 'tmp|tmpdir=s' => \$options{'tmp'},
                 'dp|depth=s' => \$options{'dp'},
+                'hdr|high_depth_bed=s' => \$options{'hdr'},
                 'pid|id_int_project=s' => \$options{'pid'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
                 'v|version'  => \$options{'v'}
@@ -201,7 +195,8 @@ sub option_builder {
   pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'});
 	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
-  
+
+
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
 	$options{'d'}=~s/\/$//g;
 	mkpath($options{'o'});
@@ -253,6 +248,11 @@ sub option_builder {
 	if(($options{'ao'} || $options{'m'}) && lc($options{'a'}) eq 'snp') {
 		$log->logcroak("Warning: VCF augment option is only supported for indels");
 	} 
+  if(!defined $options{'hdr'}) {
+     warn "-hdr high depth reagions file not provided for indel analysis, using default hg19 file: $Bin/hdr/seq.cov.$options{'c'}.ONHG19_sorted.bed.gz";
+		 $options{'hdr'}="$Bin/hdr/seq.cov".$options{'c'}.'.ONHG19_sorted.bed.gz';
+     
+	}
 	
  \%options;
 }
@@ -293,6 +293,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --base_quality   (-bq) base quality threshold for snp
    --bamExtension   (-be) Input read file extension  
    --depth          (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
+   --high_depth_bed (-hdr) High Depth Region(HDR) bed file to mask high depth regions in the genome
    --id_int_project (-pid)Internal project id [WTSI only]
    --bed_only       (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
    --vcf            (-vcf)user defined vcf file name (otherwise deduced from tumour name and  [please specify in same order as tumour sample names]

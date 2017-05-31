@@ -1,4 +1,3 @@
-#!/usr/bin/perl-5.16.3
 use strict;
 use Test::More;
 use Test::Fatal;
@@ -165,7 +164,7 @@ subtest 'ReadVcf' => sub {
 	my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
 	$vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
 	$vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
-	my($outfile_gz,$outfile_tabix)=$vcf_obj->compressVcf("$outfile_name_no_ext.vcf");	
+	my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");	
 	
 	
 	# test 
@@ -229,7 +228,7 @@ subtest 'ReadVcf' => sub {
 
 subtest 'CleanTestResults' => sub {
 	  my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
-	  my($cleaned1) = $vcf_obj->cleanTempdir($options->{'tmp'}); 
+  my($cleaned1) = $vcf_obj->cleanTempdir($options->{'tmp'}); 
 		is_deeply($cleaned1,$options->{'tmp'},'CleanTestResults:tmpdir');
 		my($cleaned2) = $vcf_obj->cleanTempdir($test_output);
 		is_deeply($cleaned2,$test_output,'CleanTestResults:testOutdir');
