@@ -1,5 +1,12 @@
 
-## v4.5.1 ########
+## v4.5.3 ########
+
+* Updated licensing policy
+* Added option to supply external ignore depth file 
+* removed legacy code to run external commands
+* Added prerelease.sh to 
+
+## v4.5.2 ########
 
 * Updated .gitignore to allow test data to be added to git 
 

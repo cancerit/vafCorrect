@@ -35,21 +35,30 @@ use FindBin qw($Bin);
 use List::Util qw(first reduce max min);
 use warnings FATAL => 'all';
 use Capture::Tiny qw(:all);
+use Const::Fast qw(const);
 use Carp;
 use Try::Tiny qw(try catch finally);
 use File::Remove qw(remove);
 use File::Path qw(remove_tree);
+
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
 use Sanger::CGP::Vaf::VafConstants;
 use Sanger::CGP::Vaf::Process::Variant;
+
 use Log::Log4perl;
 Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 use base qw(Sanger::CGP::Vaf::Data::AbstractVcf);
 
+const my $SORT_N_BGZIP => q{vcf-sort %s| bgzip -c >%s };
+const my $TABIX_FILE => q{tabix -f -p vcf %s};
+const my $VALIDATE_VCF => q{vcf-validator -u %s};
+
+
 1; 
+
 
 
 sub _localInit {
@@ -1320,7 +1329,7 @@ sub _writeFinalVcf {
 	}
 		$vcf->close();
 		$aug_vcf_fh->{$sample}->close();
-		my ($aug_gz,$aug_tabix)=$self->compressVcf($aug_vcf_name->{$sample});
+		my ($aug_gz,$aug_tabix)=$self->gzipAndIndexVcf($aug_vcf_name->{$sample});
 		# remove raw vcf file after tabix indexing
     if ((-e $aug_gz) && (-e $aug_tabix)) {
     	unlink $aug_vcf_name->{$sample} or $log->warn("Could not unlink".$aug_vcf_name->{$sample}.':'.$!) if(-e $aug_vcf_name->{$sample});
@@ -1328,137 +1337,41 @@ sub _writeFinalVcf {
 		return;
 }
 
-=head2 compressVcf
+
+=head2 gzipAndIndexVcf
 Write bgzip compressed vcf file
 Inputs
 =over 2
-=item annot_vcf -vcf file to compress
+=item annot_vcf file to compress
 =back
 =cut
 
-
-sub compressVcf {
-  my ($self,$annot_vcf)=@_;
-  my $annot_gz = $annot_vcf.'.gz';
-  my $command="vcf-sort ".$annot_vcf;
-  $command .= "| bgzip -c >".$annot_gz;
-  $self->_runExternal($command, 'bgzip', undef, 1, 1); # croakable, quiet, no data
-	$command = "tabix -p vcf ".$annot_gz;
-  $self->_runExternal($command, 'tabix', undef, 1, 1); # croakable, quiet, no data
-  my $annot_tabix = "$annot_gz.tbi";
-  croak "Tabix index does not appear to exist" unless(-e $annot_tabix);
-  $command='vcf-validator -u '.$annot_gz;
-  $self->_runExternal($command, 'vcf-validator', undef, 1, 1); # croakable, quiet, no data
-  if ((-e $annot_gz) && (-e $annot_tabix)) {
-		unlink "$annot_vcf" or $log->warn("Unable to unlink $annot_vcf".$!);
-	}
-  return ($annot_gz, $annot_tabix);
+sub gzipAndIndexVcf {
+	my($self,$annot_vcf)=@_;
+	my $command = 'set -o pipefail; ';
+	$command.= sprintf $SORT_N_BGZIP, $annot_vcf, $annot_vcf.'.gz; ';
+	$command.=sprintf $TABIX_FILE, $annot_vcf.'.gz; ';
+	#$command.=sprintf $VALIDATE_VCF, $annot_vcf.'.gz '; # error while testing [ Odd number of elements in hash assignment at $PATH/lib/perl5/Vcf.pm line 2990]
+	$command.='2>&1  ';
+	$self->_runCommand($command);
+  return ($annot_vcf.'.gz', $annot_vcf.'.gz.tbi');
 }
 
-=head2 _runExternal
-Write augmented vcf file
+=head2 _runCommand
+run external command
 Inputs
 =over 2
-=item command -actual command to run
-=item ext_prog -external programme to run the command
-=item no_croak -action after error
-=item quiet -warning behaviour
-=item no_data 
-=tem FH -file handler
-=item binary -flag for binary output type
+=item command to run
 =back
 =cut
-sub _runExternal {
-        my ($self,$command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary) = @_;
-        croak "Filehandle must be defined for binary output." if($binary && !$FH);
-        return $self->_run_external_core(q{-|}, $command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary);
-}
-=head2 _run_external_core
-runs external command
-Inputs
-=over 2
-=item open_type -process type to open
-=item command -actual command to run
-=item ext_prog -external programme to run the command
-=item no_croak -action after error
-=item quiet -warning behaviour
-=item no_data 
-=tem FH -file handler
-=item binary -flag for binary output type
-=back
-=cut
-sub _run_external_core {
-  my ($self,$open_type, $command, $ext_prog, $no_croak, $quiet, $no_data, $FH, $binary) = @_;
-  # ensure that commands containing pipes give appropriate errors
-  $ENV{SHELL} = '/bin/bash'; # have to ensure bash is in use
-  my $command_prefix = q{};
-  $command_prefix = 'set -o pipefail; ' if($command =~ m/[|]/); # add pipefail to command if pipes are detected
 
-  my (@prog_data, $tmp_fn);
-        my $error_to_check;
-  $log->warn(">>>>> $command");
-  $command = $command_prefix.$command;
-        if($Sanger::CGP::Vaf::VafConstants::EXECUTE_EXTERNAL == 1) {
-          try {
-      if(defined $FH && ref \$FH eq 'SCALAR') {
-        $tmp_fn = $FH;
-        undef $FH;
-        open $FH, '>', $tmp_fn or croak "Failed to create $tmp_fn: $OS_ERROR";
-      }
-      my ($pid, $process);
-      if($open_type eq q{2>&1}) {
-        $pid = open $process, $command.' 2>&1 |' or croak 'Could not fork: '.$OS_ERROR;
-      }
-      else {
-        $pid = open $process, q{-|}, $command or croak 'Could not fork: '.$OS_ERROR;
-      }
-      croak 'Failed to fork for: '.$command unless($pid);
-      if($binary) {
-        binmode $FH;
-        binmode $process;
-        my $buffer;
-        my $buffer_max = 64*1024; # 64k
-        while(read ($process, $buffer, $buffer_max) ){
-          print $FH $buffer or croak "filehandle write failed $OS_ERROR";
-        }
-      }
-      else {
-        while (my $tmp = <$process>) {
-          print $FH $tmp or croak "filehandle write failed $OS_ERROR" if($FH);
-          $log->debug("<$ext_prog>\t$tmp") or $log->logcroak("logging write failed $OS_ERROR") unless($quiet);
-          unless($no_data) {
-            chomp $tmp;
-            push @prog_data, $tmp ;
-          }
-        }
-      }
-      close $process or croak "Error closing pipe from $ext_prog";
-    } catch {
-      unless($no_croak) {
-        my $message = q{This external process failed: }.$command;
-      $message .= "\nERROR: $_";
-        croak $message;
-      } elsif($no_croak eq 'warn') {
-        my $message = q{This external process failed: }.$command;
-        $message .= "\nWARNING: $_";
-        $log->warn($message);
-      } elsif($no_croak eq 'check') {
-        $error_to_check = $_;
-      }
-      # else just ignore the error
-    }
-    finally {
-      close $FH or croak "Failed to close $tmp_fn: $OS_ERROR" if(defined $tmp_fn);
-    };
-        }
-        $log->debug( "<<<<<") unless($quiet);
-
-        if (defined $error_to_check) {
-                $log->logcroak("_run_external should be called in list context if called with no_croak=check, returning an error value") unless wantarray;
-                return (\@prog_data, $error_to_check);
-        } else {
-                return (\@prog_data);
-        }
+sub _runCommand {
+	my($self,$command)=@_;
+  try {
+      warn "\nErrors from command: $command\n\n";
+      print "\nOutput from command: $command\n\n";
+      system($command);
+  }catch { die $_; };
 }
 
 =head2 catFiles
@@ -1473,7 +1386,7 @@ Inputs
 sub catFiles {
 	my($self,$path,$ext,$outfile)=@_;
 	my $command='cat '.$path.'/tmp_*.'.$ext.' >>'."$outfile.$ext";
-  $self->_runExternal($command, 'cat', undef, 1, 1); # croakable, quiet, no data
+  $self->_runCommand($command); # croakable, quiet, no data
 }
 
 # recursively cleanups folder and underlying substructure
@@ -1503,7 +1416,7 @@ sub check_and_cleanup_dir{
 
 =over
 
-Implemented as File::Path remove_tree (rmtree) is naff
+Implemented as File::Path remove_tree (rmtree)
 the idea is to remove the content of all of the directories
 and then use remove_tree to remove the directories
 needed to handle very big structures from devil
