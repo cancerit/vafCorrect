@@ -8,3 +8,4 @@ Makefile
 install_tmp
 perl/MANIFEST
 perl/perltidy.LOG
+perl/docs
