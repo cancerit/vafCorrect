@@ -50,11 +50,16 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 my $store_results;
 
+my $debug = 0;
+
 my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
 try {
 	my ($options) = option_builder();
-	
+	if ($options->{'dbg'}){	
+		$log->debug("================Using Parameters===========================");
+	  $log->debug(Dumper($options));
+	}
 	if ($options->{'a'} eq 'indel') {
     	$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
   }
@@ -78,7 +83,7 @@ try {
 		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
-		'tabix_hdr' 	=> defined  $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
+		'tabix_hdr' 	=> defined $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
 		'mq' 					=> $vcf_obj->{'_mq'},
 		'bq' 					=> $vcf_obj->{'_bq'},
 		);	
@@ -140,6 +145,10 @@ try {
 			my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
 		}
   }
+  if ($options->{'dbg'}){	
+    $log->debug("==============================Parameters used===================");
+    $log->debug(Dumper($options));
+  }
 }
 	
 catch {
@@ -176,6 +185,7 @@ sub option_builder {
                 'hdr|high_depth_bed=s' => \$options{'hdr'},
                 'pid|id_int_project=s' => \$options{'pid'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
+                'dbg|debug=i' => \$options{'dbg'},
                 'v|version'  => \$options{'v'}
 	);
 	
@@ -244,7 +254,7 @@ sub option_builder {
 		$log->logcroak("Warning: VCF augment option is only supported for indels");
 	} 
   if(!defined $options{'hdr'}) {
-     warn "-hdr high depth reagions file not provided for indel analysis, regions with high depth will take longer to run";
+     warn "-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run";
 	}
 	
  \%options;
