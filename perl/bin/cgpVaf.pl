@@ -50,11 +50,16 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 my $store_results;
 
+my $debug = 0;
+
 my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
 try {
 	my ($options) = option_builder();
-	
+	if ($options->{'dbg'}){	
+		$log->debug("================Using Parameters===========================");
+	  $log->debug(Dumper($options));
+	}
 	if ($options->{'a'} eq 'indel') {
     	$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
   }
@@ -78,7 +83,7 @@ try {
 		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
-		'tabix_hdr' 	=> Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}),
+		'tabix_hdr' 	=> defined $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
 		'mq' 					=> $vcf_obj->{'_mq'},
 		'bq' 					=> $vcf_obj->{'_bq'},
 		);	
@@ -140,6 +145,10 @@ try {
 			my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
 		}
   }
+  if ($options->{'dbg'}){	
+    $log->debug("==============================Parameters used===================");
+    $log->debug(Dumper($options));
+  }
 }
 	
 catch {
@@ -158,7 +167,6 @@ sub option_builder {
                 'b|bedIntervals=s' => \$options{'b'},
                 'e|vcfExtension=s' => \$options{'e'},
                 'be|bamExtension=s' => \$options{'be'},
-                'c|hdr_cutoff=i' => \$options{'c'},
                 'g|genome=s' => \$options{'g'},
                 'a|variant_type=s' => \$options{'a'},
                 'r|restrict_flag=i' => \$options{'r'},
@@ -177,6 +185,7 @@ sub option_builder {
                 'hdr|high_depth_bed=s' => \$options{'hdr'},
                 'pid|id_int_project=s' => \$options{'pid'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
+                'dbg|debug=i' => \$options{'dbg'},
                 'v|version'  => \$options{'v'}
 	);
 	
@@ -221,10 +230,6 @@ sub option_builder {
 	if(!defined $options{'be'}) { 
 		$options{'be'}=".bam";
 	}
-	#use tabix file 
-	if(!defined $options{'c'}) {
-		$options{'c'}='005';
-	}
 	# use PASS flag
 	if(!defined $options{'r'}) {
 		$options{'r'}= 1;
@@ -249,9 +254,7 @@ sub option_builder {
 		$log->logcroak("Warning: VCF augment option is only supported for indels");
 	} 
   if(!defined $options{'hdr'}) {
-     warn "-hdr high depth reagions file not provided for indel analysis, using default hg19 file: $Bin/hdr/seq.cov.$options{'c'}.ONHG19_sorted.bed.gz";
-		 $options{'hdr'}="$Bin/hdr/seq.cov".$options{'c'}.'.ONHG19_sorted.bed.gz';
-     
+     warn "-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run";
 	}
 	
  \%options;
@@ -284,7 +287,6 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
                          bed file can be specified in the config file after the last sample pair,
                          if specified on command line then same bed file is used for all the tumour/normal pairs,
                          bed file name in config file overrides command line argument
-   --hdr_cutoff     (-c)  High Depth Region(HDR) cutoff  value[ avoids extreme depth regions (default: 005 i.e top 0.05% )]
                          (possible values 001,005,01,05 and 1)
    --restrict_flag  (-r)  restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
    --augment        (-m)  Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
@@ -293,7 +295,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --base_quality   (-bq) base quality threshold for snp
    --bamExtension   (-be) Input read file extension  
    --depth          (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
-   --high_depth_bed (-hdr) High Depth Region(HDR) bed file to mask high depth regions in the genome
+   --high_depth_bed (-hdr) High Depth Region(HDR) bed file (tabix indexed) to mask high depth regions in the genome
    --id_int_project (-pid)Internal project id [WTSI only]
    --bed_only       (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
    --vcf            (-vcf)user defined vcf file name (otherwise deduced from tumour name and  [please specify in same order as tumour sample names]

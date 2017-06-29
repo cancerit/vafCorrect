@@ -1,4 +1,5 @@
-
+## v4.5.4 #######
+* Removed default high depth regions filter option, users can optionally provide this file on command line (refer wiki)
 ## v4.5.3 ########
 
 * Updated licensing policy

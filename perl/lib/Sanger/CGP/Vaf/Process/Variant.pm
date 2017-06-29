@@ -329,7 +329,10 @@ sub _getRange {
   return unless($self->getVarType eq 'indel');
   my ($left_pos,$right_pos,$chr_len,$spanned_region);
   my $lib_size=$self->{'_libSize'};
-  my ($hdr_flag)=$self->_check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$self->{'_tabix_hdr'});
+  my $hdr_flag=0;
+  if(defined $self->{'_tabix_hdr'}) {
+    $hdr_flag=$self->_check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$self->{'_tabix_hdr'});
+  }
   my $spanning_seq_denom=$Sanger::CGP::Vaf::VafConstants::SPANNING_SEQ_DENOMINATOR;
   #if location is in high depth region and has depth >1000 then hdr_flag is true
   if($hdr_flag && $max_depth > 1000){$spanning_seq_denom=4;}
