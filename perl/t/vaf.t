@@ -132,7 +132,7 @@ subtest 'ReadVcf' => sub {
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
 		'tmp'					=> $options->{'tmp'},
-		'tabix_hdr' 		=> Bio::DB::HTS::Tabix->new(filename => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
+    'tabix_hdr'   => defined  $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
 		);
 
 	#diag(Dumper $variant);
@@ -211,7 +211,7 @@ subtest 'ReadVcf' => sub {
 		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
 		'outDir'			=> $vcf_obj->getOutputDir,
 		'passedOnly'  => $vcf_obj->{'_r'},
-		'tabix_hdr' 		=> Bio::DB::HTS::Tabix->new(filename => "$Bin/hdr/seq.cov".$vcf_obj->{'_c'}.'.ONHG19_sorted.bed.gz')
+    'tabix_hdr'   => defined  $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
 		);
 	 		
  	  $variant->setLocation('1:16902712:T:C');
@@ -220,10 +220,6 @@ subtest 'ReadVcf' => sub {
 		is_deeply($g_pu,$expected_g_pu,'ReadVcf_processMergedLocations:g_pu');
  		$g_pu=$variant->populateHash($g_pu,'samplea',$bam_header_data);
  		$g_pu=$variant->getPileup($bam_objects->{'samplea'},$g_pu);
-		my($res)=$variant->_check_hdr_overlap('chr1',89499371,89499451,$variant->{'_tabix_hdr'});		
-		is_deeply($res,1,'ReadVcf_processMergedLocations:_check_hdr_overlap_true');
-		$res=$variant->_check_hdr_overlap(1,16902712,16902712,$variant->{'_tabix_hdr'});		
-		is_deeply($res,0,'ReadVcf_processMergedLocations:_check_hdr_overlap_false');
 };
 
 subtest 'CleanTestResults' => sub {
