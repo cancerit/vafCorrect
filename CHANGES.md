@@ -1,7 +1,11 @@
+
+## v4.5.5 #######
+* updated version tag
+
 ## v4.5.4 #######
 * Removed default high depth regions filter option, users can optionally provide this file on command line (refer wiki)
-## v4.5.3 ########
 
+## v4.5.3 ########
 * Updated licensing policy
 * Added option to supply external ignore depth file 
 * removed legacy code to run external commands
