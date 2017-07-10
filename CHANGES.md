@@ -1,3 +1,5 @@
+## v4.5.6 #######
+* Update to Bio::DB::HTS install to use already installed htslib
 
 ## v4.5.5 #######
 * updated version tag
@@ -7,17 +9,17 @@
 
 ## v4.5.3 ########
 * Updated licensing policy
-* Added option to supply external ignore depth file 
+* Added option to supply external ignore depth file
 * removed legacy code to run external commands
-* Added prerelease.sh to 
+* Added prerelease.sh to
 
 ## v4.5.2 ########
 
-* Updated .gitignore to allow test data to be added to git 
+* Updated .gitignore to allow test data to be added to git
 
 ## v4.5.1 ########
 
-* Updated test data set files 
+* Updated test data set files
 
 ## v4.5.0 ########
 
@@ -29,7 +31,7 @@
 
 ## v4.4.1 ########
 
-* More robust check for mismatches at varinat positions in the alignment  
+* More robust check for mismatches at varinat positions in the alignment
 
 ## v4.4.0 ########
 
@@ -76,19 +78,19 @@
 
 ## V4.2.1 ########
 
-* changed Bio::DB::HTS version to 1.11 
+* changed Bio::DB::HTS version to 1.11
 
 ## V4.2.0 ########
 
-* Added support to Bio::DB::HTS 
+* Added support to Bio::DB::HTS
 
 ## V4.1.17 ########
 
-* Updated SQL query to get input data to generate commands 
+* Updated SQL query to get input data to generate commands
 
 ## V4.1.16 ########
 
-* corrected condition to get unmatched normal 
+* corrected condition to get unmatched normal
 
 ## V4.1.15 ########
 
@@ -116,7 +118,7 @@
 
 ## V4.1.8 ########
 
-*added test to check final result removal 
+*added test to check final result removal
 *chnaged bio:db:sam version to 1.42
 
 ## V4.1.7 ########
@@ -137,7 +139,7 @@
 
 ## V4.1.3 ########
 
-*Added tumour sample name as postfix to tmp folder 
+*Added tumour sample name as postfix to tmp folder
 
 ## V4.1.2 ########
 
