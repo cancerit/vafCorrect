@@ -20,7 +20,8 @@
 ##########LICENCE##########
 
 SOURCE_VCFTOOLS="http://sourceforge.net/projects/vcftools/files/vcftools_0.1.12a.tar.gz/download"
-BIODBHTS_INSTALL="https://raw.githubusercontent.com/Ensembl/Bio-HTS/master/INSTALL.pl"
+SOURCE_BIOBDHTS="https://github.com/Ensembl/Bio-HTS/archive/2.3.tar.gz"
+SOURCE_HTSLIB="https://github.com/samtools/htslib/releases/download/1.3.2/htslib-1.3.2.tar.bz2"
 SOURCE_SAMTOOLS="https://github.com/samtools/samtools/releases/download/1.3/samtools-1.3.tar.bz2"
 
 done_message () {
@@ -48,14 +49,12 @@ get_distro () {
     echo "I don't understand the file type for $1"
     exit 1
   fi
+  rm -f $1.$EXT
   if hash curl 2>/dev/null; then
-    curl -sS -o $1.$EXT -L $2
+    curl --retry 10 -sS -o $1.$EXT -L $2
   else
-    wget -nv -O $1.$EXT $2
+    wget --tries=10 -nv -O $1.$EXT $2
   fi
-  mkdir -p $1
-  `$DECOMP $1.$EXT`
-  tar --strip-components 1 -C $1 -xf $1.tar
 }
 
 get_file () {
@@ -75,13 +74,6 @@ if [[ ($# -ne 1 && $# -ne 2) ]] ; then
   exit 0
 fi
 
-INST_PATH=$1
-
-if [[ $# -eq 2 ]] ; then
-  CGP_PERLLIBS=$2
-fi
-
-
 CPU=`grep -c ^processor /proc/cpuinfo`
 if [ $? -eq 0 ]; then
   if [ "$CPU" -gt "6" ]; then
@@ -91,6 +83,8 @@ else
   CPU=1
 fi
 echo "Max compilation CPUs set to $CPU"
+
+INST_PATH=$1
 
 # get current directory
 INIT_DIR=`pwd`
@@ -109,18 +103,9 @@ INST_PATH=`pwd`
 cd $INIT_DIR
 
 # make sure that build is self contained
+unset PERL5LIB
 PERLROOT=$INST_PATH/lib/perl5
-
-# allows user to knowingly specify other PERL5LIB areas.
-if [ -z ${CGP_PERLLIBS+x} ]; then
-  export PERL5LIB="$PERLROOT"
-else
-  export PERL5LIB="$PERLROOT:$CGP_PERLLIBS"
-fi
-
-
-#add bin path for install tests
-export PATH=$INST_PATH/bin:$PATH
+export PERL5LIB="$PERLROOT"
 
 # log information about this system
 
@@ -135,17 +120,17 @@ export PATH=$INST_PATH/bin:$PATH
     echo
 
 
-perlmods=( "File::ShareDir" "File::ShareDir::Install" )
+perlmods=( "File::ShareDir" "File::ShareDir::Install" "Bio::Root::Version@1.006924" "Module::Build~0.42" )
 
 set -e
 for i in "${perlmods[@]}" ; do
   echo -n "Installing build prerequisite $i..."
-  
+
     set -x
     $INIT_DIR/perl/bin/cpanm -v --mirror http://cpan.metacpan.org -l $INST_PATH $i
     set +x
     echo; echo
-  
+
   done_message "" "Failed during installation of $i."
 done
 
@@ -157,35 +142,79 @@ cd $SETUP_DIR
 
 done_message "" "Failed to build $CURR_TOOL."
 
-echo -n "Building samtools ..."
-if [ -e $SETUP_DIR/samtools.success ]; then
-  echo -n " previously installed ...";
+if [ -e $SETUP_DIR/htslibGet.success ]; then
+  echo " already staged ...";
 else
+  echo
   cd $SETUP_DIR
-  set -x
-    get_distro "samtools" $SOURCE_SAMTOOLS &&
-		cd samtools &&
-		./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH &&
-		make all all-htslib &&
-		make install install-htslib &&
-		touch $SETUP_DIR/samtools.success
+  get_distro "htslib" $SOURCE_HTSLIB
+  touch $SETUP_DIR/htslibGet.success
 fi
-done_message "" "Failed to build samtools."
 
 echo -n "Building Bio::DB::HTS ..."
-
 if [ -e $SETUP_DIR/biohts.success ]; then
-  echo -n " previously installed ...";
+  echo " previously installed ...";
 else
-  cd $SETUP_DIR &&
-  $INIT_DIR/perl/bin/cpanm --mirror http://cpan.metacpan.org --notest -l $INST_PATH Module::Build Bio::Root::Version &&
-  get_file "INSTALL.pl" $BIODBHTS_INSTALL &&
-  perl -I $PERL5LIB INSTALL.pl --prefix $INST_PATH --static &&
-  rm -f BioDbHTS_INSTALL.pl &&
+  echo
+  cd $SETUP_DIR
+  rm -rf bioDbHts
+  get_distro "bioDbHts" $SOURCE_BIOBDHTS
+  echo ls
+  mkdir -p bioDbHts/htslib
+  tar --strip-components 1 -C bioDbHts -zxf bioDbHts.tar.gz
+  tar --strip-components 1 -C bioDbHts/htslib -jxf $SETUP_DIR/htslib.tar.bz2
+  cd bioDbHts/htslib
+  perl -pi -e 'if($_ =~ m/^CFLAGS/ && $_ !~ m/\-fPIC/i){chomp; s/#.+//; $_ .= " -fPIC -Wno-unused -Wno-unused-result\n"};' Makefile
+  make -j$CPU
+  rm -f libhts.so*
+  cd ../
+  env HTSLIB_DIR=$SETUP_DIR/bioDbHts/htslib perl Build.PL --install_base=$INST_PATH
+  ./Build test
+  ./Build install
+  cd $SETUP_DIR
+  rm -f bioDbHts.tar.gz
   touch $SETUP_DIR/biohts.success
 fi
 
-done_message "" "Failed to build Bio::DB:HTS."
+echo -n "Building htslib ..."
+if [ -e $SETUP_DIR/htslib.success ]; then
+  echo " previously installed ...";
+else
+  echo
+  mkdir -p htslib
+  tar --strip-components 1 -C htslib -jxf htslib.tar.bz2
+  cd htslib
+  ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
+  make -j$CPU
+  make install
+  cd $SETUP_DIR
+  touch $SETUP_DIR/htslib.success
+fi
+
+export HTSLIB=$INST_PATH
+
+if [[ ",$COMPILE," == *,samtools,* ]] ; then
+  echo -n "Building samtools ..."
+  if [ -e $SETUP_DIR/samtools.success ]; then
+    echo " previously installed ...";
+  else
+  echo
+    cd $SETUP_DIR
+    rm -rf samtools
+    get_distro "samtools" $SOURCE_SAMTOOLS
+    mkdir -p samtools
+    tar --strip-components 1 -C samtools -xjf samtools.tar.bz2
+    cd samtools
+    ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
+    make -j$CPU all all-htslib
+    make install all all-htslib
+    cd $SETUP_DIR
+    rm -f samtools.tar.bz2
+    touch $SETUP_DIR/samtools.success
+  fi
+else
+  echo "samtools - No change between vafCorrect versions"
+fi
 
 cd $SETUP_DIR
 
@@ -195,15 +224,18 @@ echo -n "Building $CURR_TOOL ..."
 if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
   echo -n " previously installed ..."
 else
-  
+
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE
-    cd $SETUP_DIR/$CURR_TOOL
+    cd $SETUP_DIR
+    mkdir vcftools
+    tar --strip 1 -C vcftools -zxf $CURR_TOOL.tar.gz
+    cd $CURR_TOOL
     patch Makefile < $INIT_DIR/patches/vcfToolsInstLocs.diff
     patch perl/Vcf.pm < $INIT_DIR/patches/vcfToolsProcessLog.diff
     make -j$CPU PREFIX=$INST_PATH
     touch $SETUP_DIR/$CURR_TOOL.success
-  
+
 fi
 
 done_message "" "Failed to build $CURR_TOOL."
