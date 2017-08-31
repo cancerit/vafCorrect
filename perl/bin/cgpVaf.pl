@@ -86,6 +86,7 @@ try {
 		'tabix_hdr' 	=> defined $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
 		'mq' 					=> $vcf_obj->{'_mq'},
 		'bq' 					=> $vcf_obj->{'_bq'},
+		'exp'                   =>  $vcf_obj->{'_exp'},
 		);	
 		
 	my($bed_locations)=$vcf_obj->getBedHash;
@@ -184,6 +185,7 @@ sub option_builder {
                 'dp|depth=s' => \$options{'dp'},
                 'hdr|high_depth_bed=s' => \$options{'hdr'},
                 'pid|id_int_project=s' => \$options{'pid'},
+                'exp|exonerate_percent=i' => \$options{'exp'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
                 'dbg|debug=i' => \$options{'dbg'},
                 'v|version'  => \$options{'v'}
@@ -201,9 +203,9 @@ sub option_builder {
 	pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
 	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
 	pod2usage(q{'-nn' normal sample name/s must be provided}) unless (defined $options{'nn'});
-  pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'});
+    pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'});
 	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
-  pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
+    pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 
 
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
@@ -241,6 +243,10 @@ sub option_builder {
 	if(!defined $options{'s'}) {
 		#analyse single sample no merge step 
 		$options{'s'}=undef;
+	}
+	if(!defined $options{'exp'}) {
+		#analyse single sample no merge step 
+		$options{'exp'}=92;
 	}
 	if(!defined $options{'ao'}) {
 		# augment vcf no merging step
@@ -293,6 +299,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --augment_only   (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
    --map_quality    (-mq) read mapping quality threshold
    --base_quality   (-bq) base quality threshold for snp
+   --exonerate_pct  (exp) report alignment over a percentage of the maximum score attainable by each query (exonerate specific parameter) [default 92]
    --bamExtension   (-be) Input read file extension  
    --depth          (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --high_depth_bed (-hdr) High Depth Region(HDR) bed file (tabix indexed) to mask high depth regions in the genome

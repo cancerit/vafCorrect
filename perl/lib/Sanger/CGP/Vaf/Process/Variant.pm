@@ -765,7 +765,7 @@ sub _do_exonerate {
 	my $read_track_alt;
 	my $read_track_ref;
 	my $amb_reads;
-	my $test_mode=0;
+	my $test_mode=1;
 	
 	#print Dumper $g_pu;
  # -E | --exhaustive <boolean>
@@ -775,14 +775,14 @@ sub _do_exonerate {
   # using exhaustive OFF as it is fast and gives identical answer 
   
   my $cmd="exonerate -E 0 -S 0".
-	"   --percent 92 --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
+	"   --percent $self->{'_exp'} --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
 	" --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
 	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS %em {%Ps}\n' ";
 	#for testing only
 	if($test_mode)
 	{
 	  my $cmd2="exonerate -E 0 -S 0".
-		"  --percent 92 --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
+		"  --percent $self->{'_exp'} --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
 		" --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
 		" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
 		print "$cmd2\n";
