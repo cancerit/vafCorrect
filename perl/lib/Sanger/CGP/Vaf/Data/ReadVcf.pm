@@ -439,11 +439,6 @@ sub _getOriginalHeader {
 	foreach my $sample_line ( @$sample_info) {
 		foreach my $key (keys %$sample_line) {
 			if(defined $sample_line->{$key} and $key eq "SampleName") {
-				#if (exists $sample_line->{'CGP_Project'}) {
-				#	$self->_createSymlink($Sanger::CGP::Vaf::VafConstants::NST_LINKS.'/'.$sample_line->{'CGP_Project'}.'/'.$sample_line->{$key}.'/'.$sample_line->{$key}.'.bam',"$self->{'_d'}/$sample_line->{$key}.bam");
-				#	$self->_createSymlink($Sanger::CGP::Vaf::VafConstants::NST_LINKS.'/'.$sample_line->{'CGP_Project'}.'/'.$sample_line->{$key}.'/'.$sample_line->{$key}.'.bam',"$self->{'_d'}/$sample_line->{$key}.bam");
-				#	$log->debug("Created symlink for sample in vcf header: $sample_line->{$key} in project:".$sample_line->{'CGP_Project'});
-				#}
 				$normal_sample->{$sample_line->{$key}}.="|$sample";
 			}
 		}		
@@ -751,7 +746,7 @@ sub processMergedLocations {
 			if($self->{'_a'} eq 'indel') {	
 				$g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
 				if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
-					$g_pu=$variant->addNormalCount($g_pu);
+					$g_pu=$variant->addNormalCount($g_pu);					
 				}
 				elsif($self->{'_m'} && $data_for_all_samples->{$sample}{$location}) {
 					$store_results=$variant->storeResults($store_results,$g_pu,$sample);
@@ -931,7 +926,7 @@ sub _get_read_length {
 				$read_counter++;
 				my $len=length($qseq);
 				$mapped_length->{$len}=$read_counter;
-				if($read_counter > 100){
+				if($read_counter > 1000){
 					return $mapped_length;
 				}
 			}
@@ -1053,7 +1048,7 @@ sub _getVCFObject {
 	
 	return $vcf;
 }
-
+	
 =head2 _get_tab_sep_header
 parse header data to generate header data and columns names
 Inputs

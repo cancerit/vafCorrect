@@ -305,6 +305,7 @@ sub createExonerateInput {
 	my($self,$bam,$bam_header,$depth,$g_pu)=@_;
 	$g_pu=$self->_getRange($bam_header,$g_pu,$depth);
 	my($ref_seq)=$self->_get_dna_segment($bam,$g_pu->{'chr'},$g_pu->{'pos_5p'},$g_pu->{'pos_3p'});
+	
 	my($alt_seq)=$self->_get_alt_seq($bam,$g_pu);
 	$g_pu=$self->_get_ref_5p_pos($ref_seq,$alt_seq,$g_pu);
 	open (my $ref_n_alt_FH,'>'.$self->{'_tmp'}.'/temp.ref')|| $log->logcroak("unable to open file $!");;
@@ -346,15 +347,15 @@ sub _getRange {
 			$left_pos=$g_pu->{'start'} - $spanned_region;
 			$right_pos=$g_pu->{'end'} + $spanned_region;
 		}else{
-		 $left_pos=$g_pu->{'start'} - 50;
-		 $right_pos = $g_pu->{'end'} + 50;
+		 $left_pos=$g_pu->{'start'};
+		 $right_pos = $g_pu->{'end'};
 		}
 	}else{
 		$log->logcroak("Library size or chromosome length in not defined");
 	}
 	
-	$g_pu->{'pos_5p'}=$left_pos;
-	$g_pu->{'pos_3p'}=$right_pos;
+	$g_pu->{'pos_5p'}=round($left_pos - $lib_size);
+	$g_pu->{'pos_3p'}=round($right_pos + $lib_size);
 	$g_pu->{'hdr'}=$hdr_flag;
 	# to get exact location of variant base and avoid borderline matching   
 	# added padding to reference posotion 
@@ -530,24 +531,11 @@ sub populateHash {
 	$g_pu->{'sample'} = $sample; 
 	
 	return $g_pu if($self->{'_varType'} eq 'snp');
-	#if(exists $bam_header_data->{$sample}{'read_length'}){
+	
 		$g_pu->{'read_length'}=$bam_header_data->{$sample}{'read_length'};
-	#}
-	#else {
-	#	$g_pu->{'read_length'}=$Sanger::CGP::Vaf::VafConstants::READ_LENGTH;
-	#}
-	#if(exists $bam_header_data->{$sample}{'lib_size'}){
 		$g_pu->{'lib_size'}=$bam_header_data->{$sample}{'lib_size'};
-		
-		#print "LIB:::: $sample".$bam_header_data->{$sample}{'lib_size'}."-------------\n";
-		
-	#}
-	#else {
-	#	$g_pu->{'lib_size'}=$Sanger::CGP::Vaf::VafConstants::READ_LENGTH*2;
-	#} 
 	# exonerate score is 5 per base , we allow max 4 mismatches * 9 = 36 score units, 4 bases * 5 for readlength = 20 score units to be safe side added another 14 score units
-	$g_pu->{'exonerate_score_cutoff'} = (($g_pu->{'read_length'}) * $Sanger::CGP::Vaf::VafConstants::EXONERATE_SCORE_MULTIPLIER) - $Sanger::CGP::Vaf::VafConstants::EXONERATE_SCORE_FACTOR;	                 
-  $g_pu;
+   $g_pu;
 }
 
 =head2 _fetch_features
@@ -617,6 +605,7 @@ Inputs
 
 sub _fetch_reads {
 my ($self,$sam_object,$region,$Reads_FH)=@_;
+
 my ($mate_info,%mapped_length);
 my $read_counter=0;
 		$sam_object->fetch($region, sub {
@@ -776,61 +765,61 @@ sub _do_exonerate {
 	my $read_track_alt;
 	my $read_track_ref;
 	my $amb_reads;
-		
-	# -E | --exhaustive <boolean>
+	my $test_mode=0;
+	
+	#print Dumper $g_pu;
+ # -E | --exhaustive <boolean>
   #Specify whether or not exhaustive alignment should be used.  By default, this is FALSE, and alignment heuristics will be used.  If it is set to TRUE, an exhaus‐
   #tive alignment will be calculated.  This requires quadratic time, and will be much, much slower, but will provide the optimal result for the given model. 
   #-S | --subopt <boolean>
   # using exhaustive OFF as it is fast and gives identical answer 
   
   my $cmd="exonerate -E 0 -S 0".
-	" --score $g_pu->{'exonerate_score_cutoff'} --percent 90 --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
+	"   --percent 92 --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
 	" --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
 	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS %em {%Ps}\n' ";
 	#for testing only
-	#if($test_mode)
-	#{
-	#my $cmd2="exonerate -E 0 -S 0".
-	#	" --score $g_pu->{'exonerate_score_cutoff'} --percent 95 --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
-	#	" --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
-	#	" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
-	#	my ($exonerate_output1, $stderr1, $exit1) = capture {system("$cmd2")};
-	#open (my $tfh1, '>',"exonerate_results_Alignment.out");
-	#print $tfh1 $exonerate_output1;
-	#my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd")};
+	if($test_mode)
+	{
+	  my $cmd2="exonerate -E 0 -S 0".
+		"  --percent 92 --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
+		" --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
+		" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
+		print "$cmd2\n";
+		my ($exonerate_output1, $stderr1, $exit1) = capture {system("$cmd2")};
+	 open (my $tfh1, '>','exonerate_results_Alignment'.$g_pu->{'sample'}.'.out');
+	 print $tfh1 $exonerate_output1;
+	#	my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd")};
 	
- # }
-	
+   }	
 	my ($exonerate_output, $stderr, $exit) = capture {system("$cmd")};
 	if ($exit) { $log->logcroak("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
 	#----- parse exonerate output ------
 	LINE:foreach my $line((split("\n", $exonerate_output))) {
-    my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand,$mismacth,$match_score)=(split ' ', $line);
-		# ignore reads with more than 1 mismatch and alignment length less than cutoff
-		if ( $match_len < ($g_pu->{'read_length'} - 2) ) {
-		 next LINE;
-		}
-		my $strand=$t_strand;
-		#<--5p--|*******|--3p-->
-		my $temp_start=$t_start;
-		my $org_read=$read;
-		$read=~s/_\d+$//g;
-		if($strand eq '-') { $t_start=$t_end ; $t_end=$temp_start;}
-		# check if there is mismatch in the alignment and if it is at the variant position
+    my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand,$mismatch,$match_score)=(split ' ', $line);   
+	my $strand=$t_strand;
+	#<--5p--|*******|--3p-->
+	
+	my $temp_start=$t_start;
+	my $org_read=$read;
+	$read=~s/_\d+$//g;
+	if($strand eq '-') { $t_start=$t_end ; $t_end=$temp_start;}
     my $aln_offset=0;
-    
     my $result=index($match_score,'-',0);
+    # check if there is mismatch in the alignment and if it is at the variant position
     while($result != -1 ) {
-    	my $mismathc_pos=$result + $aln_offset;
+    	my $mismatch_pos=$result + $aln_offset;
     	$aln_offset--;
-    	#print " $aln_offset: Found mismatch at :$result: $mismathc_pos\n";
-    	my $actual_pos=$mismathc_pos+$t_start;
-    	if($strand eq '-') { $actual_pos = ($match_len - $mismathc_pos) + $t_start +1; }
+    	my $actual_pos=$mismatch_pos+$t_start;
+    	
+    	if($strand eq '-') { $actual_pos = ($match_len - $mismatch_pos) + $t_start +1; }
+    	#print " Actual pos: $actual_pos: Aln offset: $aln_offset: Found mismatch at :$result: $mismatch_pos\n";
     	#print "$target: $match_score: $actual_pos:  ($g_pu->{'ref_pos_5p'} :$g_pu->{'alt_pos_3p'}) BEFORE $org_read \n";
     	if( ($g_pu->{'ref_pos_5p'} <= $actual_pos) && (($g_pu->{'alt_pos_3p'} >= $actual_pos) || ($g_pu->{'ref_pos_3p'} >= $actual_pos)) ) {
 				if($target eq 'alt') {
 						$read_count_unk->{$read}++;
-						#print "$target: $match_score: $actual_pos ($g_pu->{'ref_pos_5p'} :$g_pu->{'alt_pos_3p'}): AFTER $org_read \n";
+						#print "$g_pu->{'ref_pos_5p'} <= $actual_pos) && (($g_pu->{'alt_pos_3p'} >= $actual_pos) || ($g_pu->{'ref_pos_3p'} >= $actual_pos \n
+						#$target: $match_score: $actual_pos ($g_pu->{'ref_pos_5p'} :$g_pu->{'alt_pos_3p'}): AFTER $org_read \n";
 						next LINE;
 					}
 			}	
@@ -865,12 +854,13 @@ sub _do_exonerate {
 		}
 	}	
 
+#print Dumper('ALT:',$read_track_alt,'REF:',$read_track_ref,'ALT_P:',$alt_count_p,'ALT_N:',$alt_count_n,'REF_P:',$ref_count_p,'REF_N:',$ref_count_n,'UNK:',$read_count_unk);
 $g_pu=$self->_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n,$read_count_unk); 
 
 return $g_pu;
 
 
-}
+	}
 
 
 =head2 _cleaup_read_ambiguities
