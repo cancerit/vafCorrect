@@ -353,9 +353,14 @@ sub _getRange {
 	}else{
 		$log->logcroak("Library size or chromosome length in not defined");
 	}
-	
-	$g_pu->{'pos_5p'}=round($left_pos - $lib_size);
-	$g_pu->{'pos_3p'}=round($right_pos + $lib_size);
+	if(!defined $lib_size) {
+	 $g_pu->{'pos_5p'}=round($left_pos - 200);
+	 $g_pu->{'pos_3p'}=round($right_pos + 200);
+	  
+	}else{
+	 $g_pu->{'pos_5p'}=round($left_pos - $lib_size);
+	 $g_pu->{'pos_3p'}=round($right_pos + $lib_size);
+	}
 	$g_pu->{'hdr'}=$hdr_flag;
 	# to get exact location of variant base and avoid borderline matching   
 	# added padding to reference posotion 
