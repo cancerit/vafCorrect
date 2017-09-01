@@ -1,3 +1,9 @@
+## v5.0.0 #######
+* Removed exonerate parameter to filter alignments based on score
+* Removed condition to discard alignment length smaller than read length
+* Added user defined option to specify exonerat percent value  
+* Increased padding to extended reference sequence -- this will allow to map longer reads in amplicon data.
+
 ## v4.5.6 #######
 * Update to Bio::DB::HTS install to use already installed htslib
 
