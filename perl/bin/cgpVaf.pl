@@ -245,7 +245,7 @@ sub option_builder {
 		$options{'s'}=undef;
 	}
 	if(!defined $options{'exp'}) {
-		#analyse single sample no merge step 
+	#default exonerate percentage
 		$options{'exp'}=92;
 	}
 	if(!defined $options{'ao'}) {
@@ -299,7 +299,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --augment_only   (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
    --map_quality    (-mq) read mapping quality threshold
    --base_quality   (-bq) base quality threshold for snp
-   --exonerate_pct  (exp) report alignment over a percentage of the maximum score attainable by each query (exonerate specific parameter) [default 92]
+   --exonerate_pct  (-exp) report alignment over a percentage of the maximum score attainable by each query (exonerate specific parameter) [default 92]
    --bamExtension   (-be) Input read file extension  
    --depth          (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --high_depth_bed (-hdr) High Depth Region(HDR) bed file (tabix indexed) to mask high depth regions in the genome
