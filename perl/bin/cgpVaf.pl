@@ -185,7 +185,7 @@ sub option_builder {
                 'dp|depth=s' => \$options{'dp'},
                 'hdr|high_depth_bed=s' => \$options{'hdr'},
                 'pid|id_int_project=s' => \$options{'pid'},
-                'exp|exonerate_percent=i' => \$options{'exp'},
+                'exp|exonerate_pct=i' => \$options{'exp'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
                 'dbg|debug=i' => \$options{'dbg'},
                 'v|version'  => \$options{'v'}
