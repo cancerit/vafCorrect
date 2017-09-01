@@ -770,7 +770,7 @@ sub _do_exonerate {
 	my $read_track_alt;
 	my $read_track_ref;
 	my $amb_reads;
-	my $test_mode=1;
+	my $test_mode=0;
 	
 	#print Dumper $g_pu;
  # -E | --exhaustive <boolean>
