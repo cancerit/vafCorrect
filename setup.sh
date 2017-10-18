@@ -23,6 +23,7 @@ SOURCE_VCFTOOLS="http://sourceforge.net/projects/vcftools/files/vcftools_0.1.12a
 SOURCE_BIOBDHTS="https://github.com/Ensembl/Bio-HTS/archive/2.3.tar.gz"
 SOURCE_HTSLIB="https://github.com/samtools/htslib/releases/download/1.3.2/htslib-1.3.2.tar.bz2"
 SOURCE_SAMTOOLS="https://github.com/samtools/samtools/releases/download/1.3/samtools-1.3.tar.bz2"
+SOURCE_EXONERATE="http://ftp.ebi.ac.uk/pub/software/vertebrategenomics/exonerate/exonerate-2.2.0.tar.gz"
 
 done_message () {
     if [ $? -eq 0 ]; then
@@ -224,7 +225,6 @@ echo -n "Building $CURR_TOOL ..."
 if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
   echo -n " previously installed ..."
 else
-
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE
     cd $SETUP_DIR
@@ -239,6 +239,31 @@ else
 fi
 
 done_message "" "Failed to build $CURR_TOOL."
+
+cd $SETUP_DIR
+
+CURR_TOOL="exonerate"
+CURR_SOURCE=$SOURCE_EXONERATE
+echo -n "Building exonerate..."
+  if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
+    echo -n " previously installed ..."
+  else
+    set -ex
+    get_distro $CURR_TOOL $CURR_SOURCE 
+    tar zxf exonerate.tar.gz
+    cd exonerate-2.2.0
+    cp $INIT_DIR/patches/exonerate_pthread-asneeded.diff .
+    patch -p1 < exonerate_pthread-asneeded.diff 
+    ./configure --prefix=$INST_PATH 
+    make     # don't do multi-threaded make
+    make check 
+    make install
+    cd $INIT_DIR
+    touch $SETUP_DIR/exonerate.success
+  fi
+  
+done_message "" "Failed to build exonerate."
+
 
 cd "$INIT_DIR/perl"
 
