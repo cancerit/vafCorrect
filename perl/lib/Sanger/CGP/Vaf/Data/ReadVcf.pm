@@ -243,7 +243,7 @@ sub writeFinalFileHeaders {
 		
 	foreach my $sample(@{$self->{'allSamples'}}){
 		foreach my $tag_name(@$tags){
-			push ($temp_cols,"$sample\_$tag_name");
+			push (@$temp_cols,"$sample\_$tag_name");
 		}
 	}   
 	print $WFH_TSV "@$header\n".join("\t",@$temp_cols)."\n";
