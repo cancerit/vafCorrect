@@ -6,14 +6,14 @@ env:
   - CC=gcc
 addons:
   apt:
-		packages:
-   - build-essential
-   - autoconf
-   - curl
-   - zlib1g-dev
-   - libncurses5-dev
-   - libpstreams-dev
-   - libcurl4-openssl-dev
+    packages:
+     - build-essential
+     - autoconf
+     - curl
+     - zlib1g-dev
+     - libncurses5-dev
+     - libpstreams-dev
+     - libcurl4-openssl-dev
 
 language: perl
 
