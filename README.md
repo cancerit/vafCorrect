@@ -41,11 +41,8 @@ Some of the code included in this package has dependencies on several C packages
  * [Samtools](https://github.com/samtools/samtools) - max 0.1.20 until perl bindings are updated
  * [vcftools](http://vcftools.sourceforge.net/)
  * [Bio-HTS] (https://github.com/Ensembl/Bio-DB-HTS)
- 
-User has to install exonerate-2.2.0 before running cgpVaf.pl script and set path into .bashrc or .cshrc files.
-http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate
+ * [Exonerate](http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate)
 
-And various perl modules.
 
 Please use `setup.sh` to install the dependencies.  Please be aware that this expects basic C
 compilation libraries and tools to be available, most are listed in `INSTALL`.
