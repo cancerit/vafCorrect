@@ -51,9 +51,9 @@ And various perl modules.
 Please use `setup.sh` to install the dependencies.  Please be aware that this expects basic C
 compilation libraries and tools to be available, most are listed in `INSTALL`.
 
----
 
 ##Creating a release
+
 ####Preparation
 * Commit/push all relevant changes.
 * Pull a clean version of the repo and use this for the following steps.
