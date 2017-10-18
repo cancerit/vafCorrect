@@ -166,7 +166,7 @@ else
   tar --strip-components 1 -C bioDbHts/htslib -jxf $SETUP_DIR/htslib.tar.bz2
   cd bioDbHts/htslib
   perl -pi -e 'if($_ =~ m/^CFLAGS/ && $_ !~ m/\-fPIC/i){chomp; s/#.+//; $_ .= " -fPIC -Wno-unused -Wno-unused-result\n"};' Makefile
-  make -j$CPU
+  make -s -j$CPU
   rm -f libhts.so*
   cd ../
   env HTSLIB_DIR=$SETUP_DIR/bioDbHts/htslib perl Build.PL --install_base=$INST_PATH
@@ -186,7 +186,7 @@ else
   tar --strip-components 1 -C htslib -jxf htslib.tar.bz2
   cd htslib
   ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
-  make -j$CPU
+  make -s -j$CPU
   make install
   cd $SETUP_DIR
   touch $SETUP_DIR/htslib.success
@@ -207,7 +207,7 @@ if [[ ",$COMPILE," == *,samtools,* ]] ; then
     tar --strip-components 1 -C samtools -xjf samtools.tar.bz2
     cd samtools
     ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
-    make -j$CPU all all-htslib
+    make -s -j$CPU all all-htslib
     make install all all-htslib
     cd $SETUP_DIR
     rm -f samtools.tar.bz2
@@ -233,7 +233,7 @@ else
     cd $CURR_TOOL
     patch Makefile < $INIT_DIR/patches/vcfToolsInstLocs.diff
     patch perl/Vcf.pm < $INIT_DIR/patches/vcfToolsProcessLog.diff
-    make -j$CPU PREFIX=$INST_PATH
+    make -s -j$CPU PREFIX=$INST_PATH
     touch $SETUP_DIR/$CURR_TOOL.success
 
 fi
@@ -255,7 +255,7 @@ echo -n "Building exonerate..."
     cp $INIT_DIR/patches/exonerate_pthread-asneeded.diff .
     patch -p1 < exonerate_pthread-asneeded.diff 
     ./configure --prefix=$INST_PATH 
-    make     # don't do multi-threaded make
+    make -s     # don't do multi-threaded make
     make check 
     make install
     cd $INIT_DIR
