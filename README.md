@@ -34,7 +34,7 @@ them. For example, a copyright statement that reads ‘Copyright (c) 2005, 2007-
 reads ‘Copyright (c) 2005, 2007, 2008, 2009, 2011, 2012’ and a copyright
 statement that reads ‘Copyright (c) 2005-2012’ should be interpreted as being
 identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
-2009, 2010, 2011, 2012’."
+2009, 2010, 2011, 2012’.
 
 ###Dependencies/Install
 Some of the code included in this package has dependencies on several C packages:
