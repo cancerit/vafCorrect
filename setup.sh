@@ -233,7 +233,7 @@ else
     cd $CURR_TOOL
     patch Makefile < $INIT_DIR/patches/vcfToolsInstLocs.diff
     patch perl/Vcf.pm < $INIT_DIR/patches/vcfToolsProcessLog.diff
-    make -s -j$CPU PREFIX=$INST_PATH
+    make -j$CPU PREFIX=$INST_PATH
     touch $SETUP_DIR/$CURR_TOOL.success
 
 fi
