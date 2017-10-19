@@ -1,4 +1,4 @@
-
+#!/bin/bash 
 
 ##########LICENCE##########
 # Copyright (c) 2014-2016 Genome Research Ltd.,
@@ -262,31 +262,9 @@ echo -n "Building exonerate..."
   
 done_message "" "Failed to build exonerate."
 
-CURR_TOOL="tabix-0.2.6"
-CURR_SOURCE=$SOURCE_TABIX
 
-cd  $SETUP_DIR
-
-echo -n "Building $CURR_TOOL ..."
-if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
-  echo -n " previously installed ..."
-else 
-    set -ex
-    get_distro $CURR_TOOL $CURR_SOURCE
-    tar zxf tabix-0.2.6.tar.gz
-    cd $SETUP_DIR/$CURR_TOOL
-    make -j$CPU
-    cp tabix $INST_PATH/bin/.
-    cp bgzip $INST_PATH/bin/.
-    cd perl
-    perl Makefile.PL INSTALL_BASE=$INST_PATH
-    make
-    make test
-    make install
-    touch $SETUP_DIR/$CURR_TOOL.success
-fi
-done_message "" "Failed to build $CURR_TOOL."
-
+export PATH=$PATH:$INST_PATH/bin
+export PERL5LIB=$PERL5LIB:$PERLROOT:$PERLARCH 
 
 cd "$INIT_DIR/perl"
 
@@ -319,7 +297,7 @@ rm -rf $SETUP_DIR
 
 echo
 echo
-echo "Please add the following to beginning of path:"
+echo "Please add the following to beginning of PATH:"
 echo "  $INST_PATH/bin"
 echo "Please add the following to beginning of PERL5LIB:"
 echo "  $PERLROOT"
