@@ -147,7 +147,6 @@ done_message "" "Failed to build $CURR_TOOL."
 if [ -e $SETUP_DIR/htslibGet.success ]; then
   echo " already staged ...";
 else
-  echo
   cd $SETUP_DIR
   get_distro "htslib" $SOURCE_HTSLIB
   touch $SETUP_DIR/htslibGet.success
@@ -157,7 +156,7 @@ echo -n "Building Bio::DB::HTS ..."
 if [ -e $SETUP_DIR/biohts.success ]; then
   echo " previously installed ...";
 else
-  echo
+  (
   cd $SETUP_DIR
   rm -rf bioDbHts
   get_distro "bioDbHts" $SOURCE_BIOBDHTS
@@ -176,13 +175,14 @@ else
   cd $SETUP_DIR
   rm -f bioDbHts.tar.gz
   touch $SETUP_DIR/biohts.success
+  ) >/dev/null
 fi
 
 echo -n "Building htslib ..."
 if [ -e $SETUP_DIR/htslib.success ]; then
   echo " previously installed ...";
 else
-  echo
+  (
   mkdir -p htslib
   tar --strip-components 1 -C htslib -jxf htslib.tar.bz2
   cd htslib
@@ -191,6 +191,7 @@ else
   make install
   cd $SETUP_DIR
   touch $SETUP_DIR/htslib.success
+  ) >/dev/null
 fi
 
 export HTSLIB=$INST_PATH
@@ -200,7 +201,7 @@ if [[ ",$COMPILE," == *,samtools,* ]] ; then
   if [ -e $SETUP_DIR/samtools.success ]; then
     echo " previously installed ...";
   else
-  echo
+   (
     cd $SETUP_DIR
     rm -rf samtools
     get_distro "samtools" $SOURCE_SAMTOOLS
@@ -213,6 +214,7 @@ if [[ ",$COMPILE," == *,samtools,* ]] ; then
     cd $SETUP_DIR
     rm -f samtools.tar.bz2
     touch $SETUP_DIR/samtools.success
+    ) >/dev/null
   fi
 else
   echo "samtools - No change between vafCorrect versions"
@@ -226,6 +228,7 @@ echo -n "Building $CURR_TOOL ..."
 if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
   echo -n " previously installed ..."
 else
+   (
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE
     cd $SETUP_DIR
@@ -236,7 +239,7 @@ else
     patch perl/Vcf.pm < $INIT_DIR/patches/vcfToolsProcessLog.diff
     make -j$CPU PREFIX=$INST_PATH
     touch $SETUP_DIR/$CURR_TOOL.success
-
+   ) >/dev/null
 fi
 
 done_message "" "Failed to build $CURR_TOOL."
@@ -249,6 +252,7 @@ echo -n "Building exonerate..."
   if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
     echo -n " previously installed ..."
   else
+    (
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE 
     tar zxf exonerate.tar.gz
@@ -256,23 +260,29 @@ echo -n "Building exonerate..."
     cp $INIT_DIR/patches/exonerate_pthread-asneeded.diff .
     patch -p1 < exonerate_pthread-asneeded.diff 
     ./configure --prefix=$INST_PATH 
-    make -s     # don't do multi-threaded make
+    make -s
     make check 
     make install
     cd $INIT_DIR
     touch $SETUP_DIR/exonerate.success
+    ) >/dev/null
   fi
   
 done_message "" "Failed to build exonerate."
 
 CURR_TOOL="tabix-0.2.6"
 CURR_SOURCE=$SOURCE_TABIX
+
+cd  $SETUP_DIR
+
 echo -n "Building $CURR_TOOL ..."
 if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
   echo -n " previously installed ..."
-else
+else 
+	(
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE
+    tar zxf tabix-0.2.6.tar.gz
     cd $SETUP_DIR/$CURR_TOOL
     make -j$CPU
     cp tabix $INST_PATH/bin/.
@@ -283,6 +293,7 @@ else
     make test
     make install
     touch $SETUP_DIR/$CURR_TOOL.success
+ ) >/dev/null 
 fi
 done_message "" "Failed to build $CURR_TOOL."
 
