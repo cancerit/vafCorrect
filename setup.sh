@@ -156,7 +156,6 @@ echo -n "Building Bio::DB::HTS ..."
 if [ -e $SETUP_DIR/biohts.success ]; then
   echo " previously installed ...";
 else
-  (
   cd $SETUP_DIR
   rm -rf bioDbHts
   get_distro "bioDbHts" $SOURCE_BIOBDHTS
@@ -175,7 +174,6 @@ else
   cd $SETUP_DIR
   rm -f bioDbHts.tar.gz
   touch $SETUP_DIR/biohts.success
-  ) >/dev/null
 fi
 
 echo -n "Building htslib ..."
@@ -201,7 +199,6 @@ if [[ ",$COMPILE," == *,samtools,* ]] ; then
   if [ -e $SETUP_DIR/samtools.success ]; then
     echo " previously installed ...";
   else
-   (
     cd $SETUP_DIR
     rm -rf samtools
     get_distro "samtools" $SOURCE_SAMTOOLS
@@ -214,7 +211,6 @@ if [[ ",$COMPILE," == *,samtools,* ]] ; then
     cd $SETUP_DIR
     rm -f samtools.tar.bz2
     touch $SETUP_DIR/samtools.success
-    ) >/dev/null
   fi
 else
   echo "samtools - No change between vafCorrect versions"
@@ -228,7 +224,6 @@ echo -n "Building $CURR_TOOL ..."
 if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
   echo -n " previously installed ..."
 else
-   (
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE
     cd $SETUP_DIR
@@ -239,7 +234,6 @@ else
     patch perl/Vcf.pm < $INIT_DIR/patches/vcfToolsProcessLog.diff
     make -j$CPU PREFIX=$INST_PATH
     touch $SETUP_DIR/$CURR_TOOL.success
-   ) >/dev/null
 fi
 
 done_message "" "Failed to build $CURR_TOOL."
@@ -252,7 +246,6 @@ echo -n "Building exonerate..."
   if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
     echo -n " previously installed ..."
   else
-    (
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE 
     tar zxf exonerate.tar.gz
@@ -265,7 +258,6 @@ echo -n "Building exonerate..."
     make install
     cd $INIT_DIR
     touch $SETUP_DIR/exonerate.success
-    ) >/dev/null
   fi
   
 done_message "" "Failed to build exonerate."
@@ -279,7 +271,6 @@ echo -n "Building $CURR_TOOL ..."
 if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
   echo -n " previously installed ..."
 else 
-	(
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE
     tar zxf tabix-0.2.6.tar.gz
@@ -293,7 +284,6 @@ else
     make test
     make install
     touch $SETUP_DIR/$CURR_TOOL.success
- ) >/dev/null 
 fi
 done_message "" "Failed to build $CURR_TOOL."
 
