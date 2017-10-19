@@ -24,6 +24,7 @@ SOURCE_BIOBDHTS="https://github.com/Ensembl/Bio-HTS/archive/2.3.tar.gz"
 SOURCE_HTSLIB="https://github.com/samtools/htslib/releases/download/1.3.2/htslib-1.3.2.tar.bz2"
 SOURCE_SAMTOOLS="https://github.com/samtools/samtools/releases/download/1.3/samtools-1.3.tar.bz2"
 SOURCE_EXONERATE="http://ftp.ebi.ac.uk/pub/software/vertebrategenomics/exonerate/exonerate-2.2.0.tar.gz"
+SOURCE_TABIX="https://github.com/sb43/tabix/archive/0.2.6.tar.gz"
 
 done_message () {
     if [ $? -eq 0 ]; then
@@ -263,6 +264,27 @@ echo -n "Building exonerate..."
   fi
   
 done_message "" "Failed to build exonerate."
+
+CURR_TOOL="tabix-0.2.6"
+CURR_SOURCE=$SOURCE_TABIX
+echo -n "Building $CURR_TOOL ..."
+if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
+  echo -n " previously installed ..."
+else
+    set -ex
+    get_distro $CURR_TOOL $CURR_SOURCE
+    cd $SETUP_DIR/$CURR_TOOL
+    make -j$CPU
+    cp tabix $INST_PATH/bin/.
+    cp bgzip $INST_PATH/bin/.
+    cd perl
+    perl Makefile.PL INSTALL_BASE=$INST_PATH
+    make
+    make test
+    make install
+    touch $SETUP_DIR/$CURR_TOOL.success
+fi
+done_message "" "Failed to build $CURR_TOOL."
 
 
 cd "$INIT_DIR/perl"
