@@ -259,7 +259,7 @@ sub option_builder {
 	if(($options{'ao'} || $options{'m'}) && lc($options{'a'}) eq 'snp') {
 		$log->logcroak("Warning: VCF augment option is only supported for indels");
 	} 
-  if(!defined $options{'hdr'}) {
+  if(!defined $options{'hdr'} && lc($options{'a'}) eq 'indel') {
      warn "-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run";
 	}
 	
@@ -278,36 +278,36 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
 
   Required Options (inputDir and variant_type must be defined):
 
-   --variant_type   (-a)  variant type (snp or indel) [default snp]
-   --inputDir       (-d)  input directory path
-   --genome         (-g)  genome fasta file name (default genome.fa)
-   --tumour_name    (-tn) Toumour sample name [ list of space separated  sample names ]
-   --normal_name    (-nn) Normal sample name [ single sample used as normal for this analysis ]
-   --outDir         (-o)  Output folder
-   --vcfExtension   (-e)  vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz) 
+   --variant_type   (-a)   variant type (snp or indel) [default snp]
+   --inputDir       (-d)   input directory path
+   --genome         (-g)   genome fasta file name (default genome.fa)
+   --tumour_name    (-tn)  Toumour sample name [ list of space separated  sample names ]
+   --normal_name    (-nn)  Normal sample name [ single sample used as normal for this analysis ]
+   --outDir         (-o)   Output folder
+   --vcfExtension   (-e)   vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz) 
  
   Optional 
-   --infoTags       (-t)  comma separated list of tags to be included in the vcf INFO field 
-                         (default: VD,VW,VT,VC for Vagrent annotations)
-   --bedIntervals   (-b)  tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
-                         bed file can be specified in the config file after the last sample pair,
-                         if specified on command line then same bed file is used for all the tumour/normal pairs,
-                         bed file name in config file overrides command line argument
-                         (possible values 001,005,01,05 and 1)
-   --restrict_flag  (-r)  restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
-   --augment        (-m)  Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
-   --augment_only   (-ao) Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
-   --map_quality    (-mq) read mapping quality threshold
-   --base_quality   (-bq) base quality threshold for snp
+   --infoTags       (-t)   comma separated list of tags to be included in the vcf INFO field 
+                           (default: VD,VW,VT,VC for Vagrent annotations)
+   --bedIntervals   (-b)   tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
+                           bed file can be specified in the config file after the last sample pair,
+                           if specified on command line then same bed file is used for all the tumour/normal pairs,
+                           bed file name in config file overrides command line argument
+                           (possible values 001,005,01,05 and 1)
+   --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
+   --augment        (-m)   Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
+   --augment_only   (-ao)  Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
+   --map_quality    (-mq)  read mapping quality threshold
+   --base_quality   (-bq)  base quality threshold for snp
    --exonerate_pct  (-exp) report alignment over a percentage of the maximum score attainable by each query (exonerate specific parameter) [default 92]
-   --bamExtension   (-be) Input read file extension  
-   --depth          (-dp) comma separated list of field(s) as specified in FORMAT field representing total depth at given location
+   --bamExtension   (-be)  Input read file extension  
+   --depth          (-dp)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --high_depth_bed (-hdr) High Depth Region(HDR) bed file (tabix indexed) to mask high depth regions in the genome
-   --id_int_project (-pid)Internal project id [WTSI only]
-   --bed_only       (-bo) Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
-   --vcf            (-vcf)user defined vcf file name (otherwise deduced from tumour name and  [please specify in same order as tumour sample names]
-   --help           (-h)  Display this help message
-   --version        (-v)  provide version information for vaf
+   --id_int_project (-pid) Internal project id [WTSI only]
+   --bed_only       (-bo)  Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
+   --vcf            (-vcf) user defined input vcf file name(s) , if not defined will be deduced from tumour sample name and vcfExtension [please specify in same order as tumour sample names ]
+   --help           (-h)   Display this help message
+   --version        (-v)   provide version information for vaf
 
    Examples:
       Merge vcf files to create single vcf containing union of all the variant sites and provides pileup output for each location

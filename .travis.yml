@@ -1,6 +1,6 @@
 notifications:
   email: false
-  #slack: wtsi-cgpit:ptUMR1tkNyZJYd9TpGoss8WR
+  slack: wtsi-cgpit:ptUMR1tkNyZJYd9TpGoss8WR
 env:
   - CC=gcc
 addons:
