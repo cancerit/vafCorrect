@@ -24,7 +24,6 @@ SOURCE_BIOBDHTS="https://github.com/Ensembl/Bio-HTS/archive/2.3.tar.gz"
 SOURCE_HTSLIB="https://github.com/samtools/htslib/releases/download/1.3.2/htslib-1.3.2.tar.bz2"
 SOURCE_SAMTOOLS="https://github.com/samtools/samtools/releases/download/1.3/samtools-1.3.tar.bz2"
 SOURCE_EXONERATE="http://ftp.ebi.ac.uk/pub/software/vertebrategenomics/exonerate/exonerate-2.2.0.tar.gz"
-SOURCE_TABIX="https://github.com/sb43/tabix/archive/0.2.6.tar.gz"
 
 done_message () {
     if [ $? -eq 0 ]; then
@@ -97,7 +96,6 @@ mkdir -p $INST_PATH/lib
 mkdir -p $INST_PATH/config
 mkdir -p $INST_PATH/bin/hdr
 cp $INIT_DIR/perl/config/log4perl.vaf.conf $INST_PATH/config/
-cp -rp $INIT_DIR/perl/bin/hdr	$INST_PATH/bin/
 cp -rp $INIT_DIR/README.md	$INST_PATH/README.md
 
 cd $INST_PATH

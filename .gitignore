@@ -10,3 +10,4 @@ perl/MANIFEST
 perl/perltidy.LOG
 perl/docs
 testci/*
+perl/t/testData/genome.fa

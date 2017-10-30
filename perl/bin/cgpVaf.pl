@@ -2,21 +2,21 @@
 
 ##########LICENCE############################################################
 # Copyright (c) 2016-2017 Genome Research Ltd.
-# 
+#
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
-# 
+#
 # This file is part of cgpVAF.
-# 
+#
 # cgpVAF is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##############################################################
@@ -56,7 +56,7 @@ my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
 try {
 	my ($options) = option_builder();
-	if ($options->{'dbg'}){	
+	if ($options->{'dbg'}){
 		$log->debug("================Using Parameters===========================");
 	  $log->debug(Dumper($options));
 	}
@@ -70,7 +70,7 @@ try {
 	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
 	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
 	# create variant object
-	my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
+	my $variant=Sanger::CGP::Vaf::Process::Variant->new(
 		'location' 		=> undef,
 		'tmp'					=>$options->{'tmp'},
 		'varLine' 		=> undef,
@@ -86,34 +86,31 @@ try {
 		'tabix_hdr' 	=> defined $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
 		'mq' 					=> $vcf_obj->{'_mq'},
 		'bq' 					=> $vcf_obj->{'_bq'},
-		'exp'                   =>  $vcf_obj->{'_exp'},
-		);	
-		
+		'exp'         => $vcf_obj->{'_exp'},
+		);
+
 	my($bed_locations)=$vcf_obj->getBedHash;
 	my ($chromosomes)=$vcf_obj->getChromosomes;
 	my($progress_fhw,$progress_data)=$vcf_obj->getProgress;
-	
 	foreach my $chr(@$chromosomes) {
 		my $data_for_all_samples;
 		my $unique_locations;
 		if($options->{'bo'} == 0){
-			#print "Bed only is no defined------\n";
 			($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
 		}
 		if(defined $options->{'b'} ){
-			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);	
-		}	
+			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);
+		}
 		# Write results to tmp file...
 		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data);
 		$log->debug("Completed analysis for: $chr ");
 	}# completed all chromosomes;
-	
 	if(defined $bed_locations) {
+    print "populating bed loactions";
 		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',$tags,$info_tag_val,$progress_fhw,$progress_data);	
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',$tags,$info_tag_val,$progress_fhw,$progress_data);
 	}
-	# if augmentation option is selected then write augmented vcf file 
-	
+	# if augmentation option is selected then write augmented vcf file
 	if(defined $options->{'m'} && $options->{'m'} == 1) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
       $vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
@@ -122,10 +119,10 @@ try {
     	  close $progress_fhw;
     	  exit(0);
 	 		}
-  }   
-  
+  }
+
   my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
-  
+
   if(defined $outfile_name_no_ext){
   	foreach my $progress_line(@$progress_data) {
 			chomp $progress_line;
@@ -139,19 +136,19 @@ try {
 		$vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
 		$log->debug("Compressing and Validating VCF file");
 		my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
-		
+
 		print $progress_fhw "$outfile_name_no_ext.tsv\n";
 		close $progress_fhw;
 		if ((-e $outfile_gz) && (-e $outfile_tabix)) {
 			my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
 		}
   }
-  if ($options->{'dbg'}){	
+  if ($options->{'dbg'}){
     $log->debug("==============================Parameters used===================");
     $log->debug(Dumper($options));
   }
 }
-	
+
 catch {
   croak "\n\n".$_."\n\n" if($_);
 };
@@ -190,13 +187,13 @@ sub option_builder {
                 'dbg|debug=i' => \$options{'dbg'},
                 'v|version'  => \$options{'v'}
 	);
-	
+
   pod2usage(-message => Sanger::CGP::Vaf::license, -verbose => 1) if(defined $options{'h'});
-        
+
 	if(defined $options{'v'}){
 		my $version = Sanger::CGP::Vaf->VERSION;
 		print "$version\n";
-		exit; 
+		exit;
 	}
 	pod2usage(q{'-g' genome must be defined}) unless (defined $options{'g'});
 	pod2usage(q{'-d' input directory path must be defined}) unless (defined $options{'d'});
@@ -217,19 +214,19 @@ sub option_builder {
 		mkpath($options{'o'}.'/tmpvaf_'.$tn_name);
 		$options{'tmp'}=$options{'o'}.'/tmpvaf_'.$tn_name;
 	}
-	if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {	
+	if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {
 		warn "Analysing:".$options{'a'}."\n";
 	}
 	else{
-		$log->logcroak("Not a valid variant type [should be either [snp or indel]");	
-		exit(0); 
-	}	
+		$log->logcroak("Not a valid variant type [should be either [snp or indel]");
+		exit(0);
+	}
  	# use annotation tags
-	if(!defined $options{'t'}) { 
+	if(!defined $options{'t'}) {
 		$options{'t'}="VD,VW,VT,VC";
 	}
 	# input alignment file extension
-	if(!defined $options{'be'}) { 
+	if(!defined $options{'be'}) {
 		$options{'be'}=".bam";
 	}
 	# use PASS flag
@@ -239,9 +236,9 @@ sub option_builder {
 	if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
 		$options{'dp'}='NR,PR';
 	}
-	
+
 	if(!defined $options{'s'}) {
-		#analyse single sample no merge step 
+		#analyse single sample no merge step
 		$options{'s'}=undef;
 	}
 	if(!defined $options{'exp'}) {
@@ -258,11 +255,11 @@ sub option_builder {
 	}
 	if(($options{'ao'} || $options{'m'}) && lc($options{'a'}) eq 'snp') {
 		$log->logcroak("Warning: VCF augment option is only supported for indels");
-	} 
+	}
   if(!defined $options{'hdr'} && lc($options{'a'}) eq 'indel') {
      warn "-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run";
 	}
-	
+
  \%options;
 }
 
@@ -284,23 +281,23 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --tumour_name    (-tn)  Toumour sample name [ list of space separated  sample names ]
    --normal_name    (-nn)  Normal sample name [ single sample used as normal for this analysis ]
    --outDir         (-o)   Output folder
-   --vcfExtension   (-e)   vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz) 
- 
-  Optional 
-   --infoTags       (-t)   comma separated list of tags to be included in the vcf INFO field 
+   --vcfExtension   (-e)   vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz)
+
+  Optional
+   --infoTags       (-t)   comma separated list of tags to be included in the vcf INFO field
                            (default: VD,VW,VT,VC for Vagrent annotations)
    --bedIntervals   (-b)   tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
                            bed file can be specified in the config file after the last sample pair,
                            if specified on command line then same bed file is used for all the tumour/normal pairs,
                            bed file name in config file overrides command line argument
                            (possible values 001,005,01,05 and 1)
-   --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]   
+   --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]
    --augment        (-m)   Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
    --augment_only   (-ao)  Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
    --map_quality    (-mq)  read mapping quality threshold
    --base_quality   (-bq)  base quality threshold for snp
    --exonerate_pct  (-exp) report alignment over a percentage of the maximum score attainable by each query (exonerate specific parameter) [default 92]
-   --bamExtension   (-be)  Input read file extension  
+   --bamExtension   (-be)  Input read file extension
    --depth          (-dp)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --high_depth_bed (-hdr) High Depth Region(HDR) bed file (tabix indexed) to mask high depth regions in the genome
    --id_int_project (-pid) Internal project id [WTSI only]
@@ -311,8 +308,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
 
    Examples:
       Merge vcf files to create single vcf containing union of all the variant sites and provides pileup output for each location
-      perl cgpVaf.pl -d tmpvcfdir -o testout -a snp -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2 
+      perl cgpVaf.pl -d tmpvcfdir -o testout -a snp -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2
       Merge vcf files to create single vcf containing union of all the variant sites and provides allele count for underlying indel location
       perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2
 =cut
-
