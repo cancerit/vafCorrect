@@ -1,11 +1,11 @@
 # cgpVAF
 
-Calculates the Variant Allele Fraction for variants sites in VCF and/or BED file
+Calculates the Variant Allele Fraction for variants sites in VCF and/or BED file 
 This script performs comparative analysis of variant sites in multiple tumour/normal samples in an individual.
-Also facilitates the merging of varinats sites across the samples in a sample group defined by set of related samples in an individual and provides unbiased pileup[MNV] and exonerate[Indel] output for each variant site.
+Also facilitates the merging of varinats sites across the samples in a sample group defined by 
+set of related samples in an individual and provides unbiased pileup[MNV] and exonerate[Indel] output for each variant site.
 
-LICENCE
-=======
+# LICENCE
 
 Copyright (c) 2017 Genome Research Ltd.
 
@@ -34,31 +34,28 @@ them. For example, a copyright statement that reads ‘Copyright (c) 2005, 2007-
 reads ‘Copyright (c) 2005, 2007, 2008, 2009, 2011, 2012’ and a copyright
 statement that reads ‘Copyright (c) 2005-2012’ should be interpreted as being
 identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
-2009, 2010, 2011, 2012’."
+2009, 2010, 2011, 2012’.
 
-###Dependencies/Install
+### Dependencies/Install
 Some of the code included in this package has dependencies on several C packages:
 
  * [Samtools](https://github.com/samtools/samtools) - max 0.1.20 until perl bindings are updated
  * [vcftools](http://vcftools.sourceforge.net/)
  * [Bio-HTS] (https://github.com/Ensembl/Bio-DB-HTS)
- 
-User has to install exonerate-2.2.0 before running cgpVaf.pl script and set path into .bashrc or .cshrc files.
-http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate
+ * [Exonerate](http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate)
 
-And various perl modules.
 
 Please use `setup.sh` to install the dependencies.  Please be aware that this expects basic C
 compilation libraries and tools to be available, most are listed in `INSTALL`.
 
----
 
-##Creating a release
-####Preparation
+## Creating a release
+
+#### Preparation
 * Commit/push all relevant changes.
 * Pull a clean version of the repo and use this for the following steps.
 
-####Cutting the release
+#### Cutting the release
 1. Update `perl/lib/Sanger/CGP/Vaf.pm` to the correct version.
 2. Update `CHANGES.md` to show major items.
 3. Run `./perl/prerelease.sh`

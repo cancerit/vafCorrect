@@ -41,7 +41,8 @@ const my $test_bam1 => "$Bin/testData/samplea.bam";
 const my $test_bam2 => "$Bin/testData/samplec.bam";
 const my $test_bam3 => "$Bin/testData/sampleb.bam";
 const my $test_bed => "$Bin/testData/test.bed";
-
+const my $dummy_chr => 'bed_file_data';
+const my $test_chr => '1';
 subtest 'Initialisation checks' => sub {
   use_ok($MODULE1);
   use_ok($MODULE2);
@@ -133,13 +134,18 @@ subtest 'ReadVcf' => sub {
 		'passedOnly'  => $vcf_obj->{'_r'},
 		'tmp'					=> $options->{'tmp'},
     'tabix_hdr'   => defined  $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
+		
 		);
 
 	#diag(Dumper $variant);
 	is_deeply($vcf_obj->getChromosomes,\@chr,'ReadVcf:getChromosomes');
 	my($bed_locations)=$vcf_obj->getBedHash;
-	my ($chromosomes)=$vcf_obj->getChromosomes;	
-	my($progress_fhw,$progress_data)=$vcf_obj->getProgress;
+	my ($chromosomes)=$vcf_obj->getChromosomes([$test_chr]);	
+	if (defined $options->{'b'}) {
+	  push(@$chromosomes,$dummy_chr);
+	}
+	my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
+	
 	if(!defined $options->{'bo'}){
 		($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations('1',$updated_info_tags,$vcf_file_obj);
 		is_deeply($unique_locations,$expected_unique_locations,'ReadVcf:getMergedLocations_unique_locations');
@@ -151,12 +157,14 @@ subtest 'ReadVcf' => sub {
 			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);	
 	}	
  	my $store_results;
- 	($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples_res,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'1',$tags,$info_tag_val,$progress_fhw,$progress_data);
+ 	my($progress_fhw,$progress_data)=@{$progress_hash->{$test_chr}};
+ 	($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples_res,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$test_chr,$tags,$info_tag_val,$progress_fhw,$progress_data);
 		
 	if(defined $bed_locations) {
+	  my($progress_fhw,$progress_data)=@{$progress_hash->{$dummy_chr}};
 		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
 		#diag(Dumper $data_for_all_samples,$unique_locations);
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',$tags,$info_tag_val,$progress_fhw,$progress_data);	
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$dummy_chr,$tags,$info_tag_val,$progress_fhw,$progress_data);	
 		diag(Dumper $store_results);
 	}
 	# if augment option is not provided - results will go in tmp files (store results will be empty)...

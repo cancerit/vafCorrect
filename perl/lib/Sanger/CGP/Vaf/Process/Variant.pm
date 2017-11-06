@@ -308,7 +308,7 @@ sub createExonerateInput {
 	
 	my($alt_seq)=$self->_get_alt_seq($bam,$g_pu);
 	$g_pu=$self->_get_ref_5p_pos($ref_seq,$alt_seq,$g_pu);
-	open (my $ref_n_alt_FH,'>'.$self->{'_tmp'}.'/temp.ref')|| $log->logcroak("unable to open file $!");;
+	open (my $ref_n_alt_FH,'>'.$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref")|| $log->logcroak("unable to open file $!");;
 	print $ref_n_alt_FH ">alt\n$alt_seq\n>ref\n$ref_seq\n";
 	close($ref_n_alt_FH);
 	return($g_pu);
@@ -553,13 +553,11 @@ Inputs
 =back
 =cut
 
-
-
 sub getIndelResults {
 	my($self,$bam,$g_pu)=@_;
-	open (my $Reads_FH, '>',$self->{'_tmp'}.'/temp.reads') || $log->logcroak("unable to open file $!");
+	open (my $Reads_FH, '>',$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads") || $log->logcroak("unable to open file $!");
 	$g_pu=$self->_fetch_features($bam,$g_pu,$Reads_FH);
-	$g_pu=$self->_do_exonerate($self->{'_tmp'}.'/temp.ref',$self->{'_tmp'}.'/temp.reads',$g_pu);
+	$g_pu=$self->_do_exonerate($self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref",$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads",$g_pu);
 	return $g_pu;
 }
 
@@ -572,7 +570,6 @@ Inputs
 =item Reads_FH - file handler to store reads for a given location
 =back
 =cut
-
 
 sub _fetch_features {
 	my ($self,$sam_object,$g_pu,$Reads_FH)=@_;
@@ -593,9 +590,6 @@ sub _fetch_features {
 close($Reads_FH);
 return $g_pu;
 }
-
-
-
 
 =head2 _fetch_reads
 fetch reads

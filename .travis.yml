@@ -1,0 +1,30 @@
+notifications:
+  email: false
+  slack: wtsi-cgpit:ptUMR1tkNyZJYd9TpGoss8WR
+# safelist
+#branches:
+#  only:
+#  - master
+env:
+  - CC=gcc
+addons:
+  apt:
+    packages:
+     - build-essential
+     - autoconf
+     - curl
+     - zlib1g-dev
+     - libncurses5-dev
+     - libpstreams-dev
+     - libcurl4-openssl-dev
+
+language: perl
+
+perl:
+  - "5.16"
+
+install: true
+
+script:
+  - ./setup.sh $HOME/vafCorrect-opt
+
