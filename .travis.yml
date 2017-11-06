@@ -2,10 +2,9 @@ notifications:
   email: false
   slack: wtsi-cgpit:ptUMR1tkNyZJYd9TpGoss8WR
 # safelist
-branches:
-  only:
-  - master
-  - cancerci
+#branches:
+#  only:
+#  - master
 env:
   - CC=gcc
 addons:
