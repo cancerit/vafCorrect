@@ -51,6 +51,7 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 my $store_results;
 
 my $debug = 0;
+const my $dummy_chr => 'bed_file_data';
 
 my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
@@ -90,11 +91,15 @@ try {
 		);
 
 	my($bed_locations)=$vcf_obj->getBedHash;
-	my ($chromosomes)=$vcf_obj->getChromosomes;
-	my($progress_fhw,$progress_data)=$vcf_obj->getProgress;
+	my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
+	if (defined $options->{'b'}) {
+	  push(@$chromosomes,$dummy_chr);
+	}
+	my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
 	foreach my $chr(@$chromosomes) {
 		my $data_for_all_samples;
 		my $unique_locations;
+		my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
 		if($options->{'bo'} == 0){
 			($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
 		}
@@ -102,50 +107,39 @@ try {
 			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);
 		}
 		# Write results to tmp file...
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data);
-		$log->debug("Completed analysis for: $chr ");
+		if ($chr eq $dummy_chr) {
+			 ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
+		}
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data);  
+		close $progress_fhw;
 	}# completed all chromosomes;
-	if(defined $bed_locations) {
-    print "populating bed loactions";
-		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,'bed_file_data',$tags,$info_tag_val,$progress_fhw,$progress_data);
-	}
+	
 	# if augmentation option is selected then write augmented vcf file
 	if(defined $options->{'m'} && $options->{'m'} == 1) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
       $vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
-    	if(defined $options->{'ao'} && $options->{'ao'} == 1) {
+    	if($options->{'ao'} == 1) {
     	  my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
-    	  close $progress_fhw;
     	  exit(0);
 	 		}
   }
-
-  my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
-
-  if(defined $outfile_name_no_ext){
-  	foreach my $progress_line(@$progress_data) {
-			chomp $progress_line;
-			if ($progress_line eq "$outfile_name_no_ext.tsv") {
-				$log->debug("Skipping Analysis: result file: $outfile_name_no_ext.vcf exists");
-				close $progress_fhw;
-				exit(0);
+  # run following steps only if chromosome option is empty or user has selected option to concatenate files.  
+ if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
+    my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
+       if(!defined $outfile_name_no_ext) {
+       		$log->logcroak("Output file exists, skipping concatenation step");
+       }
+			$vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
+			$vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
+			$log->debug("Compressing and Validating VCF file");
+			my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
+			if ((-e $outfile_gz) && (-e $outfile_tabix)) {
+				my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
 			}
+		if ($options->{'dbg'}){
+			$log->debug("==============================Parameters used===================");
+			$log->debug(Dumper($options));
 		}
-		$vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
-		$vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
-		$log->debug("Compressing and Validating VCF file");
-		my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
-
-		print $progress_fhw "$outfile_name_no_ext.tsv\n";
-		close $progress_fhw;
-		if ((-e $outfile_gz) && (-e $outfile_tabix)) {
-			my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
-		}
-  }
-  if ($options->{'dbg'}){
-    $log->debug("==============================Parameters used===================");
-    $log->debug(Dumper($options));
   }
 }
 
@@ -168,6 +162,8 @@ sub option_builder {
                 'g|genome=s' => \$options{'g'},
                 'a|variant_type=s' => \$options{'a'},
                 'r|restrict_flag=i' => \$options{'r'},
+                'chr|chromosome=s{,}' => \@{$options{'chr'}},
+                'ct|concat=i'  => \$options{'ct'},
                 'o|outDir=s'  => \$options{'o'},
                 'm|augment=i' => \$options{'m'},
                 'ao|augment_only=i' => \$options{'ao'},
@@ -200,10 +196,9 @@ sub option_builder {
 	pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
 	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
 	pod2usage(q{'-nn' normal sample name/s must be provided}) unless (defined $options{'nn'});
-    pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'});
+  pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'});
 	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
-    pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
-
+  pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
 	$options{'d'}=~s/\/$//g;
@@ -276,7 +271,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
   Required Options (inputDir and variant_type must be defined):
 
    --variant_type   (-a)   variant type (snp or indel) [default snp]
-   --inputDir       (-d)   input directory path
+   --inputDir       (-d)   input directory path containing bam and vcf files
    --genome         (-g)   genome fasta file name (default genome.fa)
    --tumour_name    (-tn)  Toumour sample name [ list of space separated  sample names ]
    --normal_name    (-nn)  Normal sample name [ single sample used as normal for this analysis ]
@@ -292,6 +287,8 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
                            bed file name in config file overrides command line argument
                            (possible values 001,005,01,05 and 1)
    --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]
+   --chromosome     (-chr) restrict analysis to a chromosome list [space separated chromosome names]
+   --concat         (-ct) concat per chromosome results to a single vcf  file
    --augment        (-m)   Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
    --augment_only   (-ao)  Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
    --map_quality    (-mq)  read mapping quality threshold
@@ -307,8 +304,14 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --version        (-v)   provide version information for vaf
 
    Examples:
-      Merge vcf files to create single vcf containing union of all the variant sites and provides pileup output for each location
+      #Merge vcf files to create single vcf containing union of all the variant sites and provides pileup output for each location
       perl cgpVaf.pl -d tmpvcfdir -o testout -a snp -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2
-      Merge vcf files to create single vcf containing union of all the variant sites and provides allele count for underlying indel location
+      #Merge vcf files to create single vcf containing union of all the variant sites and provides allele count for underlying indel location
       perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn PD21369b -tn PD26296a PD26296c2
+      # Run per chromosome analysis
+      perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn sampleb -tn samplea samplec -chr 1
+      perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn sampleb -tn samplea samplec -chr 2
+      # concatenate per chromosome output to single vcf
+      perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn sampleb -tn samplea samplec -ct 1
+      
 =cut

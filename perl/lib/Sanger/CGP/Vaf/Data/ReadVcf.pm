@@ -153,25 +153,27 @@ Inputs
 =cut
 
 sub getProgress {
-	my($self)=shift;
+	my($self,$user_chr)=@_;
 	print "\n >>>>>> To view overall progress log please check vcfcommons.log file created in the current directory >>>>>>>>>\n";
 	print "\n >>>>>> Samples specific progress.out file is created in the output directory : $self->{'_o'} >>>>>>>>>\n";
-	my $progress_fhw;
-	my $file_name=$self->{'_tmp'}.'/progress.out';
-	if (-e $file_name)
-	{
-		open $progress_fhw, '>>', $file_name or die "Can't open $file_name: $!";
+	
+	my %progress_files;	
+	foreach my $chr (@$user_chr){
+		my $progress_fhw;
+	  my $file_name=$self->{'_tmp'}."/${chr}_progress.out";
+	  if (-e $file_name)
+	  {
+		   open $progress_fhw, '>>', $file_name or die "Can't open $file_name: $!";
+	  }else{
+		  open $progress_fhw, '>', $file_name or die "Unable to create progress file $file_name: $!";
+	  }
+	  open my $progress_fhr, '<', $file_name or die "Can't open $file_name: $!";
+	  my @progress_data=<$progress_fhr>;
+	  close($progress_fhr);
+		$progress_files{"$chr"}=[$progress_fhw,\@progress_data];
 	}
-	else{
-		open $progress_fhw, '>', $file_name or die "Unable to create progress file $file_name: $!";
-	}
-	open my $progress_fhr, '<', $file_name or die "Can't open $file_name: $!";
-	my @progress_data=<$progress_fhr>;
-	close($progress_fhr);
-
-	return($progress_fhw,\@progress_data);
+	return \%progress_files;
 }
-
 
 =head2 _populateBedHeader
 add bed info to vcf header
@@ -219,34 +221,30 @@ Inputs
 
 sub writeFinalFileHeaders {
 	my($self,$info_tag_val,$tags)=@_;
-
 	my $WFH_VCF=undef;
 	my $WFH_TSV=undef;
   my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';
 	# return if no VCF file found or augment only option is provided for indel data ...
 	return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || ( $self->{'_ao'} == 1) || (-e "$outfile_name.vcf.gz"));
 	my ($vcf)=$self->_getVCFObject($info_tag_val);
-	#my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';
 	$log->debug("VCF outfile:$outfile_name.vcf");
 	$log->debug("TSV outfile:$outfile_name.tsv");
-	open($WFH_VCF, '>',"$outfile_name.vcf") unless(-e "$outfile_name.vcf.gz");
-	open($WFH_TSV, '>',"$outfile_name.tsv") unless(-e "$outfile_name.tsv");
+	open($WFH_VCF, '>',"$outfile_name.vcf");
+	open($WFH_TSV, '>',"$outfile_name.tsv");
 	print $WFH_VCF $vcf->format_header();
   # writing results in tab separated format
 	my $tmp_file=$self->{'_tmp'}.'/temp.vcf';
 	open(my $tmp_vcf,'>',$tmp_file);
 	print $tmp_vcf $vcf->format_header();
 	close($tmp_vcf);
-
 	my($col_names,$header,$format_col)=$self->_get_tab_sep_header($tmp_file);
 	my $temp_cols=$col_names->{'cols'};
-
 	foreach my $sample(@{$self->{'allSamples'}}){
 		foreach my $tag_name(@$tags){
 			push (@$temp_cols,"$sample\_$tag_name");
 		}
-	}
-	print $WFH_TSV "@$header\n".join("\t",@$temp_cols)."\n";
+	}		
+	print $WFH_TSV  join("\n",@$header)."\n#".join("\t",@$temp_cols)."\n";
 	$vcf->close();
 	close $WFH_VCF;
 	close $WFH_TSV;
@@ -262,17 +260,23 @@ Inputs
 =cut
 
 sub getChromosomes {
-	my($self)=shift;
+	my($self,$chr_list)=@_;
+	my %user_chr = map { $_ => 1 } @$chr_list;
 	my $chromosomes;
+	my $filtered_chr;
 	open my $fai_fh , '<', $self->{'_g'}.'.fai';
 	while (<$fai_fh>) {
 		next if ($_=~/^#/);
 		my($chr,$pos)=(split "\t", $_)[0,1];
 		push(@$chromosomes,$chr);
+		if(exists $user_chr{$chr}){
+		 push(@$filtered_chr,$chr);
+		}
 	}
-	return $chromosomes;
+	if(@$chr_list > 0){
+	return $filtered_chr;
+	}else{return $chromosomes;}
 }
-
 
 =head2 getMergedLocations
 get merged snp/indel locations for a given individual group
@@ -547,9 +551,7 @@ Inputs
 
 sub _trim_file_path{
 	my ($self,$string ) = @_;
-
 	return 'NA' unless (defined $string);
-
 	my @bits = (split("/", $string));
 	return pop @bits;
 }
@@ -705,6 +707,7 @@ sub processMergedLocations {
 	my $pileup_results=undef;
 	my $count=0;
 	my $total_locations=keys %$unique_locations;
+	return if $total_locations == 0;
 	foreach my $progress_line(@$progress_data) {
 		chomp $progress_line;
 		if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf" && ($self->{'_ao'} == 0) ) {
@@ -712,10 +715,8 @@ sub processMergedLocations {
 			return;
 		}
 	}
-
 	open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
 	open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
-
 
   my($merged_vcf)=$self->_getVCFObject($info_tag_val);
 
@@ -725,6 +726,8 @@ sub processMergedLocations {
 		$variant->setLocation($location);
 		$variant->setVarLine($unique_locations->{$location});
 		my($g_pu)=$variant->formatVarinat();
+		# added to avoid bed locations mixing with other chromosomes when tmp files are generated
+		$g_pu->{'just_chr'}=$chr;
 		#process only passed varinats
 		if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
 			if($self->{'_ao'} == 1 || defined $self->{'_m'}) {
@@ -734,7 +737,7 @@ sub processMergedLocations {
 			}
 			next;
 		}
-    my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
+    my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);    
     if ($self->{'_a'} eq 'indel') {
 			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
     }
@@ -767,10 +770,6 @@ sub processMergedLocations {
 				}
 				$pileup_results->{$g_pu->{'sample'}}=$pileup_line;
 			}
-			# feature to test location change
-			#if(exists $g_pu->{'new_5p'} && $g_pu->{'sample'} eq $self->getNormalName) {
-			#	$log->debug("Updated position : $location: Old[5-3p]:".$g_pu->{'old_5p'}.'-'.$g_pu->{'old_3p'}.'  New[5-3p]:'.$g_pu->{'new_5p'}.'-'.$g_pu->{'new_3p'});
-			#}
   	}# Done with all the samples ...
   	#get specific annotations from original VCF INFO field....
 		if($self->{'_ao'} == 0 ) {
@@ -787,10 +786,14 @@ sub processMergedLocations {
 	}# Done with all locations for a chromosome...
 	$merged_vcf->close() if defined $merged_vcf;
 	# write success file name
-	close $tmp_WFH_VCF if($self->{'_ao'} ==0);
-	close $tmp_WFH_TSV if($self->{'_ao'} ==0);
-	print $progress_fhw "$self->{'_tmp'}/tmp_$chr.vcf\n" if($self->{'_ao'} ==0);
-	# returns only when we are augmenting the VCF files else always written into a file
+	 $log->debug("Completed analysis for: $chr ");
+	 if($self->{'_ao'} ==0){
+	  close $tmp_WFH_VCF;
+	  close $tmp_WFH_TSV; 
+	  $progress_fhw->print("$self->{'_tmp'}/tmp_$chr.vcf\n");
+	  $store_results={};
+	  return undef; 
+	 }
 	return ($store_results);
 }
 
@@ -1065,14 +1068,14 @@ sub _get_tab_sep_header {
 	my @header;
 	push @{$out->{'cols'}}, @$Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_TITLES;
 	for my $i(0..(scalar @$Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_TITLES) -1){
-    push @header, '#'.$Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_TITLES->[$i] . "\t" . $Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_DESCS->[$i]."\n";
+    push @header,'##'.$Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_TITLES->[$i] . "\t" . $Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_DESCS->[$i];
   }
 	my $line_info=$vcf->get_header_line(key=>'INFO');
 	foreach my $info_data (@$line_info) {
 		foreach my $key (sort keys %$info_data){
 			next if ($key eq 'VT' || $key eq 'VC');
 			push(@{$out->{'cols'}},$key);
-			push @header, '#'.$key. "\t" .$info_data->{$key}{'Description'}."\n";
+			push @header,'##'.$key. "\t" .$info_data->{$key}{'Description'};
 		}
 	}
 	my ($format)=$self->_get_header_lines($vcf->get_header_line(key=>'FORMAT'),'Description','FORMAT');
@@ -1085,7 +1088,6 @@ sub _get_tab_sep_header {
 	}
 	my ($sample)=$self->_get_header_lines($vcf->get_header_line(key=>'SAMPLE'),'SampleName','SAMPLE');
 	push(@header,@$sample);
-
 return ($out,\@header);
 
 }
@@ -1105,7 +1107,7 @@ sub _get_header_lines {
 	my $header;
 	foreach my $header_data (@$header_line) {
 		foreach my $key (sort keys %$header_data){
-			push @$header, '#'.$prefix.'-:'.$key."\t" .$header_data->{$key}{$val}."\n";
+			push @$header,'##'.$prefix.'-:'.$key."\t".$header_data->{$key}{$val};
 		}
 	}
 return $header;
