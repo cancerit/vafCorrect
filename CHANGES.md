@@ -1,3 +1,7 @@
+
+## v5.1.0 #######
+* User can now run per chromosome analysis [useful to run in parallel ] and concatenate the resulting files
+
 ## v5.0.0 #######
 * Removed exonerate parameter to filter alignments based on score
 * Removed condition to discard alignment length smaller than read length
