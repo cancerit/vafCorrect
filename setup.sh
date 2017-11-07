@@ -90,6 +90,8 @@ INST_PATH=$1
 # get current directory
 INIT_DIR=`pwd`
 
+echo > $INIT_DIR/setup.log
+
 # create inst_path
 mkdir -p $INST_PATH/bin
 mkdir -p $INST_PATH/lib
@@ -108,7 +110,7 @@ PERLROOT=$INST_PATH/lib/perl5
 export PERL5LIB="$PERLROOT"
 
 # log information about this system
-
+(
     echo '============== System information ===='
     set -x
     lsb_release -a
@@ -118,10 +120,11 @@ export PERL5LIB="$PERLROOT"
     grep MemTotal /proc/meminfo
     set +x
     echo
-
+) >>$INIT_DIR/setup.log 2>&1
 
 perlmods=( "File::ShareDir" "File::ShareDir::Install" "Bio::Root::Version@1.006924" "Module::Build~0.42" )
 
+(
 set -e
 for i in "${perlmods[@]}" ; do
   echo -n "Installing build prerequisite $i..."
@@ -133,6 +136,7 @@ for i in "${perlmods[@]}" ; do
 
   done_message "" "Failed during installation of $i."
 done
+) >>$INIT_DIR/setup.log 2>&1
 
 #create a location to build dependencies
 SETUP_DIR=$INIT_DIR/install_tmp
@@ -140,8 +144,7 @@ mkdir -p $SETUP_DIR
 
 cd $SETUP_DIR
 
-done_message "" "Failed to build $CURR_TOOL."
-
+(
 if [ -e $SETUP_DIR/htslibGet.success ]; then
   echo " already staged ...";
 else
@@ -149,8 +152,11 @@ else
   get_distro "htslib" $SOURCE_HTSLIB
   touch $SETUP_DIR/htslibGet.success
 fi
+) >>$INIT_DIR/setup.log 2>&1
+
 
 echo -n "Building Bio::DB::HTS ..."
+(
 if [ -e $SETUP_DIR/biohts.success ]; then
   echo " previously installed ...";
 else
@@ -173,8 +179,10 @@ else
   rm -f bioDbHts.tar.gz
   touch $SETUP_DIR/biohts.success
 fi
+) >>$INIT_DIR/setup.log 2>&1
 
 echo -n "Building htslib ..."
+(
 if [ -e $SETUP_DIR/htslib.success ]; then
   echo " previously installed ...";
 else
@@ -189,9 +197,11 @@ else
   touch $SETUP_DIR/htslib.success
   ) >/dev/null
 fi
+) >>$INIT_DIR/setup.log 2>&1
 
 export HTSLIB=$INST_PATH
 
+(
 if [[ ",$COMPILE," == *,samtools,* ]] ; then
   echo -n "Building samtools ..."
   if [ -e $SETUP_DIR/samtools.success ]; then
@@ -213,12 +223,14 @@ if [[ ",$COMPILE," == *,samtools,* ]] ; then
 else
   echo "samtools - No change between vafCorrect versions"
 fi
+) >>$INIT_DIR/setup.log 2>&1
 
 cd $SETUP_DIR
 
 CURR_TOOL="vcftools"
 CURR_SOURCE=$SOURCE_VCFTOOLS
 echo -n "Building $CURR_TOOL ..."
+(
 if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
   echo -n " previously installed ..."
 else
@@ -233,6 +245,7 @@ else
     make -j$CPU PREFIX=$INST_PATH
     touch $SETUP_DIR/$CURR_TOOL.success
 fi
+) >>$INIT_DIR/setup.log 2>&1
 
 done_message "" "Failed to build $CURR_TOOL."
 
@@ -241,6 +254,7 @@ cd $SETUP_DIR
 CURR_TOOL="exonerate"
 CURR_SOURCE=$SOURCE_EXONERATE
 echo -n "Building exonerate..."
+(
   if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
     echo -n " previously installed ..."
   else
@@ -257,6 +271,7 @@ echo -n "Building exonerate..."
     cd $INIT_DIR
     touch $SETUP_DIR/exonerate.success
   fi
+) >>$INIT_DIR/setup.log 2>&1
   
 done_message "" "Failed to build exonerate."
 
@@ -267,6 +282,7 @@ export PERL5LIB=$PERL5LIB:$PERLROOT:$PERLARCH
 cd "$INIT_DIR/perl"
 
 echo -n "Installing Perl prerequisites ..."
+(
 if ! ( perl -MExtUtils::MakeMaker -e 1 >/dev/null 2>&1); then
     echo
     echo "WARNING: Your Perl installation does not seem to include a complete set of core modules.  Attempting to cope with this, but if installation fails please make sure that at least ExtUtils::MakeMaker is installed.  For most users, the best way to do this is to use your system's package manager: apt, yum, fink, homebrew, or similar."
@@ -275,11 +291,12 @@ fi
   set -x
   perl $INIT_DIR/perl/bin/cpanm -v --mirror http://cpan.metacpan.org --notest -l $INST_PATH --installdeps . < /dev/null
   set +x
+) >>$INIT_DIR/setup.log 2>&1
 
 done_message "" "Failed during installation of core dependencies."
 
 echo -n "Installing cgpVaf ..."
-
+(
   set -e
   cd "$INIT_DIR/perl"
 	echo -n `pwd`
@@ -287,6 +304,7 @@ echo -n "Installing cgpVaf ..."
   make
   make test
   make install
+) >>$INIT_DIR/setup.log 2>&1
 
 done_message "" " cgpVaf install failed."
 
