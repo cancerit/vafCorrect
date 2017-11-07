@@ -1,5 +1,5 @@
 
-## v5.1.0 #######
+## v5.1.1 #######
 * Added custom sorting for vcf files
 
 ## v5.1.0 #######
