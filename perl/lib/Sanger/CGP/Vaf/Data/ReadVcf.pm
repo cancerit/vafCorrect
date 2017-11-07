@@ -52,7 +52,7 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 use base qw(Sanger::CGP::Vaf::Data::AbstractVcf);
 
-const my $SORT_N_BGZIP => q{vcf-sort %s| bgzip -c >%s };
+const my $SORT_N_BGZIP => q{(grep '^#' %s ; grep -v '^#' %s | sort -k1,1 -k2,2n -k4,5 )| bgzip -c >%s };
 const my $TABIX_FILE => q{tabix -f -p vcf %s};
 const my $VALIDATE_VCF => q{vcf-validator -u %s};
 
@@ -466,10 +466,9 @@ sub _getCustomHeader {
 	my ($vcf_filter,$vcf_info,$vcf_format);
   my ($log_key,$process_param)=$self->_getProcessLog();
   $vcf_format->{'process_log'}={(key=>$log_key,
-			InputVCFSource => _trim_file_path($0),
+			InputVCFSource => 'cgpVaf.pl',
 			InputVCFVer => $Sanger::CGP::Vaf::VafConstants::VERSION,
 			InputVCFParam =>$process_param )};
-
   $vcf_filter->{'filter1'}={(key=>'FILTER',ID=>'1',Description=>"New filter status 1=not called in any")}; # use of 0 is not allowed in FILTER column
 	$vcf_filter->{'filter2'}={(key=>'FILTER',ID=>'2',Description=>"New filter status 2=called in any")};
 	$vcf_filter->{'filter3'}={(key=>'FILTER',ID=>'3',Description=>"New filter status 3=called + passed")};
@@ -707,7 +706,6 @@ sub processMergedLocations {
 	my $pileup_results=undef;
 	my $count=0;
 	my $total_locations=keys %$unique_locations;
-	return if $total_locations == 0;
 	foreach my $progress_line(@$progress_data) {
 		chomp $progress_line;
 		if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf" && ($self->{'_ao'} == 0) ) {
@@ -787,14 +785,14 @@ sub processMergedLocations {
 	$merged_vcf->close() if defined $merged_vcf;
 	# write success file name
 	 $log->debug("Completed analysis for: $chr ");
-	 if($self->{'_ao'} ==0){
+	 if($self->{'_ao'} == 0){
 	  close $tmp_WFH_VCF;
 	  close $tmp_WFH_TSV; 
 	  $progress_fhw->print("$self->{'_tmp'}/tmp_$chr.vcf\n");
 	  $store_results={};
 	  return undef; 
 	 }
-	return ($store_results);
+	return $store_results;
 }
 
 =head2 _get_bam_object
@@ -1346,7 +1344,7 @@ Inputs
 sub gzipAndIndexVcf {
 	my($self,$annot_vcf)=@_;
 	my $command = 'set -o pipefail; ';
-	$command.= sprintf $SORT_N_BGZIP, $annot_vcf, $annot_vcf.'.gz; ';
+	$command.= sprintf $SORT_N_BGZIP, $annot_vcf, $annot_vcf, $annot_vcf.'.gz; ';
 	$command.=sprintf $TABIX_FILE, $annot_vcf.'.gz; ';
 	#$command.=sprintf $VALIDATE_VCF, $annot_vcf.'.gz '; # error while testing [ Odd number of elements in hash assignment at $PATH/lib/perl5/Vcf.pm line 2990]
 	$command.='2>&1  ';

@@ -1,4 +1,7 @@
 
+## v5.1.1 #######
+* Added custom sorting for vcf files
+
 ## v5.1.0 #######
 * User can now run per chromosome analysis [useful to run in parallel ] and concatenate the resulting files
 
