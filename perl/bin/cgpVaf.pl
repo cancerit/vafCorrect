@@ -111,9 +111,9 @@ try {
 			 ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
 		}
 		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data);  
+  
 		close $progress_fhw;
 	}# completed all chromosomes;
-	
 	# if augmentation option is selected then write augmented vcf file
 	if(defined $options->{'m'} && $options->{'m'} == 1) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
@@ -231,6 +231,11 @@ sub option_builder {
 	if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
 		$options{'dp'}='NR,PR';
 	}
+	
+	if($options{'ao'} ||  $options{'m'}) {
+	 $log->debug("Augmentation option selected, chromosome option will be overidden to all chromosomes");
+	  $options{'chr'}=[];
+	}
 
 	if(!defined $options{'s'}) {
 		#analyse single sample no merge step
@@ -254,7 +259,6 @@ sub option_builder {
   if(!defined $options{'hdr'} && lc($options{'a'}) eq 'indel') {
      warn "-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run";
 	}
-
  \%options;
 }
 
@@ -282,12 +286,8 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --infoTags       (-t)   comma separated list of tags to be included in the vcf INFO field
                            (default: VD,VW,VT,VC for Vagrent annotations)
    --bedIntervals   (-b)   tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
-                           bed file can be specified in the config file after the last sample pair,
-                           if specified on command line then same bed file is used for all the tumour/normal pairs,
-                           bed file name in config file overrides command line argument
-                           (possible values 001,005,01,05 and 1)
    --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]
-   --chromosome     (-chr) restrict analysis to a chromosome list [space separated chromosome names]
+   --chromosome     (-chr) restrict analysis to a chromosome list [space separated chromosome names] , not applicable if augment option is choosen
    --concat         (-ct) concat per chromosome results to a single vcf  file
    --augment        (-m)   Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
    --augment_only   (-ao)  Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
