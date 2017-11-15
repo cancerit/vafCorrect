@@ -518,7 +518,7 @@ Inputs
 sub _getProcessLog {
 	my ($self)=@_;
 	my $hash=$self->{'options'};
-	my ($date, $stderr, $exit) = capture {system("date +\"%Y%m%d\"")};
+	my ($date, $stderr, $exit) = capture {$self->system_bash("date +\"%Y%m%d\"")};
         chomp $date;
         my $log_key=join("_",'vcfProcessLog',$date);
         my $process_log;
@@ -1346,7 +1346,6 @@ sub gzipAndIndexVcf {
 	my $command = 'set -o pipefail; ';
 	$command.= sprintf $SORT_N_BGZIP, $annot_vcf, $annot_vcf, $annot_vcf.'.gz; ';
 	$command.=sprintf $TABIX_FILE, $annot_vcf.'.gz; ';
-	#$command.=sprintf $VALIDATE_VCF, $annot_vcf.'.gz '; # error while testing [ Odd number of elements in hash assignment at $PATH/lib/perl5/Vcf.pm line 2990]
 	$command.='2>&1  ';
 	$self->_runCommand($command);
   return ($annot_vcf.'.gz', $annot_vcf.'.gz.tbi');
@@ -1365,8 +1364,23 @@ sub _runCommand {
   try {
       warn "\nErrors from command: $command\n\n";
       print "\nOutput from command: $command\n\n";
-      system($command);
+      $self->system_bash($command);
   }catch { die $_; };
+}
+
+=head2 system_bash
+run external command in bash shell
+Inputs
+=over 2
+=item command to run
+=back
+=cut
+
+
+sub system_bash {
+  my($self,$prm)=@_;
+  my @args = ( "bash", "-c", $prm );
+  system(@args);
 }
 
 =head2 catFiles
