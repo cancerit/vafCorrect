@@ -785,7 +785,7 @@ sub _do_exonerate {
 		" --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
 		" --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
 		print "$cmd2\n";
-		my ($exonerate_output1, $stderr1, $exit1) = capture {system("$cmd2")};
+		my ($exonerate_output1, $stderr1, $exit1) = capture {$self->system_bash("$cmd2")};
 	 open (my $tfh1, '>','exonerate_results_Alignment'.$g_pu->{'sample'}.'.out');
 	 print $tfh1 $exonerate_output1;
 	#	my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd")};
@@ -1106,6 +1106,11 @@ $pileup_results;
 }
 
 
+sub system_bash {
+  my($self,$prm)=@_;
+  my @args = ( "bash", "-c", $prm );
+  system(@args);
+}
 
 
 

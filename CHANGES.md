@@ -1,4 +1,7 @@
 
+## v5.1.2 #######
+* forced default shell to bash for syste command
+
 ## v5.1.1 #######
 * Added custom sorting for vcf files
 
