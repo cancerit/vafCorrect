@@ -40,7 +40,7 @@ use Capture::Tiny qw(:all);
 use Math::Round qw(round);
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
-
+use Bio::DB::HTS::VCF;
 use Sanger::CGP::Vaf::VafConstants;
 
 use Log::Log4perl;
@@ -203,9 +203,9 @@ sub getVcfFields {
 	}
   
   my ($NFS,$DNFS)=$self->_getFlagStatus($flag_val);
-	my ($old_info_val)=$self->_getINFO($original_vcf_info,$DNFS);
+	my ($new_info_val)=$self->_getINFO($original_vcf_info,$DNFS);
 	
-	return ($old_info_val,$NFS,$flag_val,$max_depth);
+	return ($new_info_val,$NFS,$flag_val,$max_depth);
 }
 
 =head2 _getFlagStatus
@@ -274,20 +274,20 @@ Inputs
 
 sub _getINFO {
 	my ($self,$original_vcf_info,$DNFS)=@_;
-	my $old_info_val;
+	my $new_info_val;
 	foreach my $sample (keys %$original_vcf_info) {
 		next if !defined $original_vcf_info->{$sample} || $original_vcf_info->{$sample} eq 'NA';
 		my $info=$original_vcf_info->{$sample};
-		foreach my $tag (keys %$info) {
-			$old_info_val->{$tag}=$info->{$tag};
+		foreach my $info_field (split /;/,$info) {
+		  my($tag,$val)=split('=',$info_field);
+			$new_info_val->{$tag}=$val;
 		}
 	}
-	$old_info_val->{'NS'}=((split ':', $DNFS)[0]) + scalar keys %{$self->{'_novcf'}};
-	$old_info_val->{'NC'}=(split ':', $DNFS)[1];
-	$old_info_val->{'NP'}=(split ':', $DNFS)[2];
-	$old_info_val->{'NA'}=(split ':', $DNFS)[0];
-
-	return $old_info_val;
+	$new_info_val->{'NS'}=((split ':', $DNFS)[0]) + scalar keys %{$self->{'_novcf'}};
+	$new_info_val->{'NC'}=(split ':', $DNFS)[1];
+	$new_info_val->{'NP'}=(split ':', $DNFS)[2];
+	$new_info_val->{'NA'}=(split ':', $DNFS)[0];
+	return $new_info_val;
 }	
 
 =head2 createExonerateInput

@@ -123,8 +123,6 @@ my ($self)=@_;
 		return ($info_tag_val,$updated_info_tags,$vcf_file_obj);
 }
 
-
-
 =head2 _checkNormal
 check normal sample
 Inputs
@@ -290,7 +288,7 @@ Inputs
 =cut
 
 sub getMergedLocations {
-	my($self,$chr_location,$updated_info_tags,$vcf_file_obj)=@_;
+	my($self,$chr_location,$vcf_file_obj)=@_;
 	my $read_depth=0;
 	my $data_for_all_samples=undef;
 	my $info_data=undef;
@@ -309,15 +307,15 @@ sub getMergedLocations {
 				#last if $count > 10;
 				#$count++;
 				##
-				if(defined $self->{'_t'}){
-					$info_data=$self->_getInfo($vcf,$$x[7],$updated_info_tags);
-				}
+				#if(defined $self->{'_t'}){
+				#	$info_data=$self->_getInfo($vcf,$$x[7],$updated_info_tags);
+				#}
 				#location key consists of CHR:POS:REF:ALT
 				my $location_key="$$x[0]:$$x[1]:$$x[3]:$$x[4]";
 				if(defined $self->{'_p'}) {
 					$read_depth=$self->_getReadDepth($vcf,$x);
 				}
-				$data_for_all_samples->{$sample}{$location_key}={'INFO'=>$info_data, 'FILTER'=>$$x[6],'RD'=>$read_depth };
+				$data_for_all_samples->{$sample}{$location_key}={'INFO'=>$$x[7], 'FILTER'=>$$x[6],'RD'=>$read_depth };
 				if(!exists $unique_locations->{$location_key}) {
 					$unique_locations->{$location_key}="$sample-$$x[6]";
 				}
@@ -469,8 +467,8 @@ sub _getCustomHeader {
 			InputVCFSource => 'cgpVaf.pl',
 			InputVCFVer => $Sanger::CGP::Vaf::VafConstants::VERSION,
 			InputVCFParam =>$process_param )};
-  $vcf_filter->{'filter1'}={(key=>'FILTER',ID=>'1',Description=>"New filter status 1=not called in any")}; # use of 0 is not allowed in FILTER column
-	$vcf_filter->{'filter2'}={(key=>'FILTER',ID=>'2',Description=>"New filter status 2=called in any")};
+  $vcf_filter->{'filter1'}={(key=>'FILTER',ID=>'1',Description=>"New filter status 1=not called in any sample")}; # use of 0 is not allowed in FILTER column
+	$vcf_filter->{'filter2'}={(key=>'FILTER',ID=>'2',Description=>"New filter status 2=called in at least one sample")};
 	$vcf_filter->{'filter3'}={(key=>'FILTER',ID=>'3',Description=>"New filter status 3=called + passed")};
 
 	$vcf_info->{'NS'}={(key=>'INFO',ID=>'NS',Number=>'1',Type=>"Integer",Description=>"Number of samples analysed [Excludes designated normal sample]")};
@@ -567,14 +565,15 @@ Inputs
 sub _getInfo {
 	my ($self,$vcf,$INFO,$info_tags)=@_;
 	my %info_data;
-	#my @tags=split(',',$info_tags);
 	foreach my $tag (@$info_tags) {
-		my $info_val = $vcf->get_info_field($INFO,$tag);
-		if($info_val) {
-			$info_data{$tag}=$info_val;
-		}
-		else {
-			$info_data{$tag}='-';
+	 my $info_val = $vcf->get_info_field($INFO,$tag);
+		if(defined $info_val) {
+		   my $header_info = @{$vcf->get_header_line(key=>'INFO', ID=>$tag)}[0];
+	  		   if($header_info->{'Type'} eq 'Flag'){
+         	  $info_data{$tag}=undef;
+         	 }else{
+         	 	$info_data{$tag}=$info_val;
+         	 }
 		}
 	}
 	return \%info_data;
@@ -665,16 +664,13 @@ Inputs
 =back
 =cut
 sub populateBedLocations {
-	my ($self,$filtered_bed_locations,$updated_info_tags)=@_;
+	my ($self, $filtered_bed_locations)=@_;
 	my $temp_tag_val=undef;
 	my $data_for_all_samples=undef;
 	my $location_counter=0;
-	foreach my $tag (@$updated_info_tags) {
-			$temp_tag_val->{$tag}='-';
-	}
  	foreach my $location_key (keys %$filtered_bed_locations) {
  			foreach my $sample(keys %{$self->{'vcf'}})	{
-			$data_for_all_samples->{$sample}{$location_key}={'INFO'=>$temp_tag_val,'FILTER'=>'NA','RD'=>1 };
+			$data_for_all_samples->{$sample}{$location_key}={'INFO'=>undef,'FILTER'=>'NA','RD'=>1 };
 		}
 		$location_counter++;
 	}
@@ -1069,13 +1065,12 @@ sub _get_tab_sep_header {
     push @header,'##'.$Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_TITLES->[$i] . "\t" . $Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_DESCS->[$i];
   }
 	my $line_info=$vcf->get_header_line(key=>'INFO');
-	foreach my $info_data (@$line_info) {
-		foreach my $key (sort keys %$info_data){
-			next if ($key eq 'VT' || $key eq 'VC');
+	my $info_data=@{$vcf->get_header_line(key=>'INFO')}[0];
+		foreach my $key (sort keys %{$info_data}){
+			next if ($key eq 'VT' || $key eq 'VC' || $key eq 'VD' || $key eq 'VW');
 			push(@{$out->{'cols'}},$key);
 			push @header,'##'.$key. "\t" .$info_data->{$key}{'Description'};
 		}
-	}
 	my ($format)=$self->_get_header_lines($vcf->get_header_line(key=>'FORMAT'),'Description','FORMAT');
 	push(@header,@$format);
 	my ($filter)=$self->_get_header_lines($vcf->get_header_line(key=>'FILTER'),'Description','FILTER');
@@ -1153,7 +1148,8 @@ sub _writeOutput {
 
 	# write to VCF at very end.....
 	print $WFH_VCF $vcf->format_line($out);
-	my ($line)=$self->_parse_info_line($vcf->format_line($out),$original_vcf_info);
+	my ($line)=$self->_parse_info_line($vcf,$vcf->format_line($out),$original_vcf_info);
+			
 	# write to TSV at very end.....
 	print $WFH_TSV $self->getNormalName."\t".join("\t",@$line)."\n";
 	return 1;
@@ -1171,101 +1167,85 @@ Inputs
 
 
 sub _parse_info_line {
-	my ($self,$vcf_line,$original_vcf_info)=@_;
+	my ($self,$vcf,$vcf_line,$original_vcf_info)=@_;
    # info field prep
 		chomp $vcf_line;
     my @data = split "\t", $vcf_line ;
-
-    my (@record,@info_data);
-
+    my ($record);
     # basic variant data
-
-    push(@record,$data[2],$data[0],$data[1],$data[3],$data[4],$data[5],$data[6]);
-
-    foreach my $e (split ';',$data[7]){
-      push @info_data, [split '=', $e];
+    push(@$record,$data[2],$data[0],$data[1],$data[3],$data[4],$data[5],$data[6]);
+    # annotation fields  were parsed from INFO :  [ 0-5 from VD ,6[Type] from VT and 7 [Efffect] from VC, VW is ignored by bulk converter
+    #'Gene',    'Transcript',   'RNA',   'CDS', 'Protein', 'Type', 'Effect'
+    #AP000350.5	ENST00000609510	r.4127c>g	-	     -	        Sub	    nc_variant
+    # parse sequencial fields first
+    if(defined $original_vcf_info->{'VD'}){
+    	($record)=$self->_parseVD($original_vcf_info->{'VD'},$record);
+    }else{
+       push(@$record,'-','-','-','-','-');
     }
-
-    # annotation fields
-    my $vdseen = 0;
-    foreach my $d (@info_data){
-      if($d->[0] eq 'VD'){
-        $vdseen = 1;
-        my @anno_data = split('\|',$d->[1]);
-
-        foreach my $i(0..4){
-          if(defined $anno_data[$i]){
-            push(@record,$anno_data[$i]);
-          } else {
-            push(@record,'-');
-          }
-        }
+    if(defined $original_vcf_info->{'VT'}){
+    	($record)=$self->_parse_field('VT',$original_vcf_info->{'VT'},'String',$record);
+    }else{
+       push(@$record,'-');
+    }
+    if(defined $original_vcf_info->{'VC'}){
+    	($record)=$self->_parse_field('VT',$original_vcf_info->{'VC'},'String',$record);
+    }else{
+       push(@$record,'-');
+    }
+    my $header_info=@{$vcf->get_header_line(key=>'INFO')}[0];
+    foreach my $info_key (sort keys %{$header_info}) {
+      next if ($info_key eq 'VT' || $info_key eq 'VC' || $info_key eq 'VD' || $info_key eq 'VW');
+      if(exists $original_vcf_info->{$info_key}){
+        my($record)=$self->_parse_field($info_key,$original_vcf_info->{$info_key},$header_info->{$info_key}{'Type'},$record);
+      }else{
+        push(@$record,'-');
       }
     }
 
-    if($vdseen == 0){
-      push(@record,'-','-','-','-','-');
-    }
-
-    my $vtseen = 0;
-
-		if($vtseen == 0){
-      my $ref = $data[3];
-      my $alt = $data[4];
-      if(length($ref) > 0 && length($alt) > 0){
-        if(length($ref) == 1){
-          if(length($alt) > 1){
-            push(@record,'Ins');
-          } else {
-            push(@record,'Sub');
-          }
-        } else {
-          if(length($alt) == 1){
-            push(@record,'Del');
-          } else {
-            push(@record,'Complex');
-          }
-        }
-      } else {
-        push(@record,'-');
-      }
-
-    }
-
-    if($vdseen == 1){
-      my $vcseen = 0;
-      foreach my $d (@info_data){
-        if($d->[0] eq 'VC'){
-          $vcseen = 1;
-          push(@record,$d->[1]);
-        }
-      }
-      if($vcseen == 0){
-        push(@record,'-');
-      }
-    } else {
-      push(@record,'-');
-    }
-
-foreach my $info_key (sort keys %$original_vcf_info){
-				next if ($info_key eq 'VT' || $info_key eq 'VC');
-				if(defined $original_vcf_info->{$info_key}){
-         	push(@record,$original_vcf_info->{$info_key});
-        }
-        else{
-        	push(@record,'-');
-        }
-    }
 # print FORMAT field values for each sample
 
 my $i=9; # format field starts from 9
 foreach my $sample(@{$self->{'allSamples'}}) {
-	push(@record,split(':',$data[$i]));
+	push(@$record,split(':',$data[$i]));
 	$i++;
 }
 
-\@record;
+return $record;
 
+}
+
+
+=head2 _parseVD
+Parse VD info field
+Inputs
+=over 2
+=item vd filed value
+=item record array to store results
+=back
+=cut
+
+sub _parseVD {
+	my ($self,$vd,$record)=@_;
+  my @anno_data = split('\|',$vd);
+  foreach my $i(0..4){
+     if(defined $anno_data[$i]){
+         push(@$record,$anno_data[$i]);
+      } else {
+        push(@$record,'-');
+      }
+  }
+return $record;
+}
+
+sub _parse_field {
+	my($self,$field,$val,$type,$record)=@_;
+	if($type eq 'Flag'){
+		push(@$record,$field);
+	}else{
+		push(@$record,$val);
+	}
+	return $record;
 }
 
 

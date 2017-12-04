@@ -147,7 +147,7 @@ subtest 'ReadVcf' => sub {
 	my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
 	
 	if(!defined $options->{'bo'}){
-		($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations('1',$updated_info_tags,$vcf_file_obj);
+		($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations('1',$vcf_file_obj);
 		is_deeply($unique_locations,$expected_unique_locations,'ReadVcf:getMergedLocations_unique_locations');
 	}
 	#diag(Dumper %data_for_all_samples);
@@ -162,7 +162,7 @@ subtest 'ReadVcf' => sub {
 		
 	if(defined $bed_locations) {
 	  my($progress_fhw,$progress_data)=@{$progress_hash->{$dummy_chr}};
-		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
+		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations);
 		#diag(Dumper $data_for_all_samples,$unique_locations);
 		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$dummy_chr,$tags,$info_tag_val,$progress_fhw,$progress_data);	
 		diag(Dumper $store_results);

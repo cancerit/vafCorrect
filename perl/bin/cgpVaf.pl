@@ -101,16 +101,28 @@ try {
 		my $unique_locations;
 		my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
 		if($options->{'bo'} == 0){
-			($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
+			($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
 		}
 		if(defined $options->{'b'} ){
 			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);
 		}
 		# Write results to tmp file...
 		if ($chr eq $dummy_chr) {
-			 ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
+			 ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations);
 		}
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data);  
+		# this step should run in parallel --ToDo
+		
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples
+		,$unique_locations
+		,$variant
+		,$bam_header_data
+		,$bam_objects
+		,$store_results
+		,$chr
+		,$tags
+		,$info_tag_val
+		,$progress_fhw
+		,$progress_data);  
   
 		close $progress_fhw;
 	}# completed all chromosomes;
