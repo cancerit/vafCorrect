@@ -91,7 +91,6 @@ my ($self)=@_;
 	$self->_getData();
 	my $tumour_count=0;
 	my $info_tag_val=undef;
-	my $updated_info_tags=undef;
 	my $vcf_normal_sample=undef;
 	my $vcf_file_obj=undef;
 	foreach my $sample (keys %{$self->{'vcf'}}) {
@@ -100,8 +99,7 @@ my ($self)=@_;
 			my $vcf = Vcf->new(file => $self->{'vcf'}{$sample});
 			$vcf->parse_header();
 			$vcf->recalc_ac_an(0);
-
-			($info_tag_val,$vcf_normal_sample,$updated_info_tags)=$self->_getOriginalHeader($vcf,$info_tag_val,$vcf_normal_sample,$tumour_count,$sample,$updated_info_tags);
+			($info_tag_val,$vcf_normal_sample)=$self->_getOriginalHeader($vcf,$info_tag_val,$vcf_normal_sample,$tumour_count,$sample);
 			$vcf->close();
 			$vcf_file_obj->{$sample}=$vcf;
 		}
@@ -109,9 +107,7 @@ my ($self)=@_;
 		$self->{'noVcf'}{$sample}=0;
 		$vcf_file_obj->{$sample}=0;
 		}
-
 	}
-
 	if($self->{'_bo'} and ($self->{'_bo'} == 0)) {
 		$log->debug("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
 		$self->_checkNormal($vcf_normal_sample);
@@ -120,7 +116,7 @@ my ($self)=@_;
 	if($self->{'_b'}) {
 		$info_tag_val=$self->_populateBedHeader($info_tag_val);
 	}
-		return ($info_tag_val,$updated_info_tags,$vcf_file_obj);
+		return ($info_tag_val,$vcf_file_obj);
 }
 
 =head2 _checkNormal
@@ -282,7 +278,6 @@ Inputs
 =over 2
 =item
 =item chr_location -chromosome or an interval on chromosome
-=item updated_info_tags -vcf info tag object
 =item vcf_file_obj -vcf file object
 =back
 =cut
@@ -303,13 +298,6 @@ sub getMergedLocations {
 			$vcf->open(region => $chr_location);
 			my $count=0;
 			while (my $x=$vcf->next_data_array()) {
-				# test
-				#last if $count > 10;
-				#$count++;
-				##
-				#if(defined $self->{'_t'}){
-				#	$info_data=$self->_getInfo($vcf,$$x[7],$updated_info_tags);
-				#}
 				#location key consists of CHR:POS:REF:ALT
 				my $location_key="$$x[0]:$$x[1]:$$x[3]:$$x[4]";
 				if(defined $self->{'_p'}) {
@@ -377,7 +365,7 @@ declared in get_unique_locations so that samples names for each VCF were stored
 =cut
 
 sub _getOriginalHeader {
-	my ($self,$vcf,$info_tag_val,$normal_sample,$tumour_count,$sample,$updated_info_tags)=@_;
+	my ($self,$vcf,$info_tag_val,$normal_sample,$tumour_count,$sample)=@_;
 	#stores hash key data in an array for header tags...
 	if ($tumour_count == 1){
 		my ($vcf_filter,$vcf_info,$vcf_format)=$self->_getCustomHeader();
@@ -388,26 +376,18 @@ sub _getOriginalHeader {
 				push(@$info_tag_val,$contig_line->{$chr});
 			}
 		}
-		# get user defined tags
-		if(defined $self->{'_t'}) {
-			foreach my $tag (split(",",$self->{'_t'})) {
-				my $line=$vcf->get_header_line(key=>'INFO', ID=>$tag);
-				if(@$line > 0) {
-					push (@$updated_info_tags,$tag);
-				}
-				push(@$info_tag_val,@$line);
-			}
+		# get all info tags
+		my $info_line=@{$vcf->get_header_line(key=>'INFO')}[0];
+		foreach my $info_key (sort keys %{$info_line}){
+				push(@$info_tag_val,$info_line->{$info_key});
 		}
 		#add custom info
 		foreach my $key (sort keys %$vcf_info) {
 			push(@$info_tag_val,$vcf_info->{$key});
 		}
-
 		#add old FILTER
-		my $filter_info=$vcf->get_header_line(key=>'FILTER');
-		#$filter_info->{(key='FILTER_OLD')}=delete $filter_info->{(key='FILTER')}
-		foreach my $filter_info ( @$filter_info) {
-			foreach my $filter_id (sort keys %$filter_info) {
+		my $filter_info=@{$vcf->get_header_line(key=>'FILTER')}[0];
+			foreach my $filter_id (sort keys %{$filter_info}) {
 					foreach my $key (keys %{$filter_info->{$filter_id}}) {
 						if($filter_info->{$filter_id}{$key} eq 'FILTER') {
 							$filter_info->{$filter_id}{$key}='ORIGINAL_FILTER';
@@ -415,7 +395,6 @@ sub _getOriginalHeader {
 					}
 				push(@$info_tag_val,$filter_info->{$filter_id});
 			}
-		}
 		#add custom filter
 		foreach my $key (sort keys %$vcf_filter) {
 			push(@$info_tag_val,$vcf_filter->{$key});
@@ -427,25 +406,21 @@ sub _getOriginalHeader {
 		}
 	}
 	#add samples from old header
-	my $header_sample=$vcf->get_header_line(key=>'SAMPLE');
-	foreach my $header_sample_line (@$header_sample) {
-		foreach my $sample_data (sort keys %$header_sample_line) {
+	my $header_sample=@{$vcf->get_header_line(key=>'SAMPLE')}[0];
+		foreach my $sample_data (sort keys %{$header_sample}) {
 			if($sample_data eq "TUMOUR") {
-				$header_sample_line->{'TUMOUR'}{'ID'}="TUMOUR$tumour_count";
+				$header_sample->{'TUMOUR'}{'ID'}="TUMOUR$tumour_count";
 			}
-		push(@$info_tag_val,$header_sample_line->{$sample_data});
+		 push(@$info_tag_val,$header_sample->{$sample_data});
 		}
-	}
 	#add sample names..
-	my $sample_info=$vcf->get_header_line(key=>'SAMPLE', ID=>'NORMAL');
-	foreach my $sample_line ( @$sample_info) {
-		foreach my $key (keys %$sample_line) {
-			if(defined $sample_line->{$key} and $key eq "SampleName") {
-				$normal_sample->{$sample_line->{$key}}.="|$sample";
+	my $sample_info=@{$vcf->get_header_line(key=>'SAMPLE', ID=>'NORMAL')}[0];
+		foreach my $key (keys %{$sample_info}) {
+			if(defined $sample_info->{$key} and $key eq "SampleName") {
+				$normal_sample->{$sample_info->{$key}}.="|$sample";
 			}
 		}
-	}
-return($info_tag_val,$normal_sample,$updated_info_tags);
+return($info_tag_val,$normal_sample);
 }
 
 
@@ -553,33 +528,6 @@ sub _trim_file_path{
 	return pop @bits;
 }
 
-=head2 _getInfo
-parse VCF INFO line for given locations and returns values for respective tags
-Inputs
-=over 2
-=item vcf - vcf object
-=item INFO - VCF INFO filed value
-=item INFO - INFO field tags defined in header
-=back
-=cut
-sub _getInfo {
-	my ($self,$vcf,$INFO,$info_tags)=@_;
-	my %info_data;
-	foreach my $tag (@$info_tags) {
-	 my $info_val = $vcf->get_info_field($INFO,$tag);
-		if(defined $info_val) {
-		   my $header_info = @{$vcf->get_header_line(key=>'INFO', ID=>$tag)}[0];
-	  		   if($header_info->{'Type'} eq 'Flag'){
-         	  $info_data{$tag}=undef;
-         	 }else{
-         	 	$info_data{$tag}=$info_val;
-         	 }
-		}
-	}
-	return \%info_data;
-}
-
-
 =head2 _getReadDepth
 get read depth for given variant site for underlying sample
 line[8] is format field, get index of tag used for depth e.g., NR(reads on -ve strand) and  PR (reads on +ve strand)
@@ -660,7 +608,6 @@ Populate bed locations for all the samples
 Inputs
 =over 2
 =item filtered_bed_locations -Filtered bed locations present in vcf file
-=item updated_info_tags -INFO tags for bed locations
 =back
 =cut
 sub populateBedLocations {
@@ -712,7 +659,7 @@ sub processMergedLocations {
 	open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
 	open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
 
-  my($merged_vcf)=$self->_getVCFObject($info_tag_val);
+  my($merged_vcf,$header_info)=$self->_getVCFObject($info_tag_val);
 
   foreach my $location (sort keys %$unique_locations) {
   	#next unless($location=~/114911505/);
@@ -769,7 +716,7 @@ sub processMergedLocations {
 		if($self->{'_ao'} == 0 ) {
 			$original_vcf_info->{'ND'} =	$depth;
 			$original_vcf_info->{'NVD'} =	$mutant_depth;
-			$self->_writeOutput($original_vcf_info,$NFS,$pileup_results,$tags,$tmp_WFH_VCF,$tmp_WFH_TSV,$g_pu,$merged_vcf);
+			$self->_writeOutput($original_vcf_info,$NFS,$pileup_results,$tags,$tmp_WFH_VCF,$tmp_WFH_TSV,$g_pu,$merged_vcf,$header_info);
 			$depth=0;
 			$mutant_depth=0;
 		 }
@@ -967,7 +914,6 @@ sub WriteAugmentedHeader {
 					}
 				}
 			}
-
 			foreach my $format_type(@Sanger::CGP::Vaf::VafConstants::FORMAT_TYPE) {
 					$vcf_aug->add_header_line($vcf_format->{$format_type});
 			}
@@ -1042,8 +988,9 @@ sub _getVCFObject {
 		}
 	}
 	$vcf->add_columns(@{$self->{'allSamples'}});
-
-	return $vcf;
+  
+  my $header_info=@{$vcf->get_header_line(key=>'INFO')}[0];
+	return $vcf,$header_info;
 }
 
 =head2 _get_tab_sep_header
@@ -1064,10 +1011,11 @@ sub _get_tab_sep_header {
 	for my $i(0..(scalar @$Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_TITLES) -1){
     push @header,'##'.$Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_TITLES->[$i] . "\t" . $Sanger::CGP::Vaf::VafConstants::BASIC_COLUMN_DESCS->[$i];
   }
-	my $line_info=$vcf->get_header_line(key=>'INFO');
 	my $info_data=@{$vcf->get_header_line(key=>'INFO')}[0];
+	my @user_info_fields=split(",",$self->{'_t'});
 		foreach my $key (sort keys %{$info_data}){
-			next if ($key eq 'VT' || $key eq 'VC' || $key eq 'VD' || $key eq 'VW');
+			next if ($key eq 'VT' || $key eq 'VC' || $key eq 'VD' || $key eq 'VW'); 
+			next if (!grep(/^$key$/, @user_info_fields));
 			push(@{$out->{'cols'}},$key);
 			push @header,'##'.$key. "\t" .$info_data->{$key}{'Description'};
 		}
@@ -1123,7 +1071,7 @@ Inputs
 =cut
 
 sub _writeOutput {
-	my ($self,$original_vcf_info,$NFS,$new_pileup_results,$tags,$WFH_VCF,$WFH_TSV,$g_pu,$vcf)=@_;
+	my ($self,$original_vcf_info,$NFS,$new_pileup_results,$tags,$WFH_VCF,$WFH_TSV,$g_pu,$vcf,$header_info)=@_;
   if ((!$vcf && !$self->{'_b'})|| ($self->{'_ao'}==1)) {
 		return 1;
 	}
@@ -1148,7 +1096,7 @@ sub _writeOutput {
 
 	# write to VCF at very end.....
 	print $WFH_VCF $vcf->format_line($out);
-	my ($line)=$self->_parse_info_line($vcf,$vcf->format_line($out),$original_vcf_info);
+	my ($line)=$self->_parse_info_line($vcf,$vcf->format_line($out),$original_vcf_info,$header_info);
 			
 	# write to TSV at very end.....
 	print $WFH_TSV $self->getNormalName."\t".join("\t",@$line)."\n";
@@ -1167,11 +1115,12 @@ Inputs
 
 
 sub _parse_info_line {
-	my ($self,$vcf,$vcf_line,$original_vcf_info)=@_;
+	my ($self,$vcf,$vcf_line,$original_vcf_info,$header_info)=@_;
    # info field prep
 		chomp $vcf_line;
     my @data = split "\t", $vcf_line ;
     my ($record);
+    my @user_info_fields=split(",",$self->{'_t'});
     # basic variant data
     push(@$record,$data[2],$data[0],$data[1],$data[3],$data[4],$data[5],$data[6]);
     # annotation fields  were parsed from INFO :  [ 0-5 from VD ,6[Type] from VT and 7 [Efffect] from VC, VW is ignored by bulk converter
@@ -1193,9 +1142,12 @@ sub _parse_info_line {
     }else{
        push(@$record,'-');
     }
-    my $header_info=@{$vcf->get_header_line(key=>'INFO')}[0];
+   
     foreach my $info_key (sort keys %{$header_info}) {
       next if ($info_key eq 'VT' || $info_key eq 'VC' || $info_key eq 'VD' || $info_key eq 'VW');
+      next if(!grep(/^$info_key$/, @user_info_fields))
+      ;
+      
       if(exists $original_vcf_info->{$info_key}){
         my($record)=$self->_parse_field($info_key,$original_vcf_info->{$info_key},$header_info->{$info_key}{'Type'},$record);
       }else{

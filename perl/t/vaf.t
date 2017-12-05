@@ -116,7 +116,7 @@ subtest 'ReadVcf' => sub {
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	$vcf_obj->getAllSampleNames;
 	#diag(@{$vcf_obj->{'allSamples'}}[2]);
-	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
+	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
 	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
 	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
 	#create variant object
@@ -202,7 +202,7 @@ subtest 'ReadVcf' => sub {
 
   my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	$vcf_obj->getAllSampleNames;
-	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
+	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
 	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
 	#lib size information only applicable for indels....
 	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
