@@ -5,8 +5,6 @@ use File::Spec;
 use FindBin qw($Bin);
 use File::Temp qw/ :seekable /;
 use Data::Dumper;
-
-#use Sanger::CGP::Config::Config qw(vcfCommons);
 use Sanger::CGP::Vaf::Data::ReadVcf;
 use Sanger::CGP::Vaf::Process::Variant;
 use Sanger::CGP::Vaf::VafConstants;
@@ -76,7 +74,7 @@ my $options={
 my (%data_for_all_samples);
 	my $info={'VT'=>'Sub','VC' =>'intronic'};
 	
-	$data_for_all_samples{'samplea'}{'1:16901544:C:T'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ;TI;HSD', 'RD'=>0};																									
+	$data_for_all_samples{'samplea'}{'1:16901544:C:T'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ;TI;HSD', 'RD'=>0};
 	$data_for_all_samples{'samplea'}{'1:16901564:G:A'}={'INFO'=>$info,'FILTER'=>'UM;MN;TI;HSD', 'RD'=>0};
 	$data_for_all_samples{'samplea'}{'1:16902712:T:C'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ', 'RD'=>0};
 	$data_for_all_samples{'samplec'}{'1:16903781:C:T'}={'INFO'=>$info,'FILTER'=>'UM;MN;HSD', 'RD'=>0};
@@ -116,7 +114,7 @@ subtest 'ReadVcf' => sub {
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	$vcf_obj->getAllSampleNames;
 	#diag(@{$vcf_obj->{'allSamples'}}[2]);
-	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
+	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
 	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
 	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
 	#create variant object
@@ -147,7 +145,7 @@ subtest 'ReadVcf' => sub {
 	my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
 	
 	if(!defined $options->{'bo'}){
-		($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations('1',$updated_info_tags,$vcf_file_obj);
+		($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations('1',$vcf_file_obj);
 		is_deeply($unique_locations,$expected_unique_locations,'ReadVcf:getMergedLocations_unique_locations');
 	}
 	#diag(Dumper %data_for_all_samples);
@@ -162,7 +160,7 @@ subtest 'ReadVcf' => sub {
 		
 	if(defined $bed_locations) {
 	  my($progress_fhw,$progress_data)=@{$progress_hash->{$dummy_chr}};
-		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
+		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations);
 		#diag(Dumper $data_for_all_samples,$unique_locations);
 		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$dummy_chr,$tags,$info_tag_val,$progress_fhw,$progress_data);	
 		diag(Dumper $store_results);
@@ -202,7 +200,7 @@ subtest 'ReadVcf' => sub {
 
   my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	$vcf_obj->getAllSampleNames;
-	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
+	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
 	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
 	#lib size information only applicable for indels....
 	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
@@ -221,7 +219,6 @@ subtest 'ReadVcf' => sub {
 		'passedOnly'  => $vcf_obj->{'_r'},
     'tabix_hdr'   => defined  $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
 		);
-	 		
  	  $variant->setLocation('1:16902712:T:C');
 		$variant->setVarLine('samplea-UM;MN;MQ');
 		my($g_pu)=$variant->formatVarinat();

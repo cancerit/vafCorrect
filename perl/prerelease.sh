@@ -24,6 +24,8 @@
 
 set -eu # exit on first error or undefined value in subtitution
 
+echo "about to run $( which perl ) which is $( readlink -f "$( which perl )")"
+
 # get current directory
 INIT_DIR=`pwd`
 
