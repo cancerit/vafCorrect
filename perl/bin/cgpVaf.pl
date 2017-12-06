@@ -67,7 +67,7 @@ try {
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	# this is called only once to add allSample names to vcf object
 	$vcf_obj->getAllSampleNames;
-	my($info_tag_val,$updated_info_tags,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
+	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
 	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
 	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
 	# create variant object
@@ -101,16 +101,28 @@ try {
 		my $unique_locations;
 		my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
 		if($options->{'bo'} == 0){
-			($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr,$updated_info_tags,$vcf_file_obj);
+			($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
 		}
 		if(defined $options->{'b'} ){
 			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);
 		}
 		# Write results to tmp file...
 		if ($chr eq $dummy_chr) {
-			 ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations,$updated_info_tags);
+			 ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations);
 		}
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data);  
+		# this step should run in parallel --ToDo
+		
+		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples
+		,$unique_locations
+		,$variant
+		,$bam_header_data
+		,$bam_objects
+		,$store_results
+		,$chr
+		,$tags
+		,$info_tag_val
+		,$progress_fhw
+		,$progress_data);  
   
 		close $progress_fhw;
 	}# completed all chromosomes;
@@ -216,7 +228,7 @@ sub option_builder {
 		$log->logcroak("Not a valid variant type [should be either [snp or indel]");
 		exit(0);
 	}
- 	# use annotation tags
+ 	# use annotation tags to output in tsv
 	if(!defined $options{'t'}) {
 		$options{'t'}="VD,VW,VT,VC";
 	}
@@ -283,7 +295,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --vcfExtension   (-e)   vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz)
 
   Optional
-   --infoTags       (-t)   comma separated list of tags to be included in the vcf INFO field
+   --infoTags       (-t)   comma separated list of tags to be included in the tsv output, vcf file by default includes all data
                            (default: VD,VW,VT,VC for Vagrent annotations)
    --bedIntervals   (-b)   tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
    --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]
