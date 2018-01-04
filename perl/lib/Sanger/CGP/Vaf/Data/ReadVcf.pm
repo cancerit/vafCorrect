@@ -150,7 +150,7 @@ sub getProgress {
 	my($self,$user_chr)=@_;
 	print "\n >>>>>> To view overall progress log please check vcfcommons.log file created in the current directory >>>>>>>>>\n";
 	print "\n >>>>>> Samples specific progress.out file is created in the output directory : $self->{'_o'} >>>>>>>>>\n";
-	
+	my $unprocessed_chr;
 	my %progress_files;	
 	foreach my $chr (@$user_chr){
 		my $progress_fhw;
@@ -160,13 +160,20 @@ sub getProgress {
 		   open $progress_fhw, '>>', $file_name or die "Can't open $file_name: $!";
 	  }else{
 		  open $progress_fhw, '>', $file_name or die "Unable to create progress file $file_name: $!";
+		  #Any chromosome missed by user will be processed here only during concatenation step...
+		  push(@$unprocessed_chr,$chr);
 	  }
 	  open my $progress_fhr, '<', $file_name or die "Can't open $file_name: $!";
 	  my @progress_data=<$progress_fhr>;
 	  close($progress_fhr);
 		$progress_files{"$chr"}=[$progress_fhw,\@progress_data];
 	}
-	return \%progress_files;
+	# if not a concatenation step then process user defined chromosome 
+	if(!defined $self->{'_ct'}){
+		$unprocessed_chr=$user_chr;
+	}
+	
+	return (\%progress_files,$unprocessed_chr);
 }
 
 =head2 _populateBedHeader
@@ -288,11 +295,6 @@ sub getMergedLocations {
 	my $data_for_all_samples=undef;
 	my $info_data=undef;
 	my $unique_locations=undef;
-	if(defined $self->{'_bo'} && $self->{'_bo'}==1) {
-		$log->debug("Selected BedOnly analysis skipping data from VCF files");
-		return;
-	}
-
 	foreach my $sample (keys %$vcf_file_obj) {
 			my $vcf=$vcf_file_obj->{$sample};
 			$vcf->open(region => $chr_location);
@@ -561,16 +563,17 @@ Inputs
 
 
 sub getBedHash {
-	my($self)=@_;
+	my($self,$chr)=@_;
 	my $bed_locations=undef;
 	return if(!defined $self->{'_b'});
   open my $bedFH, '<', $self->{'_b'} || $log->logcroak("unable to open file $!");
   my $bed_name=$self->_trim_file_path($self->{'_b'});
   while(<$bedFH>) {
 		chomp;
-		next if $_=~/^#/;
-		my $fields=split("\t",$_);
-		if ($fields < 3) {
+		my @fields=split(/\t/,$_);
+		#1  14000  A  C
+		next if($fields[0] ne $chr);
+		if (@fields < 3) {
 			$log->debug("Not a valid bed location".$_);
 			next;
 		}
@@ -580,51 +583,83 @@ sub getBedHash {
 	return $bed_locations;
 }
 
-
 =head2 filterBedLocations
 Filter bed locations present in vcf file
 Inputs
 =over 2
-=item unique_locations -union of locations created by merging vcf files
 =item bed_locations -hash of bed locations
 =back
 =cut
-sub filterBedLocations {
-	my ($self,$unique_locations,$bed_locations)=@_;
-		my $filtered_bed_locations=undef;
-	  foreach my $location_key (keys %$bed_locations) {
-	   	if(exists $unique_locations->{$location_key}) {
-	   		$log->debug("Bed location not added to merged location, it is already part of VCF file");
-	   	}
-	   	else {
-	   		$filtered_bed_locations->{$location_key}=$bed_locations->{$location_key};
-	   	}
-	  }
-	  return $filtered_bed_locations;
-}
+
 
 =head2 populateBedLocations
-Populate bed locations for all the samples
+Populate bed locations into existing vcf locations for all the samples
+When user want to add additional bed locations to VCF file
 Inputs
 =over 2
-=item filtered_bed_locations -Filtered bed locations present in vcf file
+=item unique_locations -union of locations created by merging vcf files
+=item data_for_all_samples - location and vcf row data for all samples
+=item bed_locations - bed locations
 =back
 =cut
+
 sub populateBedLocations {
-	my ($self, $filtered_bed_locations)=@_;
-	my $temp_tag_val=undef;
-	my $data_for_all_samples=undef;
+	my ($self,$data_for_all_samples,$unique_locations,$bed_locations)=@_;
 	my $location_counter=0;
- 	foreach my $location_key (keys %$filtered_bed_locations) {
- 			foreach my $sample(keys %{$self->{'vcf'}})	{
-			$data_for_all_samples->{$sample}{$location_key}={'INFO'=>undef,'FILTER'=>'NA','RD'=>1 };
+	  foreach my $location_key (keys %$bed_locations) {
+	    # skip location only if it is passed as it will be analysed by default 
+	   	if(exists $unique_locations->{$location_key} && $unique_locations->{$location_key}=~m/PASS/) {
+	   		$log->debug("Bed location not added to merged location, it is already part of VCF file");
+	   	}else{	   	
+	   		foreach my $sample(keys %{$self->{'vcf'}})	{
+					$data_for_all_samples->{$sample}{$location_key}={'INFO'=>undef,'FILTER'=>'NA','RD'=>1 };
+				}
+				$unique_locations->{$location_key}=$bed_locations->{$location_key};
+				$location_counter++;
+			}
 		}
-		$location_counter++;
-	}
-	$log->debug(" Added additional ( $location_counter ) locations from BED file");
-	return ($data_for_all_samples,$filtered_bed_locations);
+	  $log->debug(" Added additional ( $location_counter ) locations from BED file");
+	  return ($data_for_all_samples,$unique_locations);
 }
 
+=head2 populateBedLocationsOnly
+Gets matching bed locations from vcf file wherever present for all the samples
+Analyses matching locations from VCF and all other locations from bed
+Inputs
+=over 2
+=item unique_locations -union of locations created by merging vcf files
+=item data_for_all_samples - location and vcf row data for all samples
+=item bed_locations - bed locations
+=back
+=cut
+
+sub populateBedLocationsFromVCF {
+	my ($self,$data_for_all_samples,$unique_locations,$bed_locations)=@_;
+	my($data_for_all_samples_bed_only,$unique_locations_bed_only);
+	my $location_counter=0;
+	my $location_counter2=0;
+	  foreach my $location_key (keys %$bed_locations) {
+	   	if(exists $unique_locations->{$location_key}){
+	   	 foreach my $sample(keys %{$self->{'vcf'}}){
+	   	    if(exists $data_for_all_samples->{$sample}{$location_key}) {
+	   	  	 $data_for_all_samples_bed_only->{$sample}{$location_key}=$data_for_all_samples->{$sample}{$location_key};
+	   	  	}
+	   	  }
+	   	  $unique_locations_bed_only->{$location_key}=$unique_locations->{$location_key};
+	   	  $location_counter2++;
+	   	}else{	   	
+	   		foreach my $sample(keys %{$self->{'vcf'}})	{
+					$data_for_all_samples_bed_only->{$sample}{$location_key}={'INFO'=>undef,'FILTER'=>'NA','RD'=>1 };
+				}
+				$unique_locations_bed_only->{$location_key}=$bed_locations->{$location_key};
+				$location_counter++;
+			}				
+		}
+	  $log->debug("Added additional ( $location_counter ) locations from BED file");
+	  $log->debug("Added additional ( $location_counter2 ) locations from VCF file");
+
+	  return ($data_for_all_samples_bed_only,$unique_locations_bed_only);
+}
 
 =head2 processMergedLocations
 Analyse merged vcf and/or bed locations
@@ -669,7 +704,7 @@ sub processMergedLocations {
 		my($g_pu)=$variant->formatVarinat();
 		# added to avoid bed locations mixing with other chromosomes when tmp files are generated
 		$g_pu->{'just_chr'}=$chr;
-		#process only passed varinats
+		#process only passed varinats		
 		if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
 			if($self->{'_ao'} == 1 || defined $self->{'_m'}) {
 				foreach my $sample (@{$self->getTumourName}) {
@@ -677,7 +712,7 @@ sub processMergedLocations {
 				}
 			}
 			next;
-		}
+		}		
     my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);    
     if ($self->{'_a'} eq 'indel') {
 			$g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);

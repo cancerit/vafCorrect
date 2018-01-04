@@ -51,7 +51,6 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 my $store_results;
 
 my $debug = 0;
-const my $dummy_chr => 'bed_file_data';
 
 my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
@@ -63,8 +62,15 @@ try {
 	}
 	if ($options->{'a'} eq 'indel') {
     	$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
-  }
+  } 
+
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+	
+	my $progress_hash;
+	# progress checked before the processing starts , speed ups concatenation step 
+	my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
+	($progress_hash,$chromosomes)=$vcf_obj->getProgress($chromosomes);
+	
 	# this is called only once to add allSample names to vcf object
 	$vcf_obj->getAllSampleNames;
 	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
@@ -90,28 +96,17 @@ try {
 		'exp'         => $vcf_obj->{'_exp'},
 		);
 
-	my($bed_locations)=$vcf_obj->getBedHash;
-	my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
-	if (defined $options->{'b'}) {
-	  push(@$chromosomes,$dummy_chr);
-	}
-	my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
 	foreach my $chr(@$chromosomes) {
-		my $data_for_all_samples;
-		my $unique_locations;
 		my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
-		if($options->{'bo'} == 0){
-			($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
-		}
+		my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
 		if(defined $options->{'b'} ){
-			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);
+		  my ($bed_locations)=$vcf_obj->getBedHash($chr);
+			if( $options->{'bo'} == 1 && (defined $data_for_all_samples) ) {
+				($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocationsFromVCF($data_for_all_samples,$unique_locations,$bed_locations);
+			}else{
+			  ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples,$unique_locations,$bed_locations);
+			}
 		}
-		# Write results to tmp file...
-		if ($chr eq $dummy_chr) {
-			 ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations);
-		}
-		# this step should run in parallel --ToDo
-		
 		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples
 		,$unique_locations
 		,$variant
@@ -237,8 +232,10 @@ sub option_builder {
 		$options{'be'}=".bam";
 	}
 	# use PASS flag
-	if(!defined $options{'r'}) {
+	if(!defined $options{'r'} && $options{'bo'}==0) {
 		$options{'r'}= 1;
+	}else{
+	  $options{'r'}= 0;
 	}
 	if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
 		$options{'dp'}='NR,PR';

@@ -181,7 +181,6 @@ Inputs
 
 sub getVcfFields {
 	my($self,$data_for_all_samples)=@_;
-	
 	return if(!defined $self->getVcfStatus && $self->getVarLine!~/BEDFILE/);
 	my $max_depth=0;
 	my $flag_val=undef;
