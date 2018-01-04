@@ -72,7 +72,7 @@ sub _isValid {
 	$log->logcroak("varinat type must be specified") unless(defined $self->{_a});
 	$log->logcroak("Tumour sample name(s) must be specified") unless(defined $self->{_tn});
 	$log->logcroak("Normal sample name must be specified") unless(defined $self->{_nn});
-	$log->logcroak("vcf file extension with dot(.) must be specified") unless(defined $self->{_e});
+	$log->logcroak("vcf file extension with dot(.) must be specified") unless(defined $self->{_bo});
 	$log->logcroak("Genome must be specified") unless(defined $self->{_g} && -e $self->{_g});
 	return 1;
 }
