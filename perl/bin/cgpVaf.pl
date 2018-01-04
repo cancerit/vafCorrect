@@ -102,8 +102,6 @@ try {
 			  ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples,$unique_locations,$bed_locations);
 			}
 		}
-		
-		# this step should run in parallel --ToDo
 		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples
 		,$unique_locations
 		,$variant
