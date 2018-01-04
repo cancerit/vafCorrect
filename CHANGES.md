@@ -1,4 +1,7 @@
 
+## v5.2.1 #######
+* added condition to test vcf extension when bed file is not present
+
 ## v5.2.0 #######
 * added functionality to process bed file per chromosome
 * progress file check during concatenation step ignores already processed chromosomes
