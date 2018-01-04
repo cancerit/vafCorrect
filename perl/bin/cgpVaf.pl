@@ -63,7 +63,16 @@ try {
 	if ($options->{'a'} eq 'indel') {
     	$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
   }
+  
+  
+  
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+	
+	my $progress_hash;
+	# progress checked before the processing starts , speeds up concatenation step 
+	my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
+	($progress_hash,$chromosomes)=$vcf_obj->getProgress($chromosomes);
+	
 	# this is called only once to add allSample names to vcf object
 	$vcf_obj->getAllSampleNames;
 	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
@@ -89,8 +98,7 @@ try {
 		'exp'         => $vcf_obj->{'_exp'},
 		);
 
-	my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
-	my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
+	
 	foreach my $chr(@$chromosomes) {
 		my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
 		my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);

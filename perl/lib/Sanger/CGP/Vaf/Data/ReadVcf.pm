@@ -150,7 +150,7 @@ sub getProgress {
 	my($self,$user_chr)=@_;
 	print "\n >>>>>> To view overall progress log please check vcfcommons.log file created in the current directory >>>>>>>>>\n";
 	print "\n >>>>>> Samples specific progress.out file is created in the output directory : $self->{'_o'} >>>>>>>>>\n";
-	
+	my $unprocessed_chr;
 	my %progress_files;	
 	foreach my $chr (@$user_chr){
 		my $progress_fhw;
@@ -160,13 +160,20 @@ sub getProgress {
 		   open $progress_fhw, '>>', $file_name or die "Can't open $file_name: $!";
 	  }else{
 		  open $progress_fhw, '>', $file_name or die "Unable to create progress file $file_name: $!";
+		  #Any chromosome missed by user will be processed here only during concatenation step...
+		  push(@$unprocessed_chr,$chr);
 	  }
 	  open my $progress_fhr, '<', $file_name or die "Can't open $file_name: $!";
 	  my @progress_data=<$progress_fhr>;
 	  close($progress_fhr);
 		$progress_files{"$chr"}=[$progress_fhw,\@progress_data];
 	}
-	return \%progress_files;
+	# if not a concatenation step then process user defined chromosome 
+	if(!defined $self->{'_ct'}){
+		$unprocessed_chr=$user_chr;
+	}
+	
+	return (\%progress_files,$unprocessed_chr);
 }
 
 =head2 _populateBedHeader
