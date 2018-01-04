@@ -62,8 +62,15 @@ try {
 	}
 	if ($options->{'a'} eq 'indel') {
     	$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
-  }
+  } 
+
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+	
+	my $progress_hash;
+	# progress checked before the processing starts , speed ups concatenation step 
+	my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
+	($progress_hash,$chromosomes)=$vcf_obj->getProgress($chromosomes);
+	
 	# this is called only once to add allSample names to vcf object
 	$vcf_obj->getAllSampleNames;
 	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
@@ -89,8 +96,6 @@ try {
 		'exp'         => $vcf_obj->{'_exp'},
 		);
 
-	my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
-	my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
 	foreach my $chr(@$chromosomes) {
 		my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
 		my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
@@ -102,8 +107,6 @@ try {
 			  ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples,$unique_locations,$bed_locations);
 			}
 		}
-		
-		# this step should run in parallel --ToDo
 		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples
 		,$unique_locations
 		,$variant
@@ -200,7 +203,7 @@ sub option_builder {
 	pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
 	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
 	pod2usage(q{'-nn' normal sample name/s must be provided}) unless (defined $options{'nn'});
-  pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'e'});
+  pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'bo'});
 	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 
@@ -286,7 +289,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --tumour_name    (-tn)  Toumour sample name [ list of space separated  sample names ]
    --normal_name    (-nn)  Normal sample name [ single sample used as normal for this analysis ]
    --outDir         (-o)   Output folder
-   --vcfExtension   (-e)   vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz)
+   --vcfExtension   (-e)   vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz) [ optional if -bo 1 ]
 
   Optional
    --infoTags       (-t)   comma separated list of tags to be included in the tsv output, vcf file by default includes all data

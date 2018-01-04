@@ -1,7 +1,9 @@
 
-## v5.1.4 #######
+## v5.2.0 #######
 * added functionality to process bed file per chromosome
- 
+* progress file check during concatenation step ignores already processed chromosomes
+* vcf file extension is optional if --bedOnly option is selected
+
 ## v5.1.3 #######
 * Fixed broken INFO tags in vcf and tsv
 * tags -t option is now only applicable to tsv file
