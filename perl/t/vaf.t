@@ -137,34 +137,26 @@ subtest 'ReadVcf' => sub {
 
 	#diag(Dumper $variant);
 	is_deeply($vcf_obj->getChromosomes,\@chr,'ReadVcf:getChromosomes');
-	my($bed_locations)=$vcf_obj->getBedHash;
+
 	my ($chromosomes)=$vcf_obj->getChromosomes([$test_chr]);	
-	if (defined $options->{'b'}) {
-	  push(@$chromosomes,$dummy_chr);
-	}
 	my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
-	
-	if(!defined $options->{'bo'}){
-		($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations('1',$vcf_file_obj);
-		is_deeply($unique_locations,$expected_unique_locations,'ReadVcf:getMergedLocations_unique_locations');
-	}
+	my ($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations($test_chr,$vcf_file_obj);
+	is_deeply($unique_locations,$expected_unique_locations,'ReadVcf:getMergedLocations_unique_locations');
 	#diag(Dumper %data_for_all_samples);
 	#test will not pass for bed only options
 	#is_deeply($data_for_all_samples_res,\%data_for_all_samples,'ReadVcf:getMergedLocations');	
 	if(defined $options->{'b'} ){
-			($bed_locations)=$vcf_obj->filterBedLocations($unique_locations,$bed_locations);	
-	}	
+	    my($bed_locations)=$vcf_obj->getBedHash($test_chr);
+	    if( $options->{'bo'} == 1 && (defined $data_for_all_samples_res) ) {
+				($data_for_all_samples_res, $unique_locations)=$vcf_obj->filterBedLocationsFromVCF($data_for_all_samples_res, $unique_locations, $bed_locations);	
+			}else{
+				 ($data_for_all_samples_res,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples_res,$unique_locations,$bed_locations);
+			}
+	}
+		
  	my $store_results;
  	my($progress_fhw,$progress_data)=@{$progress_hash->{$test_chr}};
  	($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples_res,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$test_chr,$tags,$info_tag_val,$progress_fhw,$progress_data);
-		
-	if(defined $bed_locations) {
-	  my($progress_fhw,$progress_data)=@{$progress_hash->{$dummy_chr}};
-		my($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($bed_locations);
-		#diag(Dumper $data_for_all_samples,$unique_locations);
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$dummy_chr,$tags,$info_tag_val,$progress_fhw,$progress_data);	
-		diag(Dumper $store_results);
-	}
 	# if augment option is not provided - results will go in tmp files (store results will be empty)...
 	is_deeply($store_results,$expected_store_results,'ReadVcf:processMergedLocations');
 	my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
