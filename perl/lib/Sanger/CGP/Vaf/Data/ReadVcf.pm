@@ -288,10 +288,6 @@ sub getMergedLocations {
 	my $data_for_all_samples=undef;
 	my $info_data=undef;
 	my $unique_locations=undef;
-	#if(defined $self->{'_bo'} && $self->{'_bo'}==1) {
-	#	$log->debug("Selected BedOnly analysis skipping data from VCF files");
-	#	return;
-	#}
 	foreach my $sample (keys %$vcf_file_obj) {
 			my $vcf=$vcf_file_obj->{$sample};
 			$vcf->open(region => $chr_location);
