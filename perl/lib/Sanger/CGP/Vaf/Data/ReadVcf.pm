@@ -190,10 +190,13 @@ sub _populateBedHeader {
 	my $bed_file=$self->{'_b'};
 	my $bed_name=$self->_trim_file_path($bed_file);
 	my %info_tag;
-	$info_tag{'Interval'}='BedFile';
+  my $header_sample;
+  my $tumour_count=0;
+	
+  $info_tag{'Interval'}='BedFile';
 	# create header for bed only locations...
-	if( !defined $self->{'vcf'} && $self->{'_ao'}==0 ) {
-		my ($vcf_filter,$vcf_info,$vcf_format)=$self->_getCustomHeader();
+	if( defined $self->{'_bo'} and $self->{'_bo'} == 1 ) {
+		my ($vcf_filter,$vcf_info,$vcf_format,$sample_header)=$self->_getCustomHeader();
 			foreach my $key (sort keys %$vcf_info) {
 			push(@$info_tag_val,$vcf_info->{$key});
 		}
@@ -203,13 +206,16 @@ sub _populateBedHeader {
 		foreach my $key (sort keys %$vcf_filter) {
 			push(@$info_tag_val,$vcf_filter->{$key});
 		}
-	}
-	my %bed_vcf_info=(key=>'FILTER',ID=>'BD', Description=>"Location from bed file");
-	push(@$info_tag_val,\%bed_vcf_info);
+		foreach my $key (sort keys %$sample_header) {
+			push(@$info_tag_val,$sample_header->{$key});
+		}
+ # Add sample names for bedonly data:
+   my %bed_vcf_info=(key=>'FILTER',ID=>'BD', Description=>"Location from bed file");
+	 push(@$info_tag_val,\%bed_vcf_info);
+	 return $info_tag_val;
+ } 
 
-	return $info_tag_val;
 }
-
 
 =head2 writeFinalFileHeaders
 create sample specific file handlers to write VAF output in tsv and vcf format
@@ -370,7 +376,7 @@ sub _getOriginalHeader {
 	my ($self,$vcf,$info_tag_val,$normal_sample,$tumour_count,$sample)=@_;
 	#stores hash key data in an array for header tags...
 	if ($tumour_count == 1){
-		my ($vcf_filter,$vcf_info,$vcf_format)=$self->_getCustomHeader();
+		my ($vcf_filter,$vcf_info,$vcf_format,$sample_header_line)=$self->_getCustomHeader();
 		#add contig info
 		my $contig_info=$vcf->get_header_line(key=>'contig');
 		foreach my $contig_line ( @$contig_info) {
@@ -406,23 +412,11 @@ sub _getOriginalHeader {
 		foreach my $key (sort keys %$vcf_format) {
 			push(@$info_tag_val,$vcf_format->{$key});
 		}
+		foreach my $key (sort keys %$sample_header_line) {
+			push(@$info_tag_val,$sample_header_line->{$key});
+		}
 	}
-	#add samples from old header
-	my $header_sample=@{$vcf->get_header_line(key=>'SAMPLE')}[0];
-		foreach my $sample_data (sort keys %{$header_sample}) {
-			if($sample_data eq "TUMOUR") {
-				$header_sample->{'TUMOUR'}{'ID'}="TUMOUR$tumour_count";
-			}
-		 push(@$info_tag_val,$header_sample->{$sample_data});
-		}
-	#add sample names..
-	my $sample_info=@{$vcf->get_header_line(key=>'SAMPLE', ID=>'NORMAL')}[0];
-		foreach my $key (keys %{$sample_info}) {
-			if(defined $sample_info->{$key} and $key eq "SampleName") {
-				$normal_sample->{$sample_info->{$key}}.="|$sample";
-			}
-		}
-return($info_tag_val,$normal_sample);
+  return($info_tag_val,$normal_sample);
 }
 
 
@@ -440,6 +434,8 @@ sub _getCustomHeader {
 	my ($self)=shift;
 	my ($vcf_filter,$vcf_info,$vcf_format);
   my ($log_key,$process_param)=$self->_getProcessLog();
+  my $header_sample;
+  my $tumour_count=0;
   $vcf_format->{'process_log'}={(key=>$log_key,
 			InputVCFSource => 'cgpVaf.pl',
 			InputVCFVer => $Sanger::CGP::Vaf::VafConstants::VERSION,
@@ -480,8 +476,13 @@ sub _getCustomHeader {
 		$vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'Float',Description=>"Variant Allele Fraction (excludes ambiguous reads if any)")};
 
 	}
-
-	return ($vcf_filter,$vcf_info,$vcf_format);
+  foreach my $sample(@{$self->{'_tn'}}){
+     $tumour_count++;
+     $header_sample->{"SAMPLE$tumour_count"}={(key=>'SAMPLE', ID=>"TUMOUR$tumour_count", Description=>"Mutant", SampleName=>$sample)};
+ } 
+ $header_sample->{'SAMPLE'}={(key=>'SAMPLE', ID=>"NORMAL", Description=>"Wild type", SampleName=>$self->{'_nn'})};
+	
+ return ($vcf_filter,$vcf_info,$vcf_format,$header_sample);
 }
 
 =head2 _getProcessLog
@@ -929,7 +930,7 @@ sub WriteAugmentedHeader {
 
 	if(defined $self->{'_m'}) {
 		my $augment_vcf=$self->{'vcf'};
-		my ($vcf_filter,$vcf_info,$vcf_format)=$self->_getCustomHeader();
+		my ($vcf_filter,$vcf_info,$vcf_format,$sample_header)=$self->_getCustomHeader();
 		foreach my $sample (keys %$augment_vcf) {
 			my ($tmp_file)=(split '/', $augment_vcf->{$sample})[-1];
 			$tmp_file=~s/(\.vcf|\.gz)//g;
@@ -1055,7 +1056,7 @@ sub _get_tab_sep_header {
 			push @header,'##'.$key. "\t" .$info_data->{$key}{'Description'};
 		}
 	my ($format)=$self->_get_header_lines($vcf->get_header_line(key=>'FORMAT'),'Description','FORMAT');
-	push(@header,@$format);
+  push(@header,@$format);
 	my ($filter)=$self->_get_header_lines($vcf->get_header_line(key=>'FILTER'),'Description','FILTER');
 	push(@header,@$filter);
 	my ($org_filter)=$self->_get_header_lines($vcf->get_header_line(key=>'ORIGINAL_FILTER'),'Description','ORIGINAL_FILTER');
