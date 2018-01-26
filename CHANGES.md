@@ -1,4 +1,8 @@
 
+## v5.2.2 #######
+* Heade line for SAMPLE is now generated from command line
+* Fixed bug for missing header data when running with bedonly option
+
 ## v5.2.1 #######
 * added condition to test vcf extension when bed file is not present
 
