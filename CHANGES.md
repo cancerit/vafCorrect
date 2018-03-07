@@ -1,4 +1,7 @@
 
+## v5.3.2 #######
+* Fixed bug which caused incorrent assignment of mutant reads overlapping deletion regions to Unknon category - if there is any mismatch in 3prime region from deletionstart site 
+
 ## v5.2.2 #######
 * Heade line for SAMPLE is now generated from command line
 * Fixed bug for missing header data when running with bedonly option
