@@ -811,13 +811,9 @@ sub _do_exonerate {
     	my $actual_pos=$mismatch_pos+$t_start;
     	
     	if($strand eq '-') { $actual_pos = ($match_len - $mismatch_pos) + $t_start +1; }
-    	#print " Actual pos: $actual_pos: Aln offset: $aln_offset: Found mismatch at :$result: $mismatch_pos\n";
-    	#print "$target: $match_score: $actual_pos:  ($g_pu->{'ref_pos_5p'} :$g_pu->{'alt_pos_3p'}) BEFORE $org_read \n";
     	if( ($g_pu->{'ref_pos_5p'} <= $actual_pos) && (($g_pu->{'alt_pos_3p'} >= $actual_pos) || ($g_pu->{'ref_pos_3p'} >= $actual_pos)) ) {
-				if($target eq 'alt') {
+				if($target eq 'alt' and $g_pu->{'ins_flag'}) {
 						$read_count_unk->{$read}++;
-						#print "$g_pu->{'ref_pos_5p'} <= $actual_pos) && (($g_pu->{'alt_pos_3p'} >= $actual_pos) || ($g_pu->{'ref_pos_3p'} >= $actual_pos \n
-						#$target: $match_score: $actual_pos ($g_pu->{'ref_pos_5p'} :$g_pu->{'alt_pos_3p'}): AFTER $org_read \n";
 						next LINE;
 					}
 			}	
@@ -852,7 +848,6 @@ sub _do_exonerate {
 		}
 	}	
 
-#print Dumper('ALT:',$read_track_alt,'REF:',$read_track_ref,'ALT_P:',$alt_count_p,'ALT_N:',$alt_count_n,'REF_P:',$ref_count_p,'REF_N:',$ref_count_n,'UNK:',$read_count_unk);
 $g_pu=$self->_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n,$read_count_unk); 
 
 return $g_pu;
