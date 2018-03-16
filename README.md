@@ -5,6 +5,11 @@ This script performs comparative analysis of variant sites in multiple tumour/no
 Also facilitates the merging of varinats sites across the samples in a sample group defined by 
 set of related samples in an individual and provides unbiased pileup[MNV] and exonerate[Indel] output for each variant site.
 
+| Master                                        | Develop                                         |
+| --------------------------------------------- | ----------------------------------------------- |
+| [![Master Badge][travis-master]][travis-base] | [![Develop Badge][travis-develop]][travis-base] |
+
+
 # LICENCE
 
 Copyright (c) 2017 Genome Research Ltd.

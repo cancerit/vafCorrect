@@ -87,6 +87,13 @@ echo "Max compilation CPUs set to $CPU"
 
 INST_PATH=$1
 
+if [[ "x$2" == "x" ]] ; then
+  INST_METHOD=0
+else
+  INST_METHOD=$2
+fi
+
+
 # get current directory
 INIT_DIR=`pwd`
 
@@ -251,13 +258,17 @@ done_message "" "Failed to build $CURR_TOOL."
 
 cd $SETUP_DIR
 
+
+
 CURR_TOOL="exonerate"
 CURR_SOURCE=$SOURCE_EXONERATE
 echo -n "Building exonerate..."
 (
   if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
     echo -n " previously installed ..."
-  else
+  else [ $INST_METHOD -eq 2 ]; then
+		echo " Skipping exonerate install ..."
+	else
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE 
     tar zxf exonerate.tar.gz
