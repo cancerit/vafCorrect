@@ -1,4 +1,7 @@
 
+## v5.3.3 #######
+* Modified setup.sh and .travis to avoid build timeout 
+
 ## v5.3.2 #######
 * Fixed bug which caused incorrent assignment of mutant reads overlapping deletion regions to Unknon category - if there is any mismatch in 3prime region from deletionstart site 
 

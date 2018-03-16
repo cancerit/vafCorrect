@@ -10,13 +10,14 @@ env:
 addons:
   apt:
     packages:
-     - build-essential
      - autoconf
+     - build-essential
      - curl
-     - zlib1g-dev
+     - exonerate 
      - libncurses5-dev
      - libpstreams-dev
      - libcurl4-openssl-dev
+     - zlib1g-dev
 
 language: perl
 
@@ -26,5 +27,6 @@ perl:
 install: true
 
 script:
+	- while sleep 9m; do echo "=====[ $SECONDS seconds still running ]====="; done &
   - ./setup.sh $HOME/vafCorrect-opt
 
