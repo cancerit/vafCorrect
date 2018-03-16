@@ -1,4 +1,7 @@
 
+## v5.3.4 #######
+* corrected typo in setup.sh removed safelist branches from .travis 
+
 ## v5.3.3 #######
 * Modified setup.sh and .travis to avoid build timeout 
 

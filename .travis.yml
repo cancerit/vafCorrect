@@ -1,10 +1,6 @@
 notifications:
   email: false
   slack: wtsi-cgpit:ptUMR1tkNyZJYd9TpGoss8WR
-# safelist
-#branches:
-#  only:
-#  - master
 env:
   - CC=gcc
 addons:
@@ -27,6 +23,5 @@ perl:
 install: true
 
 script:
-	- while sleep 9m; do echo "=====[ $SECONDS seconds still running ]====="; done &
   - ./setup.sh $HOME/vafCorrect-opt
 

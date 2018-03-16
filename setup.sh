@@ -266,9 +266,9 @@ echo -n "Building exonerate..."
 (
   if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
     echo -n " previously installed ..."
-  else [ $INST_METHOD -eq 2 ]; then
+  elif [ $INST_METHOD -eq 2 ]; then
 		echo " Skipping exonerate install ..."
-	else
+  else
     set -ex
     get_distro $CURR_TOOL $CURR_SOURCE 
     tar zxf exonerate.tar.gz
