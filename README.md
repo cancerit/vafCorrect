@@ -35,7 +35,7 @@ set of related samples in an individual and provides unbiased pileup[MNV] and ex
 
 ### Skipping all external dependencies
 
-If you want to only install the core of BRASS (C and perl wrappers) and use existing versions of
+If you want to only install vafCorrect and use existing versions of
 tools from your path run as:
 
 ```
