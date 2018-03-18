@@ -23,5 +23,5 @@ perl:
 install: true
 
 script:
-  - ./setup.sh $HOME/vafCorrect-opt
+  - ./setup.sh $HOME/vafCorrect-opt 2
 

@@ -8,6 +8,9 @@
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
 - [vafCorrect](#cgpVaf)
+- [Quick installation](#quick-installation)
+	- [Skipping all external dependencies](#skipping-all-external-dependencies)
+	- [Skipping exonerate install](#skipping-exonerate-install)
 - [INSTALL](#install)
 	- [Dependencies](#package-dependencies)
 - [Creating a release](#creating-a-release)
@@ -23,6 +26,30 @@ Calculates the Variant Allele Fraction for variants sites in VCF and/or BED file
 This script performs comparative analysis of variant sites in multiple tumour/normal samples in an individual.
 Also facilitates the merging of varinats sites across the samples in a sample group defined by 
 set of related samples in an individual and provides unbiased pileup[MNV] and exonerate[Indel] output for each variant site.
+
+## Quick installation
+
+```
+./setup.sh path_to_install_to
+```
+
+### Skipping all external dependencies
+
+If you want to only install the core of BRASS (C and perl wrappers) and use existing versions of
+tools from your path run as:
+
+```
+./setup.sh path_to_install_to 1
+```
+
+### Skipping exonerate install
+
+Central install via package manager of 2.2.0 is adequate. To skip just exonerate install run:
+
+```
+./setup.sh path_to_install_to 2
+```
+
 
 ## INSTALL 
 
@@ -57,6 +84,39 @@ tools to be available, most are listed in `INSTALL`.
 5. Commit the updated docs tree and updated module/version.
 6. Push commits.
 7. Use the GitHub tools to draft a release.
+
+## LICENCE
+
+```
+Copyright (c) 2014-2018 Genome Research Ltd.
+
+Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
+
+This file is part of vafCorrect.
+
+vafCorrect is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation; either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+1. The usage of a range of years within a copyright statement contained within
+this distribution should be interpreted as being equivalent to a list of years
+including the first and last year specified and all consecutive years between
+them. For example, a copyright statement that reads ‘Copyright (c) 2005, 2007-
+2009, 2011-2012’ should be interpreted as being identical to a statement that
+reads ‘Copyright (c) 2005, 2007, 2008, 2009, 2011, 2012’ and a copyright
+statement that reads ‘Copyright (c) 2005-2012’ should be interpreted as being
+identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
+2009, 2010, 2011, 2012’."
+```
 
 <!-- References -->
 [Samtools]: https://github.com/samtools/samtools 
