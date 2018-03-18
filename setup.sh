@@ -289,7 +289,8 @@ else
   ) >>$INIT_DIR/setup.log 2>&1
     
   done_message "" "Failed to build exonerate."
-  
+
+fi  
 
 export PATH=$PATH:$INST_PATH/bin
 export PERL5LIB=$PERL5LIB:$PERLROOT:$PERLARCH 
