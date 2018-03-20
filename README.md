@@ -1,20 +1,96 @@
 # cgpVAF
 
+| Master                                        | Develop                                         |
+| --------------------------------------------- | ----------------------------------------------- |
+| [![Master Badge][travis-master-badge]][travis-repo] | [![Develop Badge][travis-develop-badge]][travis-repo] |
+
+
+<!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
+
+- [vafCorrect](#cgpVaf)
+- [Quick installation](#quick-installation)
+	- [Skipping all external dependencies](#skipping-all-external-dependencies)
+	- [Skipping exonerate install](#skipping-exonerate-install)
+- [INSTALL](#install)
+	- [Dependencies](#package-dependencies)
+- [Creating a release](#creating-a-release)
+	- [Preparation](#preparation)
+	- [Cutting the release](#cutting-the-release)
+- [LICENSE](#License)
+
+<!-- /TOC -->
+
+## vafCorrect
+
 Calculates the Variant Allele Fraction for variants sites in VCF and/or BED file 
 This script performs comparative analysis of variant sites in multiple tumour/normal samples in an individual.
 Also facilitates the merging of varinats sites across the samples in a sample group defined by 
 set of related samples in an individual and provides unbiased pileup[MNV] and exonerate[Indel] output for each variant site.
 
-| Master                                        | Develop                                         |
-| --------------------------------------------- | ----------------------------------------------- |
-| [![Master Badge][travis-master]][travis-base] | [![Develop Badge][travis-develop]][travis-base] |
+## Quick installation
+
+```
+./setup.sh path_to_install_to
+```
+
+### Skipping all external dependencies
+
+If you want to only install vafCorrect and use existing versions of
+tools from your path run as:
+
+```
+./setup.sh path_to_install_to 1
+```
+
+### Skipping exonerate install
+
+Central install via package manager of 2.2.0 is adequate. To skip just exonerate install run:
+
+```
+./setup.sh path_to_install_to 2
+```
 
 
-# LICENCE
+## INSTALL 
 
-Copyright (c) 2017 Genome Research Ltd.
+### Dependencies
+Some of the code included in this package has dependencies on several C packages:
 
-Author: Cancer Genome Project <cgpit@sanger.ac.uk>
+ * [Samtools] ( max 0.1.20 until perl bindings are updated)
+ * [vcftools]
+ * [Bio-HTS] 
+ * [Exonerate]
+
+ `setup.sh` should install these dependencies.  
+
+```
+./setup.sh /some/install/location
+```
+Please be aware that this expects basic C compilation libraries and 
+tools to be available, most are listed in `INSTALL`.
+
+## Creating a release
+
+### Preparation
+
+* Commit/push all relevant changes.
+* Pull a clean version of the repo and use this for the following steps.
+
+### Cutting the release
+1. Update `perl/lib/Sanger/CGP/Vaf.pm` to the correct version.
+2. Update `CHANGES.md` to show major items.
+3. Run `./perl/prerelease.sh`
+4. Check all tests and coverage reports are acceptable.
+5. Commit the updated docs tree and updated module/version.
+6. Push commits.
+7. Use the GitHub tools to draft a release.
+
+## LICENCE
+
+```
+Copyright (c) 2017-2018 Genome Research Ltd.
+
+Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 
 This file is part of vafCorrect.
 
@@ -39,32 +115,15 @@ them. For example, a copyright statement that reads ‘Copyright (c) 2005, 2007-
 reads ‘Copyright (c) 2005, 2007, 2008, 2009, 2011, 2012’ and a copyright
 statement that reads ‘Copyright (c) 2005-2012’ should be interpreted as being
 identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
-2009, 2010, 2011, 2012’.
+2009, 2010, 2011, 2012’."
+```
 
-### Dependencies/Install
-Some of the code included in this package has dependencies on several C packages:
-
- * [Samtools](https://github.com/samtools/samtools) - max 0.1.20 until perl bindings are updated
- * [vcftools](http://vcftools.sourceforge.net/)
- * [Bio-HTS] (https://github.com/Ensembl/Bio-DB-HTS)
- * [Exonerate](http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate)
-
-
-Please use `setup.sh` to install the dependencies.  Please be aware that this expects basic C
-compilation libraries and tools to be available, most are listed in `INSTALL`.
-
-
-## Creating a release
-
-#### Preparation
-* Commit/push all relevant changes.
-* Pull a clean version of the repo and use this for the following steps.
-
-#### Cutting the release
-1. Update `perl/lib/Sanger/CGP/Vaf.pm` to the correct version.
-2. Update `CHANGES.md` to show major items.
-3. Run `./perl/prerelease.sh`
-4. Check all tests and coverage reports are acceptable.
-5. Commit the updated docs tree and updated module/version.
-6. Push commits.
-7. Use the GitHub tools to draft a release.
+<!-- References -->
+[Samtools]: https://github.com/samtools/samtools 
+[vcftools]: http://vcftools.sourceforge.net/
+[Bio-HTS]: https://github.com/Ensembl/Bio-DB-HTS
+[Exonerate]: http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate
+[vafCorrect-releases]: https://github.com/cancerit/vafCorrect/releases
+[travis-master-badge]: https://travis-ci.org/cancerit/vafCorrect.svg?branch=master
+[travis-develop-badge]: https://travis-ci.org/cancerit/vafCorrect.svg?branch=develop
+[travis-repo]: https://travis-ci.org/cancerit/vafCorrect
