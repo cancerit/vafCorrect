@@ -125,5 +125,5 @@ identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
 [Exonerate]: http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate
 [vafCorrect-releases]: https://github.com/cancerit/vafCorrect/releases
 [travis-master-badge]: https://travis-ci.org/cancerit/vafCorrect.svg?branch=master
-[travis-develop-badge]: https://travis-ci.org/cancerit/vafCorrect.svg?branch=develop
+[travis-develop-badge]: https://travis-ci.org/cancerit/vafCorrect.svg?branch=dev
 [travis-repo]: https://travis-ci.org/cancerit/vafCorrect
