@@ -151,141 +151,146 @@ mkdir -p $SETUP_DIR
 
 cd $SETUP_DIR
 
-(
-if [ -e $SETUP_DIR/htslibGet.success ]; then
-  echo " already staged ...";
+if [ $INST_METHOD -eq 1 ] ; then
+  echo -e "\n\t !!! Not installing additional tools INST_METHOD requested !!! \n\n"
 else
-  cd $SETUP_DIR
-  get_distro "htslib" $SOURCE_HTSLIB
-  touch $SETUP_DIR/htslibGet.success
-fi
-) >>$INIT_DIR/setup.log 2>&1
 
-
-echo -n "Building Bio::DB::HTS ..."
-(
-if [ -e $SETUP_DIR/biohts.success ]; then
-  echo " previously installed ...";
-else
-  cd $SETUP_DIR
-  rm -rf bioDbHts
-  get_distro "bioDbHts" $SOURCE_BIOBDHTS
-  echo ls
-  mkdir -p bioDbHts/htslib
-  tar --strip-components 1 -C bioDbHts -zxf bioDbHts.tar.gz
-  tar --strip-components 1 -C bioDbHts/htslib -jxf $SETUP_DIR/htslib.tar.bz2
-  cd bioDbHts/htslib
-  perl -pi -e 'if($_ =~ m/^CFLAGS/ && $_ !~ m/\-fPIC/i){chomp; s/#.+//; $_ .= " -fPIC -Wno-unused -Wno-unused-result\n"};' Makefile
-  make -s -j$CPU
-  rm -f libhts.so*
-  cd ../
-  env HTSLIB_DIR=$SETUP_DIR/bioDbHts/htslib perl Build.PL --install_base=$INST_PATH
-  ./Build test
-  ./Build install
-  cd $SETUP_DIR
-  rm -f bioDbHts.tar.gz
-  touch $SETUP_DIR/biohts.success
-fi
-) >>$INIT_DIR/setup.log 2>&1
-
-echo -n "Building htslib ..."
-(
-if [ -e $SETUP_DIR/htslib.success ]; then
-  echo " previously installed ...";
-else
   (
-  mkdir -p htslib
-  tar --strip-components 1 -C htslib -jxf htslib.tar.bz2
-  cd htslib
-  ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
-  make -s -j$CPU
-  make install
-  cd $SETUP_DIR
-  touch $SETUP_DIR/htslib.success
-  ) >/dev/null
-fi
-) >>$INIT_DIR/setup.log 2>&1
+  if [ -e $SETUP_DIR/htslibGet.success ]; then
+    echo " already staged ...";
+  else
+    cd $SETUP_DIR
+    get_distro "htslib" $SOURCE_HTSLIB
+    touch $SETUP_DIR/htslibGet.success
+  fi
+  ) >>$INIT_DIR/setup.log 2>&1
 
-export HTSLIB=$INST_PATH
 
-(
-if [[ ",$COMPILE," == *,samtools,* ]] ; then
-  echo -n "Building samtools ..."
-  if [ -e $SETUP_DIR/samtools.success ]; then
+  echo -n "Building Bio::DB::HTS ..."
+  (
+  if [ -e $SETUP_DIR/biohts.success ]; then
     echo " previously installed ...";
   else
     cd $SETUP_DIR
-    rm -rf samtools
-    get_distro "samtools" $SOURCE_SAMTOOLS
-    mkdir -p samtools
-    tar --strip-components 1 -C samtools -xjf samtools.tar.bz2
-    cd samtools
-    ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
-    make -s -j$CPU all all-htslib
-    make install all all-htslib
+    rm -rf bioDbHts
+    get_distro "bioDbHts" $SOURCE_BIOBDHTS
+    echo ls
+    mkdir -p bioDbHts/htslib
+    tar --strip-components 1 -C bioDbHts -zxf bioDbHts.tar.gz
+    tar --strip-components 1 -C bioDbHts/htslib -jxf $SETUP_DIR/htslib.tar.bz2
+    cd bioDbHts/htslib
+    perl -pi -e 'if($_ =~ m/^CFLAGS/ && $_ !~ m/\-fPIC/i){chomp; s/#.+//; $_ .= " -fPIC -Wno-unused -Wno-unused-result\n"};' Makefile
+    make -s -j$CPU
+    rm -f libhts.so*
+    cd ../
+    env HTSLIB_DIR=$SETUP_DIR/bioDbHts/htslib perl Build.PL --install_base=$INST_PATH
+    ./Build test
+    ./Build install
     cd $SETUP_DIR
-    rm -f samtools.tar.bz2
-    touch $SETUP_DIR/samtools.success
+    rm -f bioDbHts.tar.gz
+    touch $SETUP_DIR/biohts.success
   fi
-else
-  echo "samtools - No change between vafCorrect versions"
-fi
-) >>$INIT_DIR/setup.log 2>&1
-
-cd $SETUP_DIR
-
-CURR_TOOL="vcftools"
-CURR_SOURCE=$SOURCE_VCFTOOLS
-echo -n "Building $CURR_TOOL ..."
-(
-if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
-  echo -n " previously installed ..."
-else
-    set -ex
-    get_distro $CURR_TOOL $CURR_SOURCE
+  ) >>$INIT_DIR/setup.log 2>&1
+  
+  echo -n "Building htslib ..."
+  (
+  if [ -e $SETUP_DIR/htslib.success ]; then
+    echo " previously installed ...";
+  else
+    (
+    mkdir -p htslib
+    tar --strip-components 1 -C htslib -jxf htslib.tar.bz2
+    cd htslib
+    ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
+    make -s -j$CPU
+    make install
     cd $SETUP_DIR
-    mkdir vcftools
-    tar --strip 1 -C vcftools -zxf $CURR_TOOL.tar.gz
-    cd $CURR_TOOL
-    patch Makefile < $INIT_DIR/patches/vcfToolsInstLocs.diff
-    patch perl/Vcf.pm < $INIT_DIR/patches/vcfToolsProcessLog.diff
-    make -j$CPU PREFIX=$INST_PATH
-    touch $SETUP_DIR/$CURR_TOOL.success
-fi
-) >>$INIT_DIR/setup.log 2>&1
-
-done_message "" "Failed to build $CURR_TOOL."
-
-cd $SETUP_DIR
-
-
-
-CURR_TOOL="exonerate"
-CURR_SOURCE=$SOURCE_EXONERATE
-echo -n "Building exonerate..."
-(
+    touch $SETUP_DIR/htslib.success
+    ) >/dev/null
+  fi
+  ) >>$INIT_DIR/setup.log 2>&1
+  
+  export HTSLIB=$INST_PATH
+  
+  (
+  if [[ ",$COMPILE," == *,samtools,* ]] ; then
+    echo -n "Building samtools ..."
+    if [ -e $SETUP_DIR/samtools.success ]; then
+      echo " previously installed ...";
+    else
+      cd $SETUP_DIR
+      rm -rf samtools
+      get_distro "samtools" $SOURCE_SAMTOOLS
+      mkdir -p samtools
+      tar --strip-components 1 -C samtools -xjf samtools.tar.bz2
+      cd samtools
+      ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
+      make -s -j$CPU all all-htslib
+      make install all all-htslib
+      cd $SETUP_DIR
+      rm -f samtools.tar.bz2
+      touch $SETUP_DIR/samtools.success
+    fi
+  else
+    echo "samtools - No change between vafCorrect versions"
+  fi
+  ) >>$INIT_DIR/setup.log 2>&1
+  
+  cd $SETUP_DIR
+  
+  CURR_TOOL="vcftools"
+  CURR_SOURCE=$SOURCE_VCFTOOLS
+  echo -n "Building $CURR_TOOL ..."
+  (
   if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
     echo -n " previously installed ..."
-  else [ $INST_METHOD -eq 2 ]; then
-		echo " Skipping exonerate install ..."
-	else
-    set -ex
-    get_distro $CURR_TOOL $CURR_SOURCE 
-    tar zxf exonerate.tar.gz
-    cd exonerate-2.2.0
-    cp $INIT_DIR/patches/exonerate_pthread-asneeded.diff .
-    patch -p1 < exonerate_pthread-asneeded.diff 
-    ./configure --prefix=$INST_PATH 
-    make -s
-    make check 
-    make install
-    cd $INIT_DIR
-    touch $SETUP_DIR/exonerate.success
+  else
+      set -ex
+      get_distro $CURR_TOOL $CURR_SOURCE
+      cd $SETUP_DIR
+      mkdir vcftools
+      tar --strip 1 -C vcftools -zxf $CURR_TOOL.tar.gz
+      cd $CURR_TOOL
+      patch Makefile < $INIT_DIR/patches/vcfToolsInstLocs.diff
+      patch perl/Vcf.pm < $INIT_DIR/patches/vcfToolsProcessLog.diff
+      make -j$CPU PREFIX=$INST_PATH
+      touch $SETUP_DIR/$CURR_TOOL.success
   fi
-) >>$INIT_DIR/setup.log 2>&1
+  ) >>$INIT_DIR/setup.log 2>&1
   
-done_message "" "Failed to build exonerate."
+  done_message "" "Failed to build $CURR_TOOL."
+  
+  cd $SETUP_DIR
+  
+  
+  
+  CURR_TOOL="exonerate"
+  CURR_SOURCE=$SOURCE_EXONERATE
+  echo -n "Building exonerate..."
+  (
+    if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
+      echo -n " previously installed ..."
+    elif [ $INST_METHOD -eq 2 ]; then
+      echo " Skipping exonerate install ..."
+    else
+      set -ex
+      get_distro $CURR_TOOL $CURR_SOURCE 
+      tar zxf exonerate.tar.gz
+      cd exonerate-2.2.0
+      cp $INIT_DIR/patches/exonerate_pthread-asneeded.diff .
+      patch -p1 < exonerate_pthread-asneeded.diff 
+      ./configure --prefix=$INST_PATH 
+      make -s
+      make check 
+      make install
+      cd $INIT_DIR
+      touch $SETUP_DIR/exonerate.success
+    fi
+  ) >>$INIT_DIR/setup.log 2>&1
+    
+  done_message "" "Failed to build exonerate."
 
+fi  
 
 export PATH=$PATH:$INST_PATH/bin
 export PERL5LIB=$PERL5LIB:$PERLROOT:$PERLARCH 
