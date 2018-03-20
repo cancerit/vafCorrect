@@ -88,7 +88,7 @@ tools to be available, most are listed in `INSTALL`.
 ## LICENCE
 
 ```
-Copyright (c) 2014-2018 Genome Research Ltd.
+Copyright (c) 2017-2018 Genome Research Ltd.
 
 Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 

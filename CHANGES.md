@@ -3,11 +3,8 @@
 ## v5.3.4 
 * corrected typo in setup.sh removed safelist branches from .travis
 * Added checks for INST_METHOD
-* Changed CHHANGES.md syntax to markdown linter
+* Changed CHANGES.md syntax to markdown linter
 * Exonerate install is now skipped if INST_METHOD is 2 
-
-## v5.3.3 
-* Modified setup.sh and .travis to avoid build timeout 
 
 ## v5.3.2 
 * Fixed bug which caused incorrent assignment of mutant reads overlapping deletion regions to Unknon category - if there is any mismatch in 3prime region from deletionstart site 
