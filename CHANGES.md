@@ -1,5 +1,10 @@
 # CHANGES
 
+## v5.3.5
+* updated Bio-DB-HTS v2.10
+* modified tabix query to query_full - this will handle odd haplotype chr names in GRCh38
+* fixed bug in accessing chr prefixed chromosome names for HDR regions
+
 ## v5.3.4 
 * corrected typo in setup.sh removed safelist branches from .travis
 * Added checks for INST_METHOD

@@ -385,12 +385,11 @@ Inputs
 =cut
 sub _check_hdr_overlap {
 	my ($self, $chr, $zero_start, $one_end, $tabix ) = @_;
-	$chr=~s/chr//g;
 	###
 	# Querying is ALWAYS half open regardless of the underlying file type
 	###
 		my $i=0;
-		my $res = $tabix->query('chr'.$chr.':'.$zero_start.'-'.$one_end);
+		my $res = $tabix->query_full($chr,$zero_start,$one_end);
 		while(my $record=$res->next) {
 			if($record) {
 				$i=1;

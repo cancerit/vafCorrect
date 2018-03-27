@@ -28,7 +28,7 @@ WriteMakefile(
   EXE_FILES     => [qw( bin/cgpVaf.pl )],
   PREREQ_PM     => {
                     'Attribute::Abstract' => '1.02',
-                    'Bio::DB::HTS' => '1.12',
+                    'Bio::DB::HTS' => '2.10',
                     'Bio::Root::Version' => '1.006924',
                     'Capture::Tiny' => '0.24',
                     'Config::IniFiles' => '2.83',
