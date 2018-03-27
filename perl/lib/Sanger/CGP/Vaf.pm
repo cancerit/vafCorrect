@@ -16,4 +16,3 @@ sub license {
 }
 
 1;
-
