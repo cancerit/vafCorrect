@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 ##########LICENCE##########
 # Copyright (c) 2014-2016 Genome Research Ltd.,
@@ -20,9 +20,9 @@
 ##########LICENCE##########
 
 SOURCE_VCFTOOLS="http://sourceforge.net/projects/vcftools/files/vcftools_0.1.12a.tar.gz/download"
-SOURCE_BIOBDHTS="https://github.com/Ensembl/Bio-HTS/archive/2.3.tar.gz"
-SOURCE_HTSLIB="https://github.com/samtools/htslib/releases/download/1.3.2/htslib-1.3.2.tar.bz2"
-SOURCE_SAMTOOLS="https://github.com/samtools/samtools/releases/download/1.3/samtools-1.3.tar.bz2"
+SOURCE_BIOBDHTS="https://github.com/Ensembl/Bio-HTS/archive/2.10.tar.gz"
+SOURCE_HTSLIB="https://github.com/samtools/htslib/releases/download/1.7/htslib-1.7.tar.bz2"
+SOURCE_SAMTOOLS="https://github.com/samtools/samtools/releases/download/1.7/samtools-1.7.tar.bz2"
 SOURCE_EXONERATE="http://ftp.ebi.ac.uk/pub/software/vertebrategenomics/exonerate/exonerate-2.2.0.tar.gz"
 
 done_message () {
@@ -166,32 +166,6 @@ else
   ) >>$INIT_DIR/setup.log 2>&1
 
 
-  echo -n "Building Bio::DB::HTS ..."
-  (
-  if [ -e $SETUP_DIR/biohts.success ]; then
-    echo " previously installed ...";
-  else
-    cd $SETUP_DIR
-    rm -rf bioDbHts
-    get_distro "bioDbHts" $SOURCE_BIOBDHTS
-    echo ls
-    mkdir -p bioDbHts/htslib
-    tar --strip-components 1 -C bioDbHts -zxf bioDbHts.tar.gz
-    tar --strip-components 1 -C bioDbHts/htslib -jxf $SETUP_DIR/htslib.tar.bz2
-    cd bioDbHts/htslib
-    perl -pi -e 'if($_ =~ m/^CFLAGS/ && $_ !~ m/\-fPIC/i){chomp; s/#.+//; $_ .= " -fPIC -Wno-unused -Wno-unused-result\n"};' Makefile
-    make -s -j$CPU
-    rm -f libhts.so*
-    cd ../
-    env HTSLIB_DIR=$SETUP_DIR/bioDbHts/htslib perl Build.PL --install_base=$INST_PATH
-    ./Build test
-    ./Build install
-    cd $SETUP_DIR
-    rm -f bioDbHts.tar.gz
-    touch $SETUP_DIR/biohts.success
-  fi
-  ) >>$INIT_DIR/setup.log 2>&1
-  
   echo -n "Building htslib ..."
   (
   if [ -e $SETUP_DIR/htslib.success ]; then
@@ -209,9 +183,9 @@ else
     ) >/dev/null
   fi
   ) >>$INIT_DIR/setup.log 2>&1
-  
+
   export HTSLIB=$INST_PATH
-  
+
   (
   if [[ ",$COMPILE," == *,samtools,* ]] ; then
     echo -n "Building samtools ..."
@@ -235,9 +209,31 @@ else
     echo "samtools - No change between vafCorrect versions"
   fi
   ) >>$INIT_DIR/setup.log 2>&1
-  
+
+  echo -n "Building Bio::DB::HTS ..."
+  (
+  if [ -e $SETUP_DIR/biohts.success ]; then
+    echo " previously installed ...";
+  else
+    echo
+    cd $SETUP_DIR
+    rm -rf bioDbHts
+    get_distro "bioDbHts" $SOURCE_BIOBDHTS
+    mkdir -p bioDbHts
+    tar --strip-components 1 -C bioDbHts -zxf bioDbHts.tar.gz
+    cd bioDbHts
+    perl Build.PL --htslib=$HTSLIB --install_base=$INST_PATH
+    ./Build
+    ./Build test
+    ./Build install
+    cd $SETUP_DIR
+    rm -f bioDbHts.tar.gz
+    touch $SETUP_DIR/biohts.success
+  fi
+  ) >>$INIT_DIR/setup.log 2>&1
+
   cd $SETUP_DIR
-  
+
   CURR_TOOL="vcftools"
   CURR_SOURCE=$SOURCE_VCFTOOLS
   echo -n "Building $CURR_TOOL ..."
@@ -257,13 +253,13 @@ else
       touch $SETUP_DIR/$CURR_TOOL.success
   fi
   ) >>$INIT_DIR/setup.log 2>&1
-  
+
   done_message "" "Failed to build $CURR_TOOL."
-  
+
   cd $SETUP_DIR
-  
-  
-  
+
+
+
   CURR_TOOL="exonerate"
   CURR_SOURCE=$SOURCE_EXONERATE
   echo -n "Building exonerate..."
@@ -274,26 +270,26 @@ else
       echo " Skipping exonerate install ..."
     else
       set -ex
-      get_distro $CURR_TOOL $CURR_SOURCE 
+      get_distro $CURR_TOOL $CURR_SOURCE
       tar zxf exonerate.tar.gz
       cd exonerate-2.2.0
       cp $INIT_DIR/patches/exonerate_pthread-asneeded.diff .
-      patch -p1 < exonerate_pthread-asneeded.diff 
-      ./configure --prefix=$INST_PATH 
+      patch -p1 < exonerate_pthread-asneeded.diff
+      ./configure --prefix=$INST_PATH
       make -s
-      make check 
+      make check
       make install
       cd $INIT_DIR
       touch $SETUP_DIR/exonerate.success
     fi
   ) >>$INIT_DIR/setup.log 2>&1
-    
+
   done_message "" "Failed to build exonerate."
 
-fi  
+fi
 
 export PATH=$PATH:$INST_PATH/bin
-export PERL5LIB=$PERL5LIB:$PERLROOT:$PERLARCH 
+export PERL5LIB=$PERL5LIB:$PERLROOT:$PERLARCH
 
 cd "$INIT_DIR/perl"
 
