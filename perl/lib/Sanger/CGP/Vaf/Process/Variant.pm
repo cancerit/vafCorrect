@@ -391,13 +391,15 @@ sub _check_hdr_overlap {
 	###
 		my $i=0;
 		my $res = $tabix->query_full($chr,$zero_start,$one_end);
-		while(my $record=$res->next) {
-			if($record) {
-				$i=1;
-				return $i;
-			}
-		}
-	$i;	
+    if(defined($res)){
+		  while(my $record=$res->next) {
+			   if($record) {
+				    $i=1;
+				    return $i;
+			   }
+		  }
+    }
+	$i;
 }
 
 
