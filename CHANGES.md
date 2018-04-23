@@ -1,5 +1,8 @@
 # CHANGES
 
+## v5.3.6
+* Correct query_full to ensure `undef` return is caught.
+
 ## v5.3.5
 * Update `samtols` and `hstlib` to v1.7
 * Update `Bio::DB::HTS` to v2.10
