@@ -134,7 +134,7 @@ sub storeResults {
 	my $WTR = $g_pu->{'ref_p'} + $g_pu->{'ref_n'};
 	my $VAF;
 	eval {$VAF = $MTR/($MTR+$WTR);};
-	$VAF=defined $VAF?sprintf("%.2f",$VAF):'0.0';
+	$VAF=defined $VAF?sprintf("%.4f",$VAF):'0.0';
  	if ($self->getVarLine=~/BEDFILE/) {
 	    my $bed_line=$g_pu->{'chr'}."\t".
 	    						 $g_pu->{'start'}."\t".
@@ -936,7 +936,7 @@ sub addNormalCount {
 						$g_pu->{'normal_MTR'}=$g_pu->{'alt_p'} + $g_pu->{'alt_n'};
 						$g_pu->{'normal_WTR'}=$g_pu->{'ref_p'} + $g_pu->{'ref_n'};
 						eval{$VAF=$g_pu->{'normal_MTR'}/($g_pu->{'normal_WTR'}+$g_pu->{'normal_MTR'}); };
-						$g_pu->{'normal_VAF'}=defined $VAF?sprintf("%.2f",$VAF):'0.00';
+						$g_pu->{'normal_VAF'}=defined $VAF?sprintf("%.4f",$VAF):'0.00';
 						$g_pu->{'normal_UNK'}=$g_pu->{'unk'};
 						$g_pu->{'normal_AMB'}=$g_pu->{'amb'};
 
@@ -1063,7 +1063,7 @@ sub formatResults {
 
 	my $VAF;
 	eval {$VAF = $MTR/($MTR+$WTR);};
-	$VAF=defined $VAF?sprintf("%.2f",$VAF):'0.0';
+	$VAF=defined $VAF?sprintf("%.4f",$VAF):'0.0';
 
 	if($self->getVarType ne 'indel') {
 	$pileup_results={
