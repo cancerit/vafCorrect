@@ -134,7 +134,7 @@ perlmods=( "File::ShareDir" "File::ShareDir::Install" "Bio::Root::Version@1.0069
 (
 set -e
 for i in "${perlmods[@]}" ; do
-  echo -n "Installing build prerequisite $i..."
+  echo "Installing build prerequisite $i..."
 
     set -x
     $INIT_DIR/perl/bin/cpanm -v --mirror http://cpan.metacpan.org -l $INST_PATH $i
@@ -166,7 +166,7 @@ else
   ) >>$INIT_DIR/setup.log 2>&1
 
 
-  echo -n "Building htslib ..."
+  echo "Building htslib ..."
   (
   if [ -e $SETUP_DIR/htslib.success ]; then
     echo " previously installed ...";
@@ -188,7 +188,7 @@ else
 
   (
   if [[ ",$COMPILE," == *,samtools,* ]] ; then
-    echo -n "Building samtools ..."
+    echo "Building samtools ..."
     if [ -e $SETUP_DIR/samtools.success ]; then
       echo " previously installed ...";
     else
@@ -210,7 +210,7 @@ else
   fi
   ) >>$INIT_DIR/setup.log 2>&1
 
-  echo -n "Building Bio::DB::HTS ..."
+  echo "Building Bio::DB::HTS ..."
   (
   if [ -e $SETUP_DIR/biohts.success ]; then
     echo " previously installed ...";
