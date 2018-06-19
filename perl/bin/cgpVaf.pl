@@ -63,7 +63,6 @@ try {
 	if ($options->{'a'} eq 'indel') {
     	$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
   } 
-
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 	
 	my $progress_hash;
@@ -231,12 +230,14 @@ sub option_builder {
 	if(!defined $options{'be'}) {
 		$options{'be'}=".bam";
 	}
-	# use PASS flag
-	if(!defined $options{'r'} && $options{'bo'}==0) {
-		$options{'r'}= 1;
-	}else{
-	  $options{'r'}= 0;
+	# use PASS flag if bed only is set
+	if($options{'bo'}==1) {
+		$options{'r'}= 0;
 	}
+	if(!defined $options{'r'}) {
+		$options{'r'}= 1;
+	}
+		
 	if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
 		$options{'dp'}='NR,PR';
 	}
