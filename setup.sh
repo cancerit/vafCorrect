@@ -152,7 +152,7 @@ mkdir -p $SETUP_DIR
 cd $SETUP_DIR
 
 if [ $INST_METHOD -eq 1 ] ; then
-  echo -e "\n\t !!! Not installing additional tools INST_METHOD requested !!! \n\n"
+  echo -e "\n\t !!! Not installing additional tools: $INST_METHOD requested !!! \n\n"
 else
 
   (
