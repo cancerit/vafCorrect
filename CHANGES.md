@@ -1,5 +1,11 @@
 # CHANGES
 
+## v5.3.8
+* Updated CHANAGES.md with corerct version
+
+## v5.3.7
+* corrected condition in vafcorrect for erroneous PASS flag setting
+
 ## v5.3.6
 * Correct query_full to ensure `undef` return is caught.
 * vaf output precison raised from two to four decimal places.
