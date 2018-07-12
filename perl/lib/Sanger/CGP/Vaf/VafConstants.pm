@@ -8,6 +8,7 @@ use Const::Fast qw(const);
 
 use Sanger::CGP::Vaf; # exports VERSION
 use FindBin qw($Bin);
+use Bio::DB::HTS::Constants;
 
 ####
 #   Base constants
@@ -25,22 +26,34 @@ const our $test_mode => 0;
 
 const our $INSERT_SIZE_FACTOR => 1;
 const our $SPANNING_SEQ_DENOMINATOR => 2;
-# alignment constants
-const our $PROPER_PAIRED => 0x2;
-const our $UNMAPPED => 0x4;
-const our $REVERSE_STRAND => 0x10;
-const our $MATE_REVERSE_STRAND => 0x20;
-const our $NOT_PRIMARY_ALIGN => 0x100;
-const our $MATE_UNMAPPED => 0x0008;
-const our $READ_PAIRED => 0x0001;
-const our $FIRST_IN_PAIR => 0x40;
-const our $MAX_PILEUP_DEPTH => '1000000';
-const our $SUPP_ALIGNMENT => 0x800;
-const our $DUP_READ => 0x400;
-const our $VENDER_FAIL => 0x200;
+# alignment constants RFLAGS is exported by Bio::DB::HTS::Constants
+const our $PROPER_PAIRED => RFLAGS->{'MAP_PAIR'};
+const our $UNMAPPED => RFLAGS->{'UNMAPPED'};
+const our $REVERSE_STRAND => RFLAGS->{'REVERSED'};
+const our $MATE_REVERSE_STRAND => RFLAGS->{'M_REVERSED'};
+const our $NOT_PRIMARY_ALIGN => RFLAGS->{'NOT_PRIMARY'};
+const our $MATE_UNMAPPED => RFLAGS->{'M_UNMAPPED'};
+const our $READ_PAIRED => RFLAGS->{'PAIRED'};
+const our $FIRST_IN_PAIR => RFLAGS->{'FIRST_MATE'};
+const our $SECOND_IN_PAIR => RFLAGS->{'SECOND_MATE'};
+const our $SUPP_ALIGNMENT => RFLAGS->{'SUPPLEMENTARY'};
+const our $DUP_READ => RFLAGS->{'DUPLICATE'};
+const our $VENDER_FAIL => RFLAGS->{'QC_FAILED'};
 const our @FORMAT_TYPE => qw(MTR WTR AMB UNK VAF);
+const our $NO_READS_READLEN => 50000;
+const our $MAX_PILEUP_DEPTH => '1000000';
+const our $DEFAULT_READLEN_EXCLUDE => RFLAGS->{'UNMAPPED'} + 
+                                        RFLAGS->{'NOT_PRIMARY'} +
+                                        RFLAGS->{'M_UNMAPPED'} + 
+                                        RFLAGS->{'SUPPLEMENTARY'} +
+                                        RFLAGS->{'DUPLICATE'} + 
+                                        RFLAGS->{'QC_FAILED'};
+                                        
+const our $DEFAULT_READLEN_INCLUDE => RFLAGS->{'MAP_PAIR'} + 
+                                        RFLAGS->{'FIRST_MATE'} + 
+                                        RFLAGS->{'PAIRED'};
 
-const our	@BED_HEADER_SNP=> qw(chr pos ref alt FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_NORMAL WTR_NORMAL AMB_NORMAL VAF_NORMAL FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR VAF_TUMOUR);
+const our @BED_HEADER_SNP=> qw(chr pos ref alt FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_NORMAL WTR_NORMAL AMB_NORMAL VAF_NORMAL FAZ FCZ FGZ FTZ RAZ RCZ RGZ RTZ MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR VAF_TUMOUR);
 const our @BED_HEADER_INDEL=> qw(chr pos ref alt  MTR_NORMAL WTR_NORMAL AMB_NORMAL UNK_NORMAL VAF_NORMAL MTR_TUMOUR WTR_TUMOUR AMB_TUMOUR UNK_TUMOUR VAF_TUMOUR);
 
 const our $SNP_TAGS => ['FAZ','FCZ','FGZ','FTZ','RAZ','RCZ','RGZ','RTZ','MTR','WTR','DEP','MDR','WDR','VAF','OFS'];
