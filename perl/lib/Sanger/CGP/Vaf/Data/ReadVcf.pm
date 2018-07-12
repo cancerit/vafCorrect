@@ -56,10 +56,7 @@ const my $SORT_N_BGZIP => q{(grep '^#' %s ; grep -v '^#' %s | sort -k1,1 -k2,2n 
 const my $TABIX_FILE => q{tabix -f -p vcf %s};
 const my $VALIDATE_VCF => q{vcf-validator -u %s};
 
-
 1;
-
-
 
 sub _localInit {
 	my $self=shift;
@@ -69,7 +66,7 @@ sub _localInit {
 sub _isValid {
 	my $self=shift;
 	$log->logcroak("Input folder must be specified") unless(defined $self->{_d} && -e $self->{_g});
-	$log->logcroak("varinat type must be specified") unless(defined $self->{_a});
+	$log->logcroak("variant type must be specified") unless(defined $self->{_a});
 	$log->logcroak("Tumour sample name(s) must be specified") unless(defined $self->{_tn});
 	$log->logcroak("Normal sample name must be specified") unless(defined $self->{_nn});
 	$log->logcroak("vcf file extension with dot(.) must be specified") unless(defined $self->{_bo} || defined $self->{_e});
@@ -810,8 +807,9 @@ sub _get_bam_header_data {
 	my ($self,$bam_objects,$bas_files)=@_;
   return if $self->{'_a'} ne 'indel';
   my ($chr_len,%bam_header_data);
-  my $lib_size=0;
+  my $max_lib_size=0;
   foreach my $key (keys %$bam_objects) {
+	my $lib_size=0;
   	my($mapped_length)=$self->_get_read_length($bam_objects->{$key});
   	my $read_len=reduce{ $mapped_length->{$a} > $mapped_length->{$b} ? $a : $b } keys %$mapped_length;
    	my $header=$bam_objects->{$key}->header;
@@ -855,8 +853,9 @@ sub _get_bam_header_data {
 		if(defined $read_len) {
 			$bam_header_data{$key}{'read_length'}=$read_len;
 		}
+		if ($max_lib_size<$lib_size){ $max_lib_size = $lib_size };
 	}
-	return(\%bam_header_data,$lib_size);
+	return(\%bam_header_data,$max_lib_size);
 }
 
 =head2 _get_lib_size_from_bas
@@ -899,14 +898,17 @@ Inputs
 sub _get_read_length {
 	my ($self,$sam)=@_;
 	my ($mapped_length,$read_counter);
-	my $iterator  = $sam->features(-iterator=>1);
+	my $iterator  = $sam->features(	-iterator=>1, 
+									-type=>"match");
 		while (my $a = $iterator->next_seq) {
+			next if(($a->flag & $self->{'_fexc'}) || 
+				(($a->flag & $self->{'_finc'}) != $self->{'_finc'}));
  			my $qseq=$a->qseq;
  			if(defined $qseq) {
 				$read_counter++;
 				my $len=length($qseq);
 				$mapped_length->{$len}=$read_counter;
-				if($read_counter > 1000){
+				if($read_counter > $Sanger::CGP::Vaf::VafConstants::NO_READS_READLEN){
 					return $mapped_length;
 				}
 			}
