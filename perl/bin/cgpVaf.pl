@@ -208,7 +208,6 @@ sub option_builder {
 	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 
-	warn Dumper (\%options);
 	if(!defined($options{'finc'})){
 		$options{'finc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_INCLUDE;
 	}
