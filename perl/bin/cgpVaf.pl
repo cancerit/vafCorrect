@@ -186,6 +186,8 @@ sub option_builder {
                 'pid|id_int_project=s' => \$options{'pid'},
                 'exp|exonerate_pct=i' => \$options{'exp'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
+				'f|filter_inc=i' => \$options{'finc'},
+				'F|filter_exc=i' => \$options{'fexc'},
                 'dbg|debug=i' => \$options{'dbg'},
                 'v|version'  => \$options{'v'}
 	);
@@ -205,6 +207,14 @@ sub option_builder {
   pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'bo'} || defined $options{'e'});
 	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
   pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
+
+	if(!defined($options{'finc'})){
+		$options{'finc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_INCLUDE;
+	}
+
+	if(!defined($options{'fesc'})){
+		$options{'fesc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_EXCLUDE;
+	}
 
 	if(!defined $options{'bo'}) { $options{'bo'}=0;}
 	$options{'d'}=~s/\/$//g;
@@ -310,6 +320,8 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --id_int_project (-pid) Internal project id [WTSI only]
    --bed_only       (-bo)  Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
    --vcf            (-vcf) user defined input vcf file name(s) , if not defined will be deduced from tumour sample name and vcfExtension [please specify in same order as tumour sample names ]
+   --filter_inc     (-f)   Sam flag values to include when checking reads for read length
+   --filter_exc     (-F)   Sam flag values to exclude when checking reads for read length
    --help           (-h)   Display this help message
    --version        (-v)   provide version information for vaf
 
