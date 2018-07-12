@@ -4,7 +4,7 @@
 
 * Change max reads read when determining read length to 50k
 * Modify _get_bam_header_data to get the max read length of ALL bam files encountered and therefore to produce the correct lib_size
-* Converted internal SAM flag constants to point to `Bio::DB::SAM` constants (in the future  internal constants could be replaced)
+* Converted internal SAM flag constants to point to `Bio::DB::HTS` constants (in the future  internal constants could be replaced)
 * Added command line options for filter include and exclude of reads when checking read length
 * Added very simple test for `_get_bam_header_data`
 * All contribute to fixing #45
