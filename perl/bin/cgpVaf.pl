@@ -55,97 +55,97 @@ my $debug = 0;
 my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
 try {
-	my ($options) = option_builder();
-	if ($options->{'dbg'}){
-		$log->debug("================Using Parameters===========================");
-	  $log->debug(Dumper($options));
-	}
-	if ($options->{'a'} eq 'indel') {
-    	$tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
+    my ($options) = option_builder();
+    if ($options->{'dbg'}){
+        $log->debug("================Using Parameters===========================");
+      $log->debug(Dumper($options));
+    }
+    if ($options->{'a'} eq 'indel') {
+        $tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
   } 
-	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
-	
-	my $progress_hash;
-	# progress checked before the processing starts , speed ups concatenation step 
-	my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
-	($progress_hash,$chromosomes)=$vcf_obj->getProgress($chromosomes);
-	
-	# this is called only once to add allSample names to vcf object
-	$vcf_obj->getAllSampleNames;
-	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
-	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
-	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
-	# create variant object
-	my $variant=Sanger::CGP::Vaf::Process::Variant->new(
-		'location' 		=> undef,
-		'tmp'					=>$options->{'tmp'},
-		'varLine' 		=> undef,
-		'varType' 		=> $vcf_obj->{'_a'},
-		'libSize' 		=> defined $lib_size?$lib_size:100,
-		'samples' 		=> $vcf_obj->{'allSamples'},
-		'tumourName'	=> $vcf_obj->getTumourName,
-		'normalName'	=> $vcf_obj->getNormalName,
-		'vcfStatus' 	=> $vcf_obj->{'vcf'},
-		'noVcf'    		=> defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
-		'outDir'			=> $vcf_obj->getOutputDir,
-		'passedOnly'  => $vcf_obj->{'_r'},
-		'tabix_hdr' 	=> defined $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
-		'mq' 					=> $vcf_obj->{'_mq'},
-		'bq' 					=> $vcf_obj->{'_bq'},
-		'exp'         => $vcf_obj->{'_exp'},
-		);
+    my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+    
+    my $progress_hash;
+    # progress checked before the processing starts , speed ups concatenation step 
+    my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
+    ($progress_hash,$chromosomes)=$vcf_obj->getProgress($chromosomes);
+    
+    # this is called only once to add allSample names to vcf object
+    $vcf_obj->getAllSampleNames;
+    my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
+    my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
+    my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
+    # create variant object
+    my $variant=Sanger::CGP::Vaf::Process::Variant->new(
+        'location'      => undef,
+        'tmp'           =>$options->{'tmp'},
+        'varLine'       => undef,
+        'varType'       => $vcf_obj->{'_a'},
+        'libSize'       => defined $lib_size?$lib_size:100,
+        'samples'       => $vcf_obj->{'allSamples'},
+        'tumourName'    => $vcf_obj->getTumourName,
+        'normalName'    => $vcf_obj->getNormalName,
+        'vcfStatus'     => $vcf_obj->{'vcf'},
+        'noVcf'         => defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
+        'outDir'        => $vcf_obj->getOutputDir,
+        'passedOnly'    => $vcf_obj->{'_r'},
+        'tabix_hdr'     => defined $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
+        'mq'            => $vcf_obj->{'_mq'},
+        'bq'            => $vcf_obj->{'_bq'},
+        'exp'           => $vcf_obj->{'_exp'},
+        );
 
-	foreach my $chr(@$chromosomes) {
-		my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
-		my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
-		if(defined $options->{'b'} ){
-		  my ($bed_locations)=$vcf_obj->getBedHash($chr);
-			if( $options->{'bo'} == 1 && (defined $data_for_all_samples) ) {
-				($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocationsFromVCF($data_for_all_samples,$unique_locations,$bed_locations);
-			}else{
-			  ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples,$unique_locations,$bed_locations);
-			}
-		}
-		($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples
-		,$unique_locations
-		,$variant
-		,$bam_header_data
-		,$bam_objects
-		,$store_results
-		,$chr
-		,$tags
-		,$info_tag_val
-		,$progress_fhw
-		,$progress_data);  
+    foreach my $chr(@$chromosomes) {
+        my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
+        my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
+        if(defined $options->{'b'} ){
+          my ($bed_locations)=$vcf_obj->getBedHash($chr);
+            if( $options->{'bo'} == 1 && (defined $data_for_all_samples) ) {
+                ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocationsFromVCF($data_for_all_samples,$unique_locations,$bed_locations);
+            }else{
+              ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples,$unique_locations,$bed_locations);
+            }
+        }
+        ($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples
+        ,$unique_locations
+        ,$variant
+        ,$bam_header_data
+        ,$bam_objects
+        ,$store_results
+        ,$chr
+        ,$tags
+        ,$info_tag_val
+        ,$progress_fhw
+        ,$progress_data);  
   
-		close $progress_fhw;
-	}# completed all chromosomes;
-	# if augmentation option is selected then write augmented vcf file
-	if(defined $options->{'m'} && $options->{'m'} == 1) {
+        close $progress_fhw;
+    }# completed all chromosomes;
+    # if augmentation option is selected then write augmented vcf file
+    if(defined $options->{'m'} && $options->{'m'} == 1) {
       my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
       $vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
-    	if($options->{'ao'} == 1) {
-    	  my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
-    	  exit(0);
-	 		}
+        if($options->{'ao'} == 1) {
+          my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
+          exit(0);
+             }
   }
   # run following steps only if chromosome option is empty or user has selected option to concatenate files.  
  if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
     my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
        if(!defined $outfile_name_no_ext) {
-       		$log->logcroak("Output file exists, skipping concatenation step");
+               $log->logcroak("Output file exists, skipping concatenation step");
        }
-			$vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
-			$vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
-			$log->debug("Compressing and Validating VCF file");
-			my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
-			if ((-e $outfile_gz) && (-e $outfile_tabix)) {
-				my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
-			}
-		if ($options->{'dbg'}){
-			$log->debug("==============================Parameters used===================");
-			$log->debug(Dumper($options));
-		}
+            $vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
+            $vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
+            $log->debug("Compressing and Validating VCF file");
+            my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
+            if ((-e $outfile_gz) && (-e $outfile_tabix)) {
+                my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
+            }
+        if ($options->{'dbg'}){
+            $log->debug("==============================Parameters used===================");
+            $log->debug(Dumper($options));
+        }
   }
 }
 
@@ -186,99 +186,99 @@ sub option_builder {
                 'pid|id_int_project=s' => \$options{'pid'},
                 'exp|exonerate_pct=i' => \$options{'exp'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
-				'f|filter_inc=i' => \$options{'finc'},
-				'F|filter_exc=i' => \$options{'fexc'},
+                'f|filter_inc=i' => \$options{'finc'},
+                'F|filter_exc=i' => \$options{'fexc'},
                 'dbg|debug=i' => \$options{'dbg'},
                 'v|version'  => \$options{'v'}
-	);
+    );
 
   pod2usage(-message => Sanger::CGP::Vaf::license, -verbose => 1) if(defined $options{'h'});
 
-	if(defined $options{'v'}){
-		my $version = Sanger::CGP::Vaf->VERSION;
-		print "$version\n";
-		exit;
-	}
-	pod2usage(q{'-g' genome must be defined}) unless (defined $options{'g'});
-	pod2usage(q{'-d' input directory path must be defined}) unless (defined $options{'d'});
-	pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
-	pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
-	pod2usage(q{'-nn' normal sample name/s must be provided}) unless (defined $options{'nn'});
-  pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'bo'} || defined $options{'e'});
-	pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
-  pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
+    if(defined $options{'v'}){
+        my $version = Sanger::CGP::Vaf->VERSION;
+        print "$version\n";
+        exit;
+    }
+    pod2usage(q{'-g' genome must be defined}) unless (defined $options{'g'});
+    pod2usage(q{'-d' input directory path must be defined}) unless (defined $options{'d'});
+    pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
+    pod2usage(q{'-tn' toumour sample name/s must be provided}) unless (defined $options{'tn'});
+    pod2usage(q{'-nn' normal sample name/s must be provided}) unless (defined $options{'nn'});
+    pod2usage(q{'-e' Input vcf file extension must be provided}) unless (defined $options{'bo'} || defined $options{'e'});
+    pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'});
+    pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 
-	if(!defined($options{'finc'})){
-		$options{'finc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_INCLUDE;
-	}
+    if(!defined($options{'finc'})){
+        $options{'finc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_INCLUDE;
+    }
 
-	if(!defined($options{'fexc'})){
-		$options{'fexc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_EXCLUDE;
-	}
+    if(!defined($options{'fexc'})){
+        $options{'fexc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_EXCLUDE;
+    }
 
-	if(!defined $options{'bo'}) { $options{'bo'}=0;}
-	$options{'d'}=~s/\/$//g;
-	mkpath($options{'o'});
-	if(!defined $options{'tmp'}) {
-		$options{'o'}=~s/\/\//\//g;
-		my $tn_name=@{$options{'tn'}}[0];
-		mkpath($options{'o'}.'/tmpvaf_'.$tn_name);
-		$options{'tmp'}=$options{'o'}.'/tmpvaf_'.$tn_name;
-	}
-	if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {
-		warn "Analysing:".$options{'a'}."\n";
-	}
-	else{
-		$log->logcroak("Not a valid variant type [should be either [snp or indel]");
-		exit(0);
-	}
- 	# use annotation tags to output in tsv
-	if(!defined $options{'t'}) {
-		$options{'t'}="VD,VW,VT,VC";
-	}
-	# input alignment file extension
-	if(!defined $options{'be'}) {
-		$options{'be'}=".bam";
-	}
-	# use PASS flag if bed only is set
-	if($options{'bo'}==1) {
-		$options{'r'}= 0;
-	}
-	if(!defined $options{'r'}) {
-		$options{'r'}= 1;
-	}
-		
-	if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
-		$options{'dp'}='NR,PR';
-	}
-	
-	if($options{'ao'} ||  $options{'m'}) {
-	 $log->debug("Augmentation option selected, chromosome option will be overidden to all chromosomes");
-	  $options{'chr'}=[];
-	}
+    if(!defined $options{'bo'}) { $options{'bo'}=0;}
+    $options{'d'}=~s/\/$//g;
+    mkpath($options{'o'});
+    if(!defined $options{'tmp'}) {
+        $options{'o'}=~s/\/\//\//g;
+        my $tn_name=@{$options{'tn'}}[0];
+        mkpath($options{'o'}.'/tmpvaf_'.$tn_name);
+        $options{'tmp'}=$options{'o'}.'/tmpvaf_'.$tn_name;
+    }
+    if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {
+        warn "Analysing:".$options{'a'}."\n";
+    }
+    else{
+        $log->logcroak("Not a valid variant type [should be either [snp or indel]");
+        exit(0);
+    }
+     # use annotation tags to output in tsv
+    if(!defined $options{'t'}) {
+        $options{'t'}="VD,VW,VT,VC";
+    }
+    # input alignment file extension
+    if(!defined $options{'be'}) {
+        $options{'be'}=".bam";
+    }
+    # use PASS flag if bed only is set
+    if($options{'bo'}==1) {
+        $options{'r'}= 0;
+    }
+    if(!defined $options{'r'}) {
+        $options{'r'}= 1;
+    }
+        
+    if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
+        $options{'dp'}='NR,PR';
+    }
+    
+    if($options{'ao'} ||  $options{'m'}) {
+     $log->debug("Augmentation option selected, chromosome option will be overidden to all chromosomes");
+      $options{'chr'}=[];
+    }
 
-	if(!defined $options{'s'}) {
-		#analyse single sample no merge step
-		$options{'s'}=undef;
-	}
-	if(!defined $options{'exp'}) {
-	#default exonerate percentage
-		$options{'exp'}=92;
-	}
-	if(!defined $options{'ao'}) {
-		# augment vcf no merging step
-		$options{'ao'}=0;
-	}
-	if(!defined $options{'oe'}) {
-		# augment vcf extesnion
-		$options{'oe'}='.vaf.vcf';
-	}
-	if(($options{'ao'} || $options{'m'}) && lc($options{'a'}) eq 'snp') {
-		$log->logcroak("Warning: VCF augment option is only supported for indels");
-	}
+    if(!defined $options{'s'}) {
+        #analyse single sample no merge step
+        $options{'s'}=undef;
+    }
+    if(!defined $options{'exp'}) {
+    #default exonerate percentage
+        $options{'exp'}=92;
+    }
+    if(!defined $options{'ao'}) {
+        # augment vcf no merging step
+        $options{'ao'}=0;
+    }
+    if(!defined $options{'oe'}) {
+        # augment vcf extesnion
+        $options{'oe'}='.vaf.vcf';
+    }
+    if(($options{'ao'} || $options{'m'}) && lc($options{'a'}) eq 'snp') {
+        $log->logcroak("Warning: VCF augment option is only supported for indels");
+    }
   if(!defined $options{'hdr'} && lc($options{'a'}) eq 'indel') {
      warn "-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run";
-	}
+    }
  \%options;
 }
 
