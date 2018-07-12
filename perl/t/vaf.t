@@ -18,9 +18,9 @@ use File::Path;
 use Const::Fast qw(const);
 use File::Path qw(mkpath);
 
-const my $MODULE1 => ' Sanger::CGP::Vaf::Data::ReadVcf';
-const my $MODULE2 => 'Sanger::CGP::Vaf::Process::Variant';
-const my $MODULE3 => 'Sanger::CGP::Vaf::VafConstants';
+const my @MODULES => qw( Sanger::CGP::Vaf::Data::ReadVcf
+						Sanger::CGP::Vaf::Process::Variant
+						Sanger::CGP::Vaf::VafConstants);
 const my $test_data => "$Bin/testData";
 const my $test_output => "$Bin/testData/test_output_vaf";
 const my $test_project => '1086';
@@ -41,10 +41,11 @@ const my $test_bam3 => "$Bin/testData/sampleb.bam";
 const my $test_bed => "$Bin/testData/test.bed";
 const my $dummy_chr => 'bed_file_data';
 const my $test_chr => '1';
+
 subtest 'Initialisation checks' => sub {
-  use_ok($MODULE1);
-  use_ok($MODULE2);
-  use_ok($MODULE3);
+	foreach my $mod(@MODULES){
+		use_ok($mod);
+	}
 };
 
 const my $tags => $Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
@@ -67,6 +68,8 @@ my $options={
 	'c'=>005,
 	'be' => ".bam",
 	'tmp' => "$test_output/tmpvcf_$test_samples[0]",
+	'finc' => $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_INCLUDE,
+	'fexc' => $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_EXCLUDE,
 	#'b' => "$test_data/test.bed",
 	#'bo' => 1
 	};
@@ -109,6 +112,17 @@ my $expected_unique_locations =  {
    '1:16907525:G:C' => 'samplec-UM;MN;MQ',
    '1:2212488:A:G' => 'samplec-PASS'
  };
+
+subtest '_get_bam_header_data' => sub {
+	$options->{'a'} = $test_variant_type2;
+	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
+	$vcf_obj->getAllSampleNames;
+	my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
+	my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
+	my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
+	is($lib_size,401);
+	$options->{'a'} = $test_variant_type1;
+};
 
 subtest 'ReadVcf' => sub {
 	my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
