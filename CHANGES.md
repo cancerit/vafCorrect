@@ -8,7 +8,7 @@
 * Added command line options for filter include and exclude of reads when checking read length
 * Added very simple test for `_get_bam_header_data`
 * All contribute to fixing #45
-* All hard tabs now spaces. Fixes part of #49
+* All hard tabs now spaces. Fixes whitespace part of #49
 
 ## v5.3.8
 
