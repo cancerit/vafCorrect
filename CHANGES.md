@@ -1,22 +1,37 @@
 # CHANGES
 
+## v5.3.9
+
+* Change max reads read when determining read length to 50k
+* Modify _get_bam_header_data to get the max read length of ALL bam files encountered and therefore to produce the correct lib_size
+* Converted internal SAM flag constants to point to `Bio::DB::HTS` constants (in the future  internal constants could be replaced)
+* Added command line options for filter include and exclude of reads when checking read length
+* Added very simple test for `_get_bam_header_data`
+* All contribute to fixing #45
+* All hard tabs now spaces. Fixes whitespace part of #49
+
 ## v5.3.8
+
 * Updated CHANAGES.md with corerct version
 
 ## v5.3.7
+
 * corrected condition in vafcorrect for erroneous PASS flag setting
 
 ## v5.3.6
+
 * Correct query_full to ensure `undef` return is caught.
 * vaf output precison raised from two to four decimal places.
 
 ## v5.3.5
+
 * Update `samtols` and `hstlib` to v1.7
 * Update `Bio::DB::HTS` to v2.10
 * Change tabix->query call to tabix->query_full
 * fixed bug in accessing chr prefixed chromosome names for HDR regions
 
 ## v5.3.4
+
 * corrected typo in setup.sh removed safelist branches from .travis
 * Added checks for INST_METHOD
 * Changed CHANGES.md syntax to markdown linter
@@ -205,7 +220,7 @@
 
 ## V4.1.4
 
-*updated file postfix to <varinat>_vaf
+*updated file postfix to <variant>_vaf
 
 ## V4.1.3
 
@@ -239,4 +254,4 @@
 
 ## 3.2.3
 
-*	Added option to create config file for user defined list of samples
+* Added option to create config file for user defined list of samples

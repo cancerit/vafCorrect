@@ -1,5 +1,5 @@
 package Sanger::CGP::Vaf::Data::AbstractVcf;
-																					 
+                                                                                     
 ##########LICENCE############################################################
 # Copyright (c) 2016 Genome Research Ltd.
 # 
@@ -39,12 +39,12 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 sub new {
   my $proto = shift;
   my $class = ref($proto) || $proto;
-	my $self = {};
-	bless($self, $class);
-	$self->_init(@_);
-	$self->_isValidAbs();
-	$self->_localInit(@_);
-	return $self;
+    my $self = {};
+    bless($self, $class);
+    $self->_init(@_);
+    $self->_isValidAbs();
+    $self->_localInit(@_);
+    return $self;
 }
 
 =head2 _init
@@ -56,13 +56,13 @@ Inputs
 =cut
  
 sub _init {
-	my ($self,$options) = @_;
-	$self->{'options'}=$options;
-	foreach my $k (keys %$options) {
-		if(defined $options->{$k}) { # allows 0 and " "  string
-			$self->{"_$k"}=$options->{$k};		
-		}
-	}	
+    my ($self,$options) = @_;
+    $self->{'options'}=$options;
+    foreach my $k (keys %$options) {
+        if(defined $options->{$k}) { # allows 0 and " "  string
+            $self->{"_$k"}=$options->{$k};        
+        }
+    }    
 }
 
 sub _localInit: Abstract;
@@ -74,29 +74,29 @@ sub _isValidAbs {
 }
 
 sub getNormalBam {
- 	my($self)=shift;
-	return $self->{'_d'}.'/'.$self->getNormalName.$self->{'_be'};
+     my($self)=shift;
+    return $self->{'_d'}.'/'.$self->getNormalName.$self->{'_be'};
 }
 
 sub getVcfFile {
-	my($self)=shift;
-	my @arr=map {$self->{'_d'}.'/'.$_.$self->{'_e'}} @{$self->getTumourName};
-	return \@arr;
+    my($self)=shift;
+    my @arr=map {$self->{'_d'}.'/'.$_.$self->{'_e'}} @{$self->getTumourName};
+    return \@arr;
 }
 
 sub getTumourBam {
-	my($self)=shift;
-	my @arr=map {$self->{'_d'}.'/'.$_.$self->{'_be'}} @{$self->getTumourName};
-	return \@arr;
+    my($self)=shift;
+    my @arr=map {$self->{'_d'}.'/'.$_.$self->{'_be'}} @{$self->getTumourName};
+    return \@arr;
 }
 
 sub getTumourName {
-	return shift->{'_tn'};
+    return shift->{'_tn'};
 }
 
 
 sub getNormalName {
-	return shift->{'_nn'};
+    return shift->{'_nn'};
 }
 
 sub getAllSampleNames{
@@ -107,40 +107,40 @@ sub getAllSampleNames{
 }
 
 sub getGenome {
-	return shift->{'_g'};
+    return shift->{'_g'};
 }
 
 sub getOutputDir {
-	return shift->{'_o'};
+    return shift->{'_o'};
 }
 
 sub getBedIntervals {
-	return shift->{'_b'};
+    return shift->{'_b'};
 }
 
 #-----Legacy
 sub addMessage {
-	my ($self,$msg) = @_;
-	push(@{$self->{_msg}},ref($self).": ".$msg);
+    my ($self,$msg) = @_;
+    push(@{$self->{_msg}},ref($self).": ".$msg);
 }
 
 sub _debug {
-	my $self = shift;
-	if(exists($self->{_debug}) && defined($self->{_debug}) && $self->{_debug}){
-		return 1;
-	} else {
-		return 0;
-	}
+    my $self = shift;
+    if(exists($self->{_debug}) && defined($self->{_debug}) && $self->{_debug}){
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 sub getMessages {
-	my $self = shift;
-	return @{$self->{_msg}} if defined($self->{_msg});
-	return undef;
+    my $self = shift;
+    return @{$self->{_msg}} if defined($self->{_msg});
+    return undef;
 }
 
 sub _clearMessages {
-	shift->{_msg} = undef;
+    shift->{_msg} = undef;
 }
 
 
