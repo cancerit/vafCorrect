@@ -1,5 +1,5 @@
 package Sanger::CGP::Vaf::Process::AbstractVariant;
-																					 
+                                                                                     
 ##########LICENCE############################################################
 # Copyright (c) 2016 Genome Research Ltd.
 # 
@@ -37,12 +37,12 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 sub new {
   my $proto = shift;
   my $class = ref($proto) || $proto;
-	my $self = {};
-	bless($self, $class);
-	$self->_init(@_);
-	$self->_localInit(@_);
-	$self->_isValidAbs(@_);
-	return $self;
+    my $self = {};
+    bless($self, $class);
+    $self->_init(@_);
+    $self->_localInit(@_);
+    $self->_isValidAbs(@_);
+    return $self;
 }
 
 
@@ -55,81 +55,81 @@ Inputs
 =cut
  
 sub _init {
-	my $self = shift;
-	my (%vars) = @_;
-	foreach my $key (keys %vars) {
-	# explicitly 
-		$self->{"_$key"}=$vars{$key};
-	}
+    my $self = shift;
+    my (%vars) = @_;
+    foreach my $key (keys %vars) {
+    # explicitly 
+        $self->{"_$key"}=$vars{$key};
+    }
 }
 
 sub _localInit: Abstract;
 
 sub _isValidAbs {
-	my $self = shift;
+    my $self = shift;
 }
 
 
 sub getLocation {
-	return shift->{'_location'};
+    return shift->{'_location'};
 }
 
 sub setLocation {
-	my($self,$loc)=@_;
-	$self->{'_location'}=$loc;
+    my($self,$loc)=@_;
+    $self->{'_location'}=$loc;
 }
 
 sub getVarLine{
-	return shift->{'_varLine'};
+    return shift->{'_varLine'};
 }
 
 sub setVarLine {
-	my($self,$var)=@_;
-	$self->{'_varLine'}=$var;
+    my($self,$var)=@_;
+    $self->{'_varLine'}=$var;
 }
 
 sub getVarType {
-	return shift->{'_varType'};
+    return shift->{'_varType'};
 }
 
 sub getLibSize {
-	return shift->{'_libsize'};
+    return shift->{'_libsize'};
 }
 
 sub getVcfStatus {
-	return shift->{'_vcfStatus'};
+    return shift->{'_vcfStatus'};
 }
 
 sub getBamObj {
-	return shift->{'_bamObj'};
+    return shift->{'_bamObj'};
 }
 
 sub getSample {
-	return shift->{'_samples'};
+    return shift->{'_samples'};
 }
 #-----Legacy
 sub addMessage {
-	my ($self,$msg) = @_;
-	push(@{$self->{_msg}},ref($self).": ".$msg);
+    my ($self,$msg) = @_;
+    push(@{$self->{_msg}},ref($self).": ".$msg);
 }
 
 sub _debug {
-	my $self = shift;
-	if(exists($self->{_debug}) && defined($self->{_debug}) && $self->{_debug}){
-		return 1;
-	} else {
-		return 0;
-	}
+    my $self = shift;
+    if(exists($self->{_debug}) && defined($self->{_debug}) && $self->{_debug}){
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 sub getMessages {
-	my $self = shift;
-	return @{$self->{_msg}} if defined($self->{_msg});
-	return undef;
+    my $self = shift;
+    return @{$self->{_msg}} if defined($self->{_msg});
+    return undef;
 }
 
 sub _clearMessages {
-	shift->{_msg} = undef;
+    shift->{_msg} = undef;
 }
 
 __END__
