@@ -20,7 +20,7 @@ use File::Path qw(mkpath);
 
 const my @MODULES => qw( Sanger::CGP::Vaf::Data::ReadVcf
                         Sanger::CGP::Vaf::Process::Variant
-                        Sanger::CGP::Vaf::VafConstants);
+                        Sanger::CGP::Vaf::VafConstants );
 const my $test_data => "$Bin/testData";
 const my $test_output => "$Bin/testData/test_output_vaf";
 const my $test_project => '1086';
@@ -109,7 +109,7 @@ my $expected_unique_locations =  {
    '1:16901564:G:A' => 'samplea-UM;MN;TI;HSD',
    '1:16901544:C:T' => 'samplea-UM;MN;MQ;TI;HSD',
    '1:16903781:C:T' => 'samplec-UM;MN;HSD',
-   '1:16907525:G:C' => 'samplec-UM;MN;MQ',jw32@sanger.ac.uk
+   '1:16907525:G:C' => 'samplec-UM;MN;MQ',
    '1:2212488:A:G' => 'samplec-PASS'
  };
 
