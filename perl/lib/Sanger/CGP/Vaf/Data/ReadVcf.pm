@@ -31,6 +31,7 @@ use strict;
 use Vcf;
 use Data::Dumper;
 use English;
+use JSON;
 use FindBin qw($Bin);
 use List::Util qw(first reduce max min);
 use warnings FATAL => 'all';
@@ -692,72 +693,90 @@ sub processMergedLocations {
     open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
     open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
 
+    my $tmp_fh;
+    foreach my $sample (@{$self->getTumourName}) {
+        open my $tmp_aug_fh, '>', "$self->{'_tmp'}/tmp_${chr}_$sample.vcf" or $log->logcroak("Unable to create file $!") if($self->{'_m'} ==1);
+        $tmp_fh->{$sample} = $tmp_aug_fh;
+    }
+
   my($merged_vcf,$header_info)=$self->_getVCFObject($info_tag_val);
 
   foreach my $location (sort keys %$unique_locations) {
-      #next unless($location=~/114911505/);
-        $count++;
-        $variant->setLocation($location);
-        $variant->setVarLine($unique_locations->{$location});
-        my($g_pu)=$variant->formatVarinat();
-        # added to avoid bed locations mixing with other chromosomes when tmp files are generated
-        $g_pu->{'just_chr'}=$chr;
-        #process only passed varinats        
-        if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
-            if($self->{'_ao'} == 1 || defined $self->{'_m'}) {
-                foreach my $sample (@{$self->getTumourName}) {
-                    $store_results=$variant->storeResults($store_results,$g_pu,$sample);
-                }
+    #next unless($location=~/114911505/);
+    $count++;
+    $variant->setLocation($location);
+    $variant->setVarLine($unique_locations->{$location});
+    my($g_pu)=$variant->formatVarinat();
+    # added to avoid bed locations mixing with other chromosomes when tmp files are generated
+    $g_pu->{'just_chr'}=$chr;
+    #process only passed varinats
+    if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
+        if($self->{'_ao'} == 1 || defined $self->{'_m'}) {
+            foreach my $sample (@{$self->getTumourName}) {
+                #location:CHR:POS:REF:ALT
+                my $aug_line = $self->_format_aug_line($self->{'vcf'}{$sample}, $g_pu->{'region'},  $store_results, $sample, $location);
+                $tmp_fh->{$sample}->print($aug_line);
             }
-            next;
-        }        
-    my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);    
+        }
+        next;
+    }
+    my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
     if ($self->{'_a'} eq 'indel') {
-            $g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
+        $g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
     }
     my $mutant_depth=0;
     my $depth=0;
 
-      foreach my $sample (@{$self->{'allSamples'}}) {
-           $g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
-            if($self->{'_a'} eq 'indel') {
-                $g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
-                if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
-                    $g_pu=$variant->addNormalCount($g_pu);
-                }
-                elsif($self->{'_m'} && $data_for_all_samples->{$sample}{$location}) {
-                    $store_results=$variant->storeResults($store_results,$g_pu,$sample);
+    foreach my $sample (@{$self->{'allSamples'}}) {
+        $g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
+        if($self->{'_a'} eq 'indel') {
+            $g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
+            if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
+                $g_pu=$variant->addNormalCount($g_pu);
+            }
+            elsif($self->{'_m'} && $data_for_all_samples->{$sample}{$location}) {
+                $store_results=$variant->storeResults($g_pu,$sample);
+                #location:CHR:POS:REF:ALT
+                if(!$store_results->{"$sample\_bed"}){
+                my $aug_line = $self->_format_aug_line($self->{'vcf'}{$sample}, $g_pu->{'region'},  $store_results, $sample, $location);
+                $tmp_fh->{$sample}->print($aug_line);
+                }else{
+                    $tmp_fh->{$sample}->print($store_results->{"$sample\_bed"}{$location});
                 }
             }
-            else{
-                $g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
+        }
+        else{
+            $g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
+        }
+        if($self->{'_ao'} == 0) {
+            my($pileup_line)=$variant->formatResults($original_flag,$g_pu);
+            # Mutant read depth found at this location
+            if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'MTR'} > 0 ) {
+                    $mutant_depth++;
             }
-            if($self->{'_ao'} == 0) {
-                my($pileup_line)=$variant->formatResults($original_flag,$g_pu);
-                # Mutant read depth found at this location
-                if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'MTR'} > 0 ) {
-                        $mutant_depth++;
-                }
-                # read depth found at this location
-                if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'DEP'} > 0 ) {
-                        $depth++;
-                }
-                $pileup_results->{$g_pu->{'sample'}}=$pileup_line;
+            # read depth found at this location
+            if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'DEP'} > 0 ) {
+                    $depth++;
             }
-      }# Done with all the samples ...
-      #get specific annotations from original VCF INFO field....
-        if($self->{'_ao'} == 0 ) {
-            $original_vcf_info->{'ND'} =    $depth;
-            $original_vcf_info->{'NVD'} =    $mutant_depth;
-            $self->_writeOutput($original_vcf_info,$NFS,$pileup_results,$tags,$tmp_WFH_VCF,$tmp_WFH_TSV,$g_pu,$merged_vcf,$header_info);
-            $depth=0;
-            $mutant_depth=0;
-         }
-   if($count % 100 == 0) {
-       $log->debug("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
-   }
+            $pileup_results->{$g_pu->{'sample'}}=$pileup_line;
+        }
+    }# Done with all the samples ...
 
-    }# Done with all locations for a chromosome...
+    exit(0);
+
+    #get specific annotations from original VCF INFO field....
+    if($self->{'_ao'} == 0 ) {
+       $original_vcf_info->{'ND'} =    $depth;
+       $original_vcf_info->{'NVD'} =    $mutant_depth;
+       $self->_writeOutput($original_vcf_info,$NFS,$pileup_results,$tags,$tmp_WFH_VCF,$tmp_WFH_TSV,$g_pu,$merged_vcf,$header_info);
+       $depth=0;
+       $mutant_depth=0;
+    }
+    if($count % 100 == 0) {
+        $log->debug("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
+    }
+
+  }# Done with all locations for a chromosome...
     $merged_vcf->close() if defined $merged_vcf;
     # write success file name
      $log->debug("Completed analysis for: $chr ");
@@ -765,9 +784,14 @@ sub processMergedLocations {
       close $tmp_WFH_VCF;
       close $tmp_WFH_TSV; 
       $progress_fhw->print("$self->{'_tmp'}/tmp_$chr.vcf\n");
-      $store_results={};
-      return undef; 
+      return undef;
      }
+
+    foreach my $sample ($tmp_fh){
+        $tmp_fh->{$sample}->close()
+    }
+
+
     return $store_results;
 }
 
@@ -1290,8 +1314,16 @@ sub _writeFinalVcf {
                     $$x{gtypes}{'NORMAL'}{$format_type}=$result_line->{'n'.$format_type};
                 }
                 $aug_vcf_fh->{$sample}->print($vcf->format_line($x));
+            } # if varinat site is not in passed locations
+            else{
+                foreach my $format_type(@Sanger::CGP::Vaf::VafConstants::FORMAT_TYPE) {
+                 $vcf->add_format_field($x,$format_type);
+                 $$x{gtypes}{'TUMOUR'}{$format_type}=".";
+                 $$x{gtypes}{'NORMAL'}{$format_type}=".";
+                }
+                $aug_vcf_fh->{$sample}->print($vcf->format_line($x));
             }
-    }
+        }
         $vcf->close();
         $aug_vcf_fh->{$sample}->close();
         my ($aug_gz,$aug_tabix)=$self->gzipAndIndexVcf($aug_vcf_name->{$sample});
@@ -1301,6 +1333,46 @@ sub _writeFinalVcf {
     }
         return;
 }
+
+
+
+sub _format_aug_line {
+    my($self, $vcf_file, $region, $store_results, $sample, $org_location)=@_;
+    my $line;
+    my $vcf = Vcf->new(file => $vcf_file, region=>$region);
+    $vcf->parse_header();
+    while (my $x = $vcf->next_data_hash()) {
+        my $location="$$x{'CHROM'}:$$x{'POS'}:$$x{'REF'}:@{$$x{'ALT'}}[0]";
+        # write non passed data first
+        if ( !$store_results->{$sample}{$location} and ($location eq $org_location)){
+            foreach my $format_type(@Sanger::CGP::Vaf::VafConstants::FORMAT_TYPE) {
+                $vcf->add_format_field($x,$format_type);
+                $$x{gtypes}{'TUMOUR'}{$format_type}=".";
+                $$x{gtypes}{'NORMAL'}{$format_type}=".";
+            }
+         $line = $vcf->format_line($x);
+        }elsif($store_results->{$sample}{$location}){
+             my $result_line=$store_results->{$sample}{$location};
+                foreach my $format_type(@Sanger::CGP::Vaf::VafConstants::FORMAT_TYPE) {
+                    $vcf->add_format_field($x,$format_type);
+                    $$x{gtypes}{'TUMOUR'}{$format_type}=$result_line->{'t'.$format_type};
+                    $$x{gtypes}{'NORMAL'}{$format_type}=$result_line->{'n'.$format_type};
+                }
+          $line = $vcf->format_line($x);
+        }
+    }
+    $vcf->close();
+    return $line;
+}
+
+
+sub _get_aug_vcf_region {
+    my($self, $vcf_file, $region)=@_;
+    my $vcf = Vcf->new(file => $vcf_file, region=>$region);
+    $vcf->parse_header();
+    return $vcf;
+}
+
 
 
 =head2 gzipAndIndexVcf

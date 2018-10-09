@@ -101,7 +101,7 @@ return $g_pu;
 
 }
 
-=head2 formatVarinat
+=head2 storeResults
 get hash containing location specific information
 Inputs
 =over 2
@@ -113,7 +113,8 @@ Inputs
 
 
 sub storeResults {
-    my ($self,$store_results,$g_pu,$sample)=@_;
+    my ($self,$g_pu,$sample)=@_;
+    my $store_results={};
     my $results = {'tMTR'=> '.',
                                'tWTR'=> '.',
                                'tUNK'=> '.',
@@ -165,7 +166,7 @@ sub storeResults {
     $results->{'nUNK'}=$g_pu->{'normal_UNK'};
     $results->{'nAMB'}=$g_pu->{'normal_AMB'};
     $results->{'nVAF'}=$g_pu->{'normal_VAF'};
-  $store_results->{$sample}{$self->getLocation}=$results;
+    $store_results->{$sample}{$self->getLocation}=$results;
 
   return $store_results;
 

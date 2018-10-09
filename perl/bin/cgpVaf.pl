@@ -26,7 +26,6 @@ BEGIN {
 };
 
 use strict;
-
 use Bio::DB::HTS::Tabix;
 use File::Path qw(mkpath);
 use FindBin qw($Bin);
@@ -121,14 +120,14 @@ try {
         close $progress_fhw;
     }# completed all chromosomes;
     # if augmentation option is selected then write augmented vcf file
-    if(defined $options->{'m'} && $options->{'m'} == 1) {
-      my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
-      $vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
-        if($options->{'ao'} == 1) {
-          my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
-          exit(0);
-             }
-  }
+    #if(defined $options->{'m'} && $options->{'m'} == 1) {
+    #  my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
+    #  $vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
+    #    if($options->{'ao'} == 1) {
+    #      my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
+    #      exit(0);
+    #         }
+        #}
   # run following steps only if chromosome option is empty or user has selected option to concatenate files.  
  if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
     my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
