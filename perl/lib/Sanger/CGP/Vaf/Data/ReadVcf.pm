@@ -753,12 +753,19 @@ sub processMergedLocations {
     close $tmp_WFH_VCF;
     close $tmp_WFH_TSV;
     foreach my $sample (keys %$tmp_fh){
-       print "closing file handler $chr :  $sample \n";
+       $log->debug("closing  augmented file handler $chr :  $sample");
        $tmp_fh->{$sample}->close();
     }
     return 0;
 }
 
+
+=head2 _get_tmp_fh
+create temporary file handl for augumented vcf files
+Inputs
+=over 2
+=back
+=cut
 
 sub _get_tmp_fh {
     my($self,$chr)=@_;
