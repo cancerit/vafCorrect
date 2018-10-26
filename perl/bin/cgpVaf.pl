@@ -67,25 +67,25 @@ try {
     my $progress_hash;
     # progress checked before the processing starts , speed ups concatenation step 
     my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
-    ($progress_hash,$chromosomes)=$vcf_obj->getProgress($chromosomes);
-    
+    $chromosomes=$vcf_obj->getProgress($chromosomes);
+
     # this is called only once to add allSample names to vcf object
     $vcf_obj->getAllSampleNames;
     my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
-    my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
-    my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
+    my($bam_objects,$bas_files)=$vcf_obj->get_bam_object;
+    my $max_lib_size = $vcf_obj->get_lib_n_read_read_length($bam_objects,$bas_files);
     # create variant object
     my $variant=Sanger::CGP::Vaf::Process::Variant->new(
         'location'      => undef,
         'tmp'           =>$options->{'tmp'},
         'varLine'       => undef,
         'varType'       => $vcf_obj->{'_a'},
-        'libSize'       => defined $lib_size?$lib_size:100,
         'samples'       => $vcf_obj->{'allSamples'},
         'tumourName'    => $vcf_obj->getTumourName,
         'normalName'    => $vcf_obj->getNormalName,
         'vcfStatus'     => $vcf_obj->{'vcf'},
         'noVcf'         => defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
+        'lib_size'      => $max_lib_size,
         'outDir'        => $vcf_obj->getOutputDir,
         'passedOnly'    => $vcf_obj->{'_r'},
         'tabix_hdr'     => defined $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
@@ -94,8 +94,7 @@ try {
         'exp'           => $vcf_obj->{'_exp'},
         );
 
-    foreach my $chr(@$chromosomes) {
-        my($progress_fhw,$progress_data)=@{$progress_hash->{$chr}};
+    foreach my $chr(keys %$chromosomes) {
         my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
         if(defined $options->{'b'} ){
           my ($bed_locations)=$vcf_obj->getBedHash($chr);
@@ -105,47 +104,40 @@ try {
               ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples,$unique_locations,$bed_locations);
             }
         }
-        ($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples
-        ,$unique_locations
-        ,$variant
-        ,$bam_header_data
-        ,$bam_objects
-        ,$store_results
-        ,$chr
-        ,$tags
-        ,$info_tag_val
-        ,$progress_fhw
-        ,$progress_data);  
-  
-        close $progress_fhw;
+         $vcf_obj->processMergedLocations($data_for_all_samples ,$unique_locations,$variant,$chromosomes->{$chr} ,$bam_objects,$chr,$tags,$info_tag_val);
     }# completed all chromosomes;
-    # if augmentation option is selected then write augmented vcf file
-    #if(defined $options->{'m'} && $options->{'m'} == 1) {
-    #  my($aug_vcf_fh,$aug_vcf_name)=$vcf_obj->WriteAugmentedHeader();
-    #  $vcf_obj->writeResults($aug_vcf_fh,$store_results,$aug_vcf_name);
-    #    if($options->{'ao'} == 1) {
-    #      my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
-    #      exit(0);
-    #         }
-        #}
-  # run following steps only if chromosome option is empty or user has selected option to concatenate files.  
+
+ # run following steps only if chromosome option is empty or user has selected option to concatenate files.
  if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
-    my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
-       if(!defined $outfile_name_no_ext) {
-               $log->logcroak("Output file exists, skipping concatenation step");
-       }
-            $vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
-            $vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
-            $log->debug("Compressing and Validating VCF file");
-            my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
-            if ((-e $outfile_gz) && (-e $outfile_tabix)) {
-                my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
-            }
-        if ($options->{'dbg'}){
-            $log->debug("==============================Parameters used===================");
-            $log->debug(Dumper($options));
+     if($options->{'m'}) {
+      $log->debug("Completed analysis for all PASS locations, writing non PASS variants");
+      my($aug_vcf_fhs,$aug_vcf_names)=$vcf_obj->WriteAugmentedHeader();
+      foreach my $sample (keys %$aug_vcf_names){
+        if(-e $aug_vcf_names->{$sample}.'.gz') {
+          $log->logcroak("Output file : $aug_vcf_names->{$sample}.gz exists , skipping concatenation step");
         }
-  }
+        $vcf_obj->catFiles($options->{'tmp'},'vcf',$sample,$aug_vcf_names->{$sample});
+        $log->debug("Compressing and Validating augmented VCF file for sample: $sample");
+        my($aug_gz,$aug_tabix)=$vcf_obj->gzipAndIndexVcf($aug_vcf_names->{$sample});
+      }
+    }
+
+    my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
+
+    if($outfile_name_no_ext){
+        $vcf_obj->catFiles($options->{'tmp'},'vcf',undef,$outfile_name_no_ext);
+        $vcf_obj->catFiles($options->{'tmp'},'tsv',undef,$outfile_name_no_ext);
+        $log->debug("Compressing and Validating VCF file");
+        my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
+        if ((-e $outfile_gz) && (-e $outfile_tabix) && !$options->{'dbg'} ) {
+        my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
+        }
+    }
+    if ($options->{'dbg'}){
+        $log->debug("==============================Parameters used===================");
+        $log->debug(Dumper($options));
+    }
+ }
 }
 
 catch {
@@ -170,8 +162,7 @@ sub option_builder {
                 'chr|chromosome=s{,}' => \@{$options{'chr'}},
                 'ct|concat=i'  => \$options{'ct'},
                 'o|outDir=s'  => \$options{'o'},
-                'm|augment=i' => \$options{'m'},
-                'ao|augment_only=i' => \$options{'ao'},
+                'm|augment' => \$options{'m'},
                 'mq|map_quality=i' => \$options{'mq'},
                 'bq|base_quality=i' => \$options{'bq'},
                 # provide at least 1 tumour sample name
@@ -185,9 +176,9 @@ sub option_builder {
                 'pid|id_int_project=s' => \$options{'pid'},
                 'exp|exonerate_pct=i' => \$options{'exp'},
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
-                'f|filter_inc=i' => \$options{'finc'},
-                'F|filter_exc=i' => \$options{'fexc'},
-                'dbg|debug=i' => \$options{'dbg'},
+                'finc|filter_inc=i' => \$options{'finc'},
+                'fexc|filter_exc=i' => \$options{'fexc'},
+                'dbg|debug' => \$options{'dbg'},
                 'v|version'  => \$options{'v'}
     );
 
@@ -212,7 +203,7 @@ sub option_builder {
     }
 
     if(!defined($options{'fexc'})){
-        $options{'fexc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_EXCLUDE;
+        $options{'fexc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PIELUP;
     }
 
     if(!defined $options{'bo'}) { $options{'bo'}=0;}
@@ -250,10 +241,11 @@ sub option_builder {
     if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
         $options{'dp'}='NR,PR';
     }
-    
-    if($options{'ao'} ||  $options{'m'}) {
-     $log->debug("Augmentation option selected, chromosome option will be overidden to all chromosomes");
-      $options{'chr'}=[];
+
+    # All chromosomes were set to checkprohress file and rerun analysis if failed to detect one.
+    if($options{'ct'}) {
+        $log->debug("Concatenation option selected, chromosome option will be set to all chromosomes");
+        $options{'chr'}=[];
     }
 
     if(!defined $options{'s'}) {
@@ -264,15 +256,11 @@ sub option_builder {
     #default exonerate percentage
         $options{'exp'}=92;
     }
-    if(!defined $options{'ao'}) {
-        # augment vcf no merging step
-        $options{'ao'}=0;
-    }
     if(!defined $options{'oe'}) {
         # augment vcf extesnion
         $options{'oe'}='.vaf.vcf';
     }
-    if(($options{'ao'} || $options{'m'}) && lc($options{'a'}) eq 'snp') {
+    if($options{'m'} && lc($options{'a'}) eq 'snp' ) {
         $log->logcroak("Warning: VCF augment option is only supported for indels");
     }
   if(!defined $options{'hdr'} && lc($options{'a'}) eq 'indel') {
@@ -308,12 +296,11 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]
    --chromosome     (-chr) restrict analysis to a chromosome list [space separated chromosome names] , not applicable if augment option is choosen
    --concat         (-ct) concat per chromosome results to a single vcf  file
-   --augment        (-m)   Augment pindel file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
-   --augment_only   (-ao)  Only augment pindel VCF file (-m must be specified) [ do not  merge input files and add non passed varinats to output file ] (default 0: augment and merge )
+   --augment        (-m)   Augment original indel vcf file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
    --map_quality    (-mq)  read mapping quality threshold
    --base_quality   (-bq)  base quality threshold for snp
    --exonerate_pct  (-exp) report alignment over a percentage of the maximum score attainable by each query (exonerate specific parameter) [default 92]
-   --bamExtension   (-be)  Input read file extension
+   --bamExtension   (-be)  Input bam file extension
    --depth          (-dp)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --high_depth_bed (-hdr) High Depth Region(HDR) bed file (tabix indexed) to mask high depth regions in the genome
    --id_int_project (-pid) Internal project id [WTSI only]

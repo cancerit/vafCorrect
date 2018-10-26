@@ -137,6 +137,34 @@ sub _checkNormal {
     }
 }
 
+
+=head2 getChromosomes
+get chromosome names and length from genome file
+Inputs
+=over 2
+=back
+=cut
+
+sub getChromosomes {
+    my($self,$chr_list)=@_;
+    my %user_chr = map { $_ => 1 } @$chr_list;
+    my $chromosomes;
+    my $filtered_chr;
+    open my $fai_fh , '<', $self->{'_g'}.'.fai';
+    while (<$fai_fh>) {
+        next if ($_=~/^#/);
+        my($chr,$len)=(split "\t", $_)[0,1];
+        $chromosomes->{$chr}=$len;
+        if(exists $user_chr{$chr}){
+         $filtered_chr->{$chr}=$len;
+        }
+    }
+    if(@$chr_list > 0){
+    return $filtered_chr;
+    }else{return $chromosomes;}
+}
+
+
 =head2 getProgress
 get analysis progress log
 Inputs
@@ -147,31 +175,19 @@ Inputs
 sub getProgress {
     my($self,$user_chr)=@_;
     print "\n >>>>>> To view overall progress log please check vcfcommons.log file created in the current directory >>>>>>>>>\n";
-    print "\n >>>>>> Samples specific progress.out file is created in the output directory : $self->{'_o'} >>>>>>>>>\n";
+    print "\n >>>>>> Samples specific <CHR>_progress.out file is created in the output directory : $self->{'_o'} >>>>>>>>>\n";
     my $unprocessed_chr;
-    my %progress_files;    
-    foreach my $chr (@$user_chr){
-        my $progress_fhw;
+    foreach my $chr (keys %$user_chr){
       my $file_name=$self->{'_tmp'}."/${chr}_progress.out";
-      if (-e $file_name)
+      if (! -e $file_name)
       {
-           open $progress_fhw, '>>', $file_name or die "Can't open $file_name: $!";
+        $unprocessed_chr->{$chr}=$user_chr->{$chr};
       }else{
-          open $progress_fhw, '>', $file_name or die "Unable to create progress file $file_name: $!";
-          #Any chromosome missed by user will be processed here only during concatenation step...
-          push(@$unprocessed_chr,$chr);
+        $log->debug("Skipping analysis -- progress file exists for chr: $chr")
       }
-      open my $progress_fhr, '<', $file_name or die "Can't open $file_name: $!";
-      my @progress_data=<$progress_fhr>;
-      close($progress_fhr);
-        $progress_files{"$chr"}=[$progress_fhw,\@progress_data];
     }
-    # if not a concatenation step then process user defined chromosome 
-    if(!defined $self->{'_ct'}){
-        $unprocessed_chr=$user_chr;
-    }
-    
-    return (\%progress_files,$unprocessed_chr);
+    # if not a concatenation step then process user defined chromosome
+    return ($unprocessed_chr);
 }
 
 =head2 _populateBedHeader
@@ -228,9 +244,9 @@ sub writeFinalFileHeaders {
     my($self,$info_tag_val,$tags)=@_;
     my $WFH_VCF=undef;
     my $WFH_TSV=undef;
-  my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';
-    # return if no VCF file found or augment only option is provided for indel data ...
-    return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || ( $self->{'_ao'} == 1) || (-e "$outfile_name.vcf.gz"));
+    my $outfile_name=$self->getOutputDir.'/'.$self->getNormalName.'_'.@{$self->getTumourName}[0].'_'.$self->{'_a'}.'_vaf';
+    # return if no VCF file found  ...
+    return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || (-e "$outfile_name.vcf.gz"));
     my ($vcf)=$self->_getVCFObject($info_tag_val);
     $log->debug("VCF outfile:$outfile_name.vcf");
     $log->debug("TSV outfile:$outfile_name.tsv");
@@ -257,31 +273,7 @@ sub writeFinalFileHeaders {
 }
 
 
-=head2 getChromosomes
-get chromosome names from genome file
-Inputs
-=over 2
-=back
-=cut
 
-sub getChromosomes {
-    my($self,$chr_list)=@_;
-    my %user_chr = map { $_ => 1 } @$chr_list;
-    my $chromosomes;
-    my $filtered_chr;
-    open my $fai_fh , '<', $self->{'_g'}.'.fai';
-    while (<$fai_fh>) {
-        next if ($_=~/^#/);
-        my($chr,$pos)=(split "\t", $_)[0,1];
-        push(@$chromosomes,$chr);
-        if(exists $user_chr{$chr}){
-         push(@$filtered_chr,$chr);
-        }
-    }
-    if(@$chr_list > 0){
-    return $filtered_chr;
-    }else{return $chromosomes;}
-}
 
 =head2 getMergedLocations
 get merged snp/indel locations for a given individual group
@@ -472,7 +464,6 @@ sub _getCustomHeader {
         $vcf_format->{'RGZ'}={(key=>'FORMAT',ID=>'RGZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting G for this position, reverse strand")};
         $vcf_format->{'RTZ'}={(key=>'FORMAT',ID=>'RTZ', Number=>'1',Type=>'Integer',Description=>"Reads presenting T for this position, reverse strand")};
         $vcf_format->{'VAF'}={(key=>'FORMAT',ID=>'VAF', Number=>'1',Type=>'Float',Description=>"Variant Allele Fraction (excludes ambiguous reads if any)")};
-
     }
   foreach my $sample(@{$self->{'_tn'}}){
      $tumour_count++;
@@ -679,76 +670,58 @@ Inputs
 =cut
 
 sub processMergedLocations {
-    my($self,$data_for_all_samples,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$chr,$tags,$info_tag_val,$progress_fhw,$progress_data)=@_;
+    my($self,$data_for_all_samples,$unique_locations,$variant, $chr_length, $bam_objects,$chr,$tags,$info_tag_val)=@_;
     my $pileup_results=undef;
     my $count=0;
     my $total_locations=keys %$unique_locations;
-    foreach my $progress_line(@$progress_data) {
-        chomp $progress_line;
-        if ($progress_line eq "$self->{'_tmp'}/tmp_$chr.vcf" && ($self->{'_ao'} == 0) ) {
-            $log->debug("Skipping Analysis for chr:$chr: result file--> $self->{'_tmp'}/tmp_$chr.vcf exists");
-            return;
-        }
-    }
-    open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
-    open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!") if($self->{'_ao'} ==0);
+
+    open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!");
+    open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!");
 
     my $tmp_fh;
-    foreach my $sample (@{$self->getTumourName}) {
-        open my $tmp_aug_fh, '>', "$self->{'_tmp'}/tmp_${chr}_$sample.vcf" or $log->logcroak("Unable to create file $!") if($self->{'_m'} ==1);
-        $tmp_fh->{$sample} = $tmp_aug_fh;
+    if ($self->{'_m'}){
+        $tmp_fh=$self->_get_tmp_fh($chr);
     }
+    my($merged_vcf,$header_info)=$self->_getVCFObject($info_tag_val);
+    print "Analysing $chr\n";
+    foreach my $location (sort keys %$unique_locations) {
+        #next unless($location=~/114911505/);
+        $count++;
+        $variant->setLocation($location);
+        $variant->setVarLine($unique_locations->{$location});
+        my($g_pu)=$variant->formatVarinat();
+        # added to avoid bed locations mixing with other chromosomes when tmp files are generated
+        $g_pu->{'just_chr'}=$chr;
+        #process only passed varinats
+        next if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/);
 
-  my($merged_vcf,$header_info)=$self->_getVCFObject($info_tag_val);
-
-  foreach my $location (sort keys %$unique_locations) {
-    #next unless($location=~/114911505/);
-    $count++;
-    $variant->setLocation($location);
-    $variant->setVarLine($unique_locations->{$location});
-    my($g_pu)=$variant->formatVarinat();
-    # added to avoid bed locations mixing with other chromosomes when tmp files are generated
-    $g_pu->{'just_chr'}=$chr;
-    #process only passed varinats
-    if($self->{'_r'} && $variant->getVarLine!~/PASS/ && $variant->getVarLine!~/BEDFILE/) {
-        if($self->{'_ao'} == 1 || defined $self->{'_m'}) {
-            foreach my $sample (@{$self->getTumourName}) {
-                #location:CHR:POS:REF:ALT
-                my $aug_line = $self->_format_aug_line($self->{'vcf'}{$sample}, $g_pu->{'region'},  $store_results, $sample, $location);
-                $tmp_fh->{$sample}->print($aug_line);
-            }
+        my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
+        if ($self->{'_a'} eq 'indel') {
+            $g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName}, $chr_length, $max_depth,$g_pu);
         }
-        next;
-    }
-    my ($original_vcf_info,$NFS,$original_flag,$max_depth)=$variant->getVcfFields($data_for_all_samples);
-    if ($self->{'_a'} eq 'indel') {
-        $g_pu=$variant->createExonerateInput($bam_objects->{$self->getNormalName},$bam_header_data,$max_depth,$g_pu);
-    }
-    my $mutant_depth=0;
-    my $depth=0;
-
-    foreach my $sample (@{$self->{'allSamples'}}) {
-        $g_pu=$variant->populateHash($g_pu,$sample,$bam_header_data); # reset the counter for counts and lib size;
-        if($self->{'_a'} eq 'indel') {
-            $g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
-            if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
-                $g_pu=$variant->addNormalCount($g_pu);
-            }
-            elsif($self->{'_m'} && $data_for_all_samples->{$sample}{$location}) {
-                $store_results=$variant->storeResults($g_pu,$sample);
-                #location:CHR:POS:REF:ALT
-                if(!$store_results->{"$sample\_bed"}){
-                my $aug_line = $self->_format_aug_line($self->{'vcf'}{$sample}, $g_pu->{'region'},  $store_results, $sample, $location);
-                $tmp_fh->{$sample}->print($aug_line);
-                }else{
-                    $tmp_fh->{$sample}->print($store_results->{"$sample\_bed"}{$location});
+        my $mutant_depth=0;
+        my $depth=0;
+        foreach my $sample (@{$self->{'allSamples'}}) {
+            $g_pu=$variant->populateHash($g_pu,$sample); # reset the counter for counts and lib size;
+            if($self->{'_a'} eq 'indel') {
+                $g_pu=$variant->getIndelResults($bam_objects->{$sample},$g_pu);
+                if( ($sample eq $self->getNormalName) && (defined $self->{'_m'}) ) {
+                    $g_pu=$variant->addNormalCount($g_pu);
+                }
+                elsif($self->{'_m'} && $data_for_all_samples->{$sample}{$location}) {
+                    my $store_results = $variant->storeResults($g_pu, $sample);
+                    #location:CHR:POS:REF:ALT
+                    if(!$store_results->{"$sample\_bed"}){
+                        my $aug_line = $self->_format_aug_line($self->{'vcf'}{$sample}, $g_pu->{'region'},  $store_results, $sample, $location);
+                        $tmp_fh->{$sample}->print($aug_line);
+                    }else{
+                        $tmp_fh->{"$sample\_bed"}->print($store_results->{"$sample\_bed"}{$location});
+                    }
                 }
             }
-        }
-        else{
-            $g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
-        }
-        if($self->{'_ao'} == 0) {
+            else{
+                $g_pu=$variant->getPileup($bam_objects->{$sample},$g_pu);
+            }
             my($pileup_line)=$variant->formatResults($original_flag,$g_pu);
             # Mutant read depth found at this location
             if($g_pu->{'sample'} ne $self->getNormalName && $pileup_line->{'MTR'} > 0 ) {
@@ -759,50 +732,56 @@ sub processMergedLocations {
                     $depth++;
             }
             $pileup_results->{$g_pu->{'sample'}}=$pileup_line;
-        }
-    }# Done with all the samples ...
 
-    exit(0);
+        }# Done with all the samples ...
+        #get specific annotations from original VCF INFO field....
 
-    #get specific annotations from original VCF INFO field....
-    if($self->{'_ao'} == 0 ) {
        $original_vcf_info->{'ND'} =    $depth;
        $original_vcf_info->{'NVD'} =    $mutant_depth;
        $self->_writeOutput($original_vcf_info,$NFS,$pileup_results,$tags,$tmp_WFH_VCF,$tmp_WFH_TSV,$g_pu,$merged_vcf,$header_info);
        $depth=0;
        $mutant_depth=0;
-    }
-    if($count % 100 == 0) {
-        $log->debug("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
-    }
-
-  }# Done with all locations for a chromosome...
+        if($count % 100 == 0) {
+            $log->debug("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
+        }
+    }# Done with all locations for a chromosome...
     $merged_vcf->close() if defined $merged_vcf;
     # write success file name
-     $log->debug("Completed analysis for: $chr ");
-     if($self->{'_ao'} == 0){
-      close $tmp_WFH_VCF;
-      close $tmp_WFH_TSV; 
-      $progress_fhw->print("$self->{'_tmp'}/tmp_$chr.vcf\n");
-      return undef;
-     }
-
-    foreach my $sample ($tmp_fh){
-        $tmp_fh->{$sample}->close()
+    $log->debug("Completed analysis for: $chr ");
+    open my $tmp_progress, '>', $self->{'_tmp'}."/${chr}_progress.out" or $log->logcroak("Unable to create file $!");
+    close($tmp_progress);
+    close $tmp_WFH_VCF;
+    close $tmp_WFH_TSV;
+    foreach my $sample (keys %$tmp_fh){
+       print "closing file handler $chr :  $sample \n";
+       $tmp_fh->{$sample}->close();
     }
-
-
-    return $store_results;
+    return 0;
 }
 
-=head2 _get_bam_object
+
+sub _get_tmp_fh {
+    my($self,$chr)=@_;
+    my $tmp_fh;
+    foreach my $sample (@{$self->getTumourName}) {
+        open my $tmp_aug_fh, '>', "$self->{'_tmp'}/${sample}_tmp_${chr}.vcf" or $log->logcroak("Unable to create file $!");
+        $tmp_fh->{$sample} = $tmp_aug_fh;
+        if($self->{'_b'}){
+            open my $tmp_aug_fh, '>', "$self->{'_tmp'}/${sample}_tmp_${chr}.bed" or $log->logcroak("Unable to create file $!");
+            $tmp_fh->{"$sample\_bed"} = $tmp_aug_fh;
+        }
+    }
+   return $tmp_fh;
+}
+
+=head2 get_bam_object
 create bam object using Bio::DB::Sam
 Inputs
 =over 2
 =back
 =cut
 
-sub _get_bam_object {
+sub get_bam_object {
     my ($self)=@_;
     my (%bam_objects,%bas_files);
     my $files=$self->{'bam'};
@@ -813,13 +792,15 @@ sub _get_bam_object {
                                                             -expand_flags => 1);
         $sam->max_pileup_cnt($Sanger::CGP::Vaf::VafConstants::MAX_PILEUP_DEPTH);
         $bam_objects{$sample}=$sam;
+
         $bas_files{$sample}=$files->{$sample}.'.bas';
     }
     return(\%bam_objects,\%bas_files);
 }
 
-=head2 _get_bam_header_data
-get_bam_header_data -insert size and chr length
+
+=head2 get_lib_n_read_read_length
+get library sizse and read_length
 Inputs
 =over 2
 =item bam_objects -Bio::DB sam object
@@ -827,29 +808,38 @@ Inputs
 =back
 =cut
 
-sub _get_bam_header_data {
+sub get_lib_n_read_read_length {
     my ($self,$bam_objects,$bas_files)=@_;
-  return if $self->{'_a'} ne 'indel';
-  my ($chr_len,%bam_header_data);
-  my $max_lib_size=0;
-  foreach my $key (keys %$bam_objects) {
-    my $lib_size=0;
-      my($mapped_length)=$self->_get_read_length($bam_objects->{$key});
-      my $read_len=reduce{ $mapped_length->{$a} > $mapped_length->{$b} ? $a : $b } keys %$mapped_length;
-       my $header=$bam_objects->{$key}->header;
-       my $n_targets = $header->n_targets;
-       my $chr_names=$header->target_name;
-       foreach my $chr_no ((0..$n_targets)) {
-             my $chr_name = $header->target_name->[$chr_no];
-             my $chr_length = $header->target_len->[$chr_no];
-             if(defined $chr_name && defined $chr_length)    {
-                 $bam_header_data{$key}{$chr_name}=$chr_length;
-             }
-      }
-      #get insert size
-      # taken from brass code...
-      my $max=0;
-      my %sample_names = ();
+    return if $self->{'_a'} eq 'snp';
+    my $max_lib_size=0;
+    foreach my $sample (keys %$bam_objects){
+        my $lib_size=undef;
+        my $read_length=undef;
+        if( -e $bas_files->{$sample}) {
+           $lib_size=$self->_get_lib_size_from_bas($bas_files->{$sample});
+           $max_lib_size = $lib_size if $lib_size > $max_lib_size;
+        }else{
+           $lib_size=$self->_get_lib_size_from_bam($bam_objects->{$sample});
+           $max_lib_size = $lib_size if $lib_size > $max_lib_size;
+        }
+     }
+     return $max_lib_size;
+}
+
+=head2 _get_bam_header_data
+get_bam_header_data -insert size and chr length
+Inputs
+=over 2
+=item bam_objects -Bio::DB sam object
+=back
+=cut
+
+sub _get_lib_size_from_bam {
+  my ($self,$bam_object)=@_;
+  my $lib_size=0;
+  my $header=$bam_object->header;
+  my $max=0;
+  my %sample_names = ();
       foreach (split /\n/, $header->text) {
                 next unless /^\@RG.*/;
                 if(/.*\tMI:(?:Z:)?(\d+).*/){
@@ -858,28 +848,16 @@ sub _get_bam_header_data {
                         $lib_size=$max if $max > $lib_size;
                 }
                 $sample_names{$1}++    if(/.*\tSM:([^\t]+).*/);
-    }
-        $log->warn("Multiple sample names detected ") if scalar keys %sample_names > 1;
-
-        my @names = keys %sample_names;
-    # case where MI median inser size tag is absent in BAM file [ use the insert size from bas file ]
-
-      if ($lib_size == 0 ) {$lib_size=$read_len*2};
-
-      if( -e $bas_files->{$key}) {
-           $lib_size=$self->_get_lib_size_from_bas($bas_files->{$key});
       }
-      elsif ($lib_size == 0 )  {
+  $log->warn("Multiple sample names detected ") if scalar keys %sample_names > 1;
+  my @names = keys %sample_names;
+      if ($lib_size == 0 )  {
+        my($mapped_length)=$self->_get_read_length($bam_object);
+        my $read_len=reduce{ $mapped_length->{$a} > $mapped_length->{$b} ? $a : $b } keys %$mapped_length;
         $lib_size=$read_len*2;
-        $log->debug("No insert size tag in header or no BAS file found for $key using lib size (read_len x 2):$lib_size");
+        $log->debug("No insert size tag in header or no BAS file found using lib size (read_len x 2):$lib_size");
       }
-        $bam_header_data{$key}{'lib_size'}=$lib_size;
-        if(defined $read_len) {
-            $bam_header_data{$key}{'read_length'}=$read_len;
-        }
-        if ($max_lib_size<$lib_size){ $max_lib_size = $lib_size };
-    }
-    return(\%bam_header_data,$max_lib_size);
+    return $lib_size;
 }
 
 =head2 _get_lib_size_from_bas
@@ -899,12 +877,11 @@ sub _get_lib_size_from_bas {
     while (<$bas>) {
                     my @array=split(/\t/, $_);
                     if (defined $index_mi && $index_sd ) {
-                     $lib_size=$array[$index_mi]+ ($array[$index_sd] * 2);
-                     last;
+                         $lib_size=$array[$index_mi]+ ($array[$index_sd] * 2) if $lib_size < $array[$index_mi]+ ($array[$index_sd] * 2);
                     }
                     if (!$index_mi && !$index_sd ) {
-                            $index_mi = first { $array[$_] eq $Sanger::CGP::Vaf::VafConstants::LIB_MEAN_INS_SIZE } 0 .. $#array;
-                            $index_sd = first { $array[$_] eq $Sanger::CGP::Vaf::VafConstants::LIB_SD } 0 .. $#array;
+                        $index_mi = first { $array[$_] eq $Sanger::CGP::Vaf::VafConstants::LIB_MEAN_INS_SIZE } 0 .. $#array;
+                        $index_sd = first { $array[$_] eq $Sanger::CGP::Vaf::VafConstants::LIB_SD } 0 .. $#array;
                     }
     }
     close($bas);
@@ -951,9 +928,7 @@ sub WriteAugmentedHeader {
     my($self)=@_;
     my $aug_vcf_fh=undef;
     my $aug_vcf_name=undef;
-
     return if(!defined $self->{'vcf'});
-
     if(defined $self->{'_m'}) {
         my $augment_vcf=$self->{'vcf'};
         my ($vcf_filter,$vcf_info,$vcf_format,$sample_header)=$self->_getCustomHeader();
@@ -964,6 +939,7 @@ sub WriteAugmentedHeader {
             $aug_vcf_name->{$sample}=$aug_vcf;
             open(my $tmp_vcf,'>',$aug_vcf)|| $log->logcroak("unable to open file $!");
             $log->debug("Augmenting vcf file:".$self->getOutputDir."/$tmp_file".$self->{'_oe'});
+            # oprn original VCF for a sample
             my $vcf_aug = Vcf->new(file => $augment_vcf->{$sample});
             $vcf_aug->parse_header();
             #to get all the FORMAT fileds in one group
@@ -980,15 +956,22 @@ sub WriteAugmentedHeader {
                     $vcf_aug->add_header_line($vcf_format->{$format_type});
             }
             $vcf_aug->add_header_line($vcf_format->{'process_log'});
-
             print $tmp_vcf $vcf_aug->format_header();
+            $self->_add_non_passed_vcf_lines($vcf_aug, $tmp_vcf);
             $vcf_aug->close();
             $aug_vcf_fh->{$sample}=$tmp_vcf;
         }
+        if(defined $self->{'_b'}) {
+         $aug_vcf_fh=$self->_get_bed_header_for_augment_vcf($aug_vcf_fh);
+        }
     }
+  return($aug_vcf_fh,$aug_vcf_name);
+}
 
-    if(defined $self->{'_b'} && defined $self->{'_m'}) {
-        my $input_bam_files=$self->{'bam'};
+
+sub _get_bed_header_for_augment_vcf {
+    my($self,$aug_vcf_fh)=@_;
+     my $input_bam_files=$self->{'bam'};
         my @bed_header=@Sanger::CGP::Vaf::VafConstants::BED_HEADER_SNP;
         if($self->{'_a'} eq 'indel') {
             @bed_header=@Sanger::CGP::Vaf::VafConstants::BED_HEADER_INDEL;
@@ -1001,9 +984,22 @@ sub WriteAugmentedHeader {
                 $aug_vcf_fh->{"$sample\_bed"}=$tmp_bed;
             }
         }
-    }
-  return($aug_vcf_fh,$aug_vcf_name);
+     return $aug_vcf_fh;
 }
+
+sub _add_non_passed_vcf_lines{
+    my ($self,$vcf, $tmp_vcf)=@_;
+    while (my $x = $vcf->next_data_hash()) {
+        next if $$x{'FILTER'}[0] eq "PASS";
+        foreach my $format_type(@Sanger::CGP::Vaf::VafConstants::FORMAT_TYPE) {
+             $vcf->add_format_field($x,$format_type);
+             $$x{gtypes}{'TUMOUR'}{$format_type}=".";
+             $$x{gtypes}{'NORMAL'}{$format_type}=".";
+            }
+        print $tmp_vcf $vcf->format_line($x);
+    }
+}
+
 
 =head2 getVCFObject
 write VCF header data
@@ -1016,7 +1012,7 @@ Inputs
 sub _getVCFObject {
     my($self,$info_tag_val)=@_;
     # return if no VCF file found or augment only option is provided for indel data ...
-    return if(( !defined $self->{'vcf'} && !defined $self->{'_b'}) || ($self->{'_ao'} == 1));
+    return if(!defined $self->{'vcf'} && !defined $self->{'_b'});
     my $vcf=Vcf->new();
     my $genome_name=$self->_trim_file_path($self->getGenome);
     my $script_name=$self->_trim_file_path($0);
@@ -1134,7 +1130,7 @@ Inputs
 
 sub _writeOutput {
     my ($self,$original_vcf_info,$NFS,$new_pileup_results,$tags,$WFH_VCF,$WFH_TSV,$g_pu,$vcf,$header_info)=@_;
-  if ((!$vcf && !$self->{'_b'})|| ($self->{'_ao'}==1)) {
+  if (!$vcf && !$self->{'_b'}) {
         return 1;
     }
 
@@ -1435,8 +1431,13 @@ Inputs
 =back
 =cut
 sub catFiles {
-    my($self,$path,$ext,$outfile)=@_;
-    my $command='cat '.$path.'/tmp_*.'.$ext.' >>'."$outfile.$ext";
+    my($self, $path, $ext, $sample, $outfile)=@_;
+    my $command;
+    if($sample) {
+        $command='cat '.$path.'/'.${sample}.'_tmp_*.'.$ext.' >>'."$outfile";
+    }else{
+        $command='cat '.$path.'/tmp_*.'.$ext.' >>'."$outfile.$ext";
+    }
   $self->_runCommand($command); # croakable, quiet, no data
 }
 
