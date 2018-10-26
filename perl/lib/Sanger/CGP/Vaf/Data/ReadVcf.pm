@@ -31,7 +31,6 @@ use strict;
 use Vcf;
 use Data::Dumper;
 use English;
-use JSON;
 use FindBin qw($Bin);
 use List::Util qw(first reduce max min);
 use warnings FATAL => 'all';
