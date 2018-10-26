@@ -308,7 +308,7 @@ fi
 done_message "" "Failed during installation of core dependencies."
 
 echo -n "Installing cgpVaf ..."
-(
+  
   set -e
   cd "$INIT_DIR/perl"
 	echo -n `pwd`
@@ -316,7 +316,6 @@ echo -n "Installing cgpVaf ..."
   make
   make test
   make install
-) >>$INIT_DIR/setup.log 2>&1
 
 done_message "" " cgpVaf install failed."
 
