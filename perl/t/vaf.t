@@ -69,7 +69,7 @@ my $options={
     'be' => ".bam",
     'tmp' => "$test_output/tmpvcf_$test_samples[0]",
     'finc' => $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_INCLUDE,
-    'fexc' => $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_EXCLUDE,
+    'fexc' => $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PILEUP,
     #'b' => "$test_data/test.bed",
     #'bo' => 1
     };
@@ -118,8 +118,8 @@ subtest '_get_bam_header_data' => sub {
     my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
     $vcf_obj->getAllSampleNames;
     my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
-    my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
-    my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
+    my($bam_objects,$bas_files)=$vcf_obj->get_bam_object;
+    my($lib_size)=$vcf_obj->get_lib_n_read_read_length($bam_objects,$bas_files);
     is($lib_size,401);
     $options->{'a'} = $test_variant_type1;
 };
@@ -127,10 +127,10 @@ subtest '_get_bam_header_data' => sub {
 subtest 'ReadVcf' => sub {
     my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
     $vcf_obj->getAllSampleNames;
-    #diag(@{$vcf_obj->{'allSamples'}}[2]);
+    #diag(Dumper @{$vcf_obj->{'allSamples'}}[2]);
     my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
-    my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
-    my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
+    my($bam_objects,$bas_files)=$vcf_obj->get_bam_object;
+    my($lib_size)=$vcf_obj->get_lib_n_read_read_length($bam_objects,$bas_files);
     #create variant object
     my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
         'location'         => undef,
@@ -141,6 +141,7 @@ subtest 'ReadVcf' => sub {
         'tumourName'    => $vcf_obj->getTumourName,
         'normalName'    => $vcf_obj->getNormalName,
         'vcfStatus'     => $vcf_obj->{'vcf'},
+        'lib_size'      => $lib_size,
         'noVcf'            => defined $vcf_obj->{'noVcf'}?$vcf_obj->{'noVcf'}:undef,
         'outDir'            => $vcf_obj->getOutputDir,
         'passedOnly'  => $vcf_obj->{'_r'},
@@ -149,16 +150,16 @@ subtest 'ReadVcf' => sub {
         
         );
 
-    #diag(Dumper $variant);
-    is_deeply($vcf_obj->getChromosomes,\@chr,'ReadVcf:getChromosomes');
-
-    my ($chromosomes)=$vcf_obj->getChromosomes([$test_chr]);    
-    my ($progress_hash)=$vcf_obj->getProgress($chromosomes);
+    #diag(Dumper $vcf_obj->getChromosomes(\@chr));
+    my $exp_chr->{'1'}='16914540';
+    is_deeply($vcf_obj->getChromosomes(\@chr), $exp_chr, 'ReadVcf:getChromosomes');
+    my ($chromosomes)=$vcf_obj->getChromosomes(\@chr);
+    $chromosomes=$vcf_obj->getProgress($chromosomes);
     my ($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations($test_chr,$vcf_file_obj);
     is_deeply($unique_locations,$expected_unique_locations,'ReadVcf:getMergedLocations_unique_locations');
     #diag(Dumper %data_for_all_samples);
     #test will not pass for bed only options
-    #is_deeply($data_for_all_samples_res,\%data_for_all_samples,'ReadVcf:getMergedLocations');    
+    #is_deeply($data_for_all_samples_res,\%data_for_all_samples,'ReadVcf:getMergedLocations');
     if(defined $options->{'b'} ){
         my($bed_locations)=$vcf_obj->getBedHash($test_chr);
         if( $options->{'bo'} == 1 && (defined $data_for_all_samples_res) ) {
@@ -168,14 +169,13 @@ subtest 'ReadVcf' => sub {
             }
     }
         
-     my $store_results;
-     my($progress_fhw,$progress_data)=@{$progress_hash->{$test_chr}};
-     ($store_results)=$vcf_obj->processMergedLocations($data_for_all_samples_res,$unique_locations,$variant,$bam_header_data,$bam_objects,$store_results,$test_chr,$tags,$info_tag_val,$progress_fhw,$progress_data);
-    # if augment option is not provided - results will go in tmp files (store results will be empty)...
-    is_deeply($store_results,$expected_store_results,'ReadVcf:processMergedLocations');
+    $vcf_obj->processMergedLocations($data_for_all_samples_res,$unique_locations,$variant,$chromosomes->{$test_chr},$bam_objects,$test_chr,$tags,$info_tag_val);
+    # if augment option is not provided - results will go in tmp files ...
     my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
-    $vcf_obj->catFiles($options->{'tmp'},'vcf',$outfile_name_no_ext);
-    $vcf_obj->catFiles($options->{'tmp'},'tsv',$outfile_name_no_ext);
+    #diag(Dumper $outfile_name_no_ext);
+
+    $vcf_obj->catFiles($options->{'tmp'},'vcf', undef,  $outfile_name_no_ext);
+    $vcf_obj->catFiles($options->{'tmp'},'tsv', undef, $outfile_name_no_ext);
     my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");    
     
     
@@ -207,9 +207,9 @@ subtest 'ReadVcf' => sub {
   my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
     $vcf_obj->getAllSampleNames;
     my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
-    my($bam_objects,$bas_files)=$vcf_obj->_get_bam_object;
+    my($bam_objects,$bas_files)=$vcf_obj->get_bam_object;
     #lib size information only applicable for indels....
-    my($bam_header_data,$lib_size)=$vcf_obj->_get_bam_header_data($bam_objects,$bas_files);
+    my($lib_size)=$vcf_obj->get_lib_n_read_read_length($bam_objects,$bas_files);
     #create variant object
     my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
         'location'         => undef,
@@ -229,7 +229,7 @@ subtest 'ReadVcf' => sub {
         $variant->setVarLine('samplea-UM;MN;MQ');
         my($g_pu)=$variant->formatVarinat();
         is_deeply($g_pu,$expected_g_pu,'ReadVcf_processMergedLocations:g_pu');
-         $g_pu=$variant->populateHash($g_pu,'samplea',$bam_header_data);
+         $g_pu=$variant->populateHash($g_pu,'samplea');
          $g_pu=$variant->getPileup($bam_objects->{'samplea'},$g_pu);
 };
 
