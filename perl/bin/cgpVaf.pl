@@ -203,7 +203,7 @@ sub option_builder {
     }
 
     if(!defined($options{'fexc'})){
-        $options{'fexc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PIELUP;
+        $options{'fexc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PILEUP;
     }
 
     if(!defined $options{'bo'}) { $options{'bo'}=0;}
