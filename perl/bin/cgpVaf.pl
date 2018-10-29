@@ -296,7 +296,7 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]
    --chromosome     (-chr) restrict analysis to a chromosome list [space separated chromosome names] , not applicable if augment option is choosen
    --concat         (-ct) concat per chromosome results to a single vcf  file
-   --augment        (-m)   Augment original indel vcf file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: don not augment)
+   --augment        (-m)   Augment original indel vcf file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: do not augment)
    --map_quality    (-mq)  read mapping quality threshold
    --base_quality   (-bq)  base quality threshold for snp
    --exonerate_pct  (-exp) report alignment over a percentage of the maximum score attainable by each query (exonerate specific parameter) [default 92]
@@ -306,8 +306,8 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v
    --id_int_project (-pid) Internal project id [WTSI only]
    --bed_only       (-bo)  Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
    --vcf            (-vcf) user defined input vcf file name(s) , if not defined will be deduced from tumour sample name and vcfExtension [please specify in same order as tumour sample names ]
-   --filter_inc     (-f)   Sam flag values to include when checking reads for read length
-   --filter_exc     (-F)   Sam flag values to exclude when checking reads for read length
+   --filter_inc     (-finc)   Sam flag values to include when checking reads for read length
+   --filter_exc     (-fexc)   Sam flag values to exclude when checking reads for read length
    --help           (-h)   Display this help message
    --version        (-v)   provide version information for vaf
 
