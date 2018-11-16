@@ -75,18 +75,56 @@ sub _isValidAbs {
 
 sub getNormalBam {
      my($self)=shift;
-    return $self->{'_d'}.'/'.$self->getNormalName.$self->{'_be'};
+     if (-e $self->{'_nb'}){
+       return $self->_check_file_exists(shift->{'_nb'});
+     }
+     if(-e $self->{'_d'}.'/'.$self->getNormalName.'.bam'){
+        return $self->_check_file_exists($self->{'_d'}.'/'.$self->getNormalName.'.bam')
+     }
+     if( -e $self->{'_d'}.'/'.$self->getNormalName.'.cram'){
+        return $self->_check_file_exists($self->{'_d'}.'/'.$self->getNormalName.'.cram')
+     }
 }
 
 sub getVcfFile {
     my($self)=shift;
-    my @arr=map {$self->{'_d'}.'/'.$_.$self->{'_e'}} @{$self->getTumourName};
+    my @arr;
+     if ( scalar @{$self->{'_vcf'}} > 0){
+        foreach my $vcf_file(@{$self->{'_vcf'}}){
+            if( -e vcf_file){
+                push (@arr, $self->_check_file_exists($vcf_file));
+             }
+        }
+        return \@arr;
+     }
+    foreach my $tum_name(@{$self->getTumourName}){
+        if( -e $self->{'_d'}.'/'.$tum_name.$self->{'_e'}){
+            push (@arr, $self->_check_file_exists($self->{'_d'}.'/'.$tum_name.$self->{'_e'}) )if ($self->{'_e'});
+        }
+    }
     return \@arr;
 }
 
 sub getTumourBam {
     my($self)=shift;
-    my @arr=map {$self->{'_d'}.'/'.$_.$self->{'_be'}} @{$self->getTumourName};
+    my @arr;
+    if ( scalar @{$self->{'_tb'}} > 0){
+       foreach my $tum_file(@{$self->{'_tb'}}){
+        if( -e $tum_file){
+            push (@arr, $self->_check_file_exists($tum_file));
+        }
+       }
+       return \@arr;
+    }
+
+    foreach my $tum_name(@{$self->getTumourName}){
+        if( -e $self->{'_d'}.'/'.$tum_name.'.bam'){
+            push (@arr, $self->_check_file_exists($self->{'_d'}.'/'.$tum_name.'.bam') );
+
+        }else{
+           push (@arr, $self->_check_file_exists($self->{'_d'}.'/'.$tum_name.'.cram') );
+        }
+    }
     return \@arr;
 }
 
@@ -116,6 +154,15 @@ sub getOutputDir {
 
 sub getBedIntervals {
     return shift->{'_b'};
+}
+
+sub _check_file_exists {
+  my ($self, $file) = @_;
+  die "set_input requires a value for $file" unless(defined $file);
+  die "Does not appear to be valid file: $file" if($file !~ m/\.bam$/ && $file !~ m/\.cram$/ && $file !~ m/\.vcf.gz$/);
+  die "File does not exist : $file" unless(-e $file);
+  die "File appears to be empty : $file" unless(-s _);
+  return $file;
 }
 
 #-----Legacy

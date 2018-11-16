@@ -75,68 +75,6 @@ sub _isValid {
 }
 
 
-=head2 getVcfHeaderData
-get header info from vcf file
-Inputs
-=over 2
-=back
-=cut
-
-
-sub getVcfHeaderData {
-my ($self)=@_;
-    $self->_getData();
-    my $tumour_count=0;
-    my $info_tag_val=undef;
-    my $vcf_normal_sample=undef;
-    my $vcf_file_obj=undef;
-    foreach my $sample (keys %{$self->{'vcf'}}) {
-        $tumour_count++;
-        if(-e $self->{'vcf'}{$sample}) {
-            my $vcf = Vcf->new(file => $self->{'vcf'}{$sample});
-            $vcf->parse_header();
-            $vcf->recalc_ac_an(0);
-            ($info_tag_val,$vcf_normal_sample)=$self->_getOriginalHeader($vcf,$info_tag_val,$vcf_normal_sample,$tumour_count,$sample);
-            $vcf->close();
-            $vcf_file_obj->{$sample}=$vcf;
-        }
-        else {
-        $self->{'noVcf'}{$sample}=0;
-        $vcf_file_obj->{$sample}=0;
-        }
-    }
-    if($self->{'_bo'} and ($self->{'_bo'} == 0)) {
-        $log->debug("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
-        $self->_checkNormal($vcf_normal_sample);
-    }
-
-    if($self->{'_b'}) {
-        $info_tag_val=$self->_populateBedHeader($info_tag_val);
-    }
-        return ($info_tag_val,$vcf_file_obj);
-}
-
-=head2 _checkNormal
-check normal sample
-Inputs
-=over 2
-=item vcf_normal -normal sample defined in vcf header
-=back
-=cut
-
-sub _checkNormal {
-    my($self,$vcf_normal)=@_;
-    foreach my $key (keys %$vcf_normal) {
-        if($key eq $self->getNormalName) {
-            $log->debug("User provided normal sample matches with VCF normal");
-        }
-        else{
-            $log->debug("User provided normal sample doesn't matche with normal samples defined in VCF header");
-        }
-    }
-}
-
-
 =head2 getChromosomes
 get chromosome names and length from genome file
 Inputs
@@ -188,6 +126,94 @@ sub getProgress {
     # if not a concatenation step then process user defined chromosome
     return ($unprocessed_chr);
 }
+
+=head2 getVcfHeaderData
+get header info from vcf file
+Inputs
+=over 2
+=back
+=cut
+
+
+sub getVcfHeaderData {
+my ($self)=@_;
+    $self->_getData();
+    my $tumour_count=0;
+    my $info_tag_val=undef;
+    my $vcf_normal_sample=undef;
+    my $vcf_file_obj=undef;
+    foreach my $sample (keys %{$self->{'vcf'}}) {
+        $tumour_count++;
+        if(-e $self->{'vcf'}{$sample}) {
+            my $vcf = Vcf->new(file => $self->{'vcf'}{$sample});
+            $vcf->parse_header();
+            $vcf->recalc_ac_an(0);
+            ($info_tag_val,$vcf_normal_sample)=$self->_getOriginalHeader($vcf,$info_tag_val,$vcf_normal_sample,$tumour_count,$sample);
+            $vcf->close();
+            $vcf_file_obj->{$sample}=$vcf;
+        }
+        else {
+        $self->{'noVcf'}{$sample}=0;
+        $vcf_file_obj->{$sample}=0;
+        }
+    }
+    if($self->{'_bo'} and ($self->{'_bo'} == 0)) {
+        $log->debug("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
+        $self->_checkNormal($vcf_normal_sample);
+    }
+
+    if($self->{'_b'}) {
+        $info_tag_val=$self->_populateBedHeader($info_tag_val);
+    }
+        return ($info_tag_val,$vcf_file_obj);
+}
+
+=head2 _getData
+check and get user provided data and populate respective hash values
+Inputs
+=over 2
+=back
+=cut
+
+sub _getData {
+    my $self=shift;
+    my $count=0;
+    my $tum_bam = $self->getTumourBam;
+    my $vcf_files =  $self->getVcfFile;
+    print Dumper $vcf_files;
+
+    foreach my $sample (@{$self->getTumourName}) {
+            $self->{'bam'}{$sample}=@$tum_bam[$count];
+            if(scalar @$vcf_files >0 ){
+                $self->{'vcf'}{$sample}=@$vcf_files[$count];
+            }
+            $count++;
+    }
+    $self->{'bam'}{$self->getNormalName}=$self->getNormalBam;
+}
+
+=head2 _checkNormal
+check normal sample
+Inputs
+=over 2
+=item vcf_normal -normal sample defined in vcf header
+=back
+=cut
+
+sub _checkNormal {
+    my($self,$vcf_normal)=@_;
+    foreach my $key (keys %$vcf_normal) {
+        if($key eq $self->getNormalName) {
+            $log->debug("User provided normal sample matches with VCF normal");
+        }
+        else{
+            $log->debug("User provided normal sample doesn't matche with normal samples defined in VCF header");
+        }
+    }
+}
+
+
+
 
 =head2 _populateBedHeader
 add bed info to vcf header
@@ -271,9 +297,6 @@ sub writeFinalFileHeaders {
     return ($outfile_name);
 }
 
-
-
-
 =head2 getMergedLocations
 get merged snp/indel locations for a given individual group
 Inputs
@@ -312,41 +335,7 @@ sub getMergedLocations {
     return ($data_for_all_samples,$unique_locations);
 }
 
-=head2 _getData
-check and get user provided data and populate respective hash values
-Inputs
-=over 2
-=back
-=cut
 
-sub _getData {
-    my $self=shift;
-    my $count=0;
-    foreach my $sample (@{$self->getTumourName}) {
-        if( -e ${$self->getTumourBam}[$count] ) {
-            $self->{'bam'}{$sample}=${$self->getTumourBam}[$count];
-        }
-        else {
-            $log->debug("Skipping analysis, unble to find TUMOUR BAM file for sample: ".$sample);
-        }
-        if(${$self->getVcfFile}[$count] &&  -e ${$self->getVcfFile}[$count]) {
-            $self->{'vcf'}{$sample}=${$self->getVcfFile}[$count];
-        }
-        elsif(${$self->{'_vcf'}}[$count] && -e $self->{'_d'}.'/'.${$self->{'_vcf'}}[$count] ) {
-            $self->{'vcf'}{$sample}=$self->{'_d'}.'/'.${$self->{'_vcf'}}[$count];
-            $log->debug("No default VCF file found, using user defined VCF: ".$self->{'vcf'}{$sample});
-        }
-        elsif(defined $self->{'_bo'} && $self->{'_bo'}==0 ) {
-            $log->logcroak("Unble to find VCF file for sample: ".$sample);
-        }
-        $count++;
-    }
-    if(!-e $self->getNormalBam) {
-        $log->logcroak("Unble to find NORMAL BAM file for sample");
-    }
-    $self->{'bam'}{$self->getNormalName}=$self->getNormalBam;
-
-}
 
 =head2 _getOriginalHeader
 parse VCF header and get data from old header lines

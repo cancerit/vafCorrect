@@ -71,8 +71,8 @@ try {
 
     # this is called only once to add allSample names to vcf object
     $vcf_obj->getAllSampleNames;
-    my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData;
-    my($bam_objects,$bas_files)=$vcf_obj->get_bam_object;
+    my($info_tag_val,$vcf_file_obj)=$vcf_obj->getVcfHeaderData();
+    my($bam_objects,$bas_files)=$vcf_obj->get_bam_object();
     my $max_lib_size = $vcf_obj->get_lib_n_read_read_length($bam_objects,$bas_files);
     # create variant object
     my $variant=Sanger::CGP::Vaf::Process::Variant->new(
@@ -168,6 +168,8 @@ sub option_builder {
                 # provide at least 1 tumour sample name
                 'tn|tumour_name=s{1,}' => \@{$options{'tn'}},
                 'nn|normal_name=s' => \$options{'nn'},
+                'tb|tumour_bam=s{1,}' => \@{$options{'tb'}},
+                'nb|normal_bam=s' => \$options{'nb'},
                 'bo|bed_only=i' => \$options{'bo'},
                 'oe|output_vcfExtension=s' => \$options{'oe'},
                 'tmp|tmpdir=s' => \$options{'tmp'},
@@ -242,7 +244,6 @@ sub option_builder {
         $options{'dp'}='NR,PR';
     }
 
-    # All chromosomes were set to checkprohress file and rerun analysis if failed to detect one.
     if($options{'ct'}) {
         $log->debug("Concatenation option selected, chromosome option will be set to all chromosomes");
         $options{'chr'}=[];
@@ -277,37 +278,45 @@ cgpVaf.pl merge the variants in vcf files for a given Tumour - normal pairs in a
 
 =head1 SYNOPSIS
 
-cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -b -t -c -r -m -ao -mq -pid -bo -vcf -v]
+cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -tb -nb -b -t -c -r -m -ao -mq -pid -bo -vcf -v]
 
   Required Options (inputDir and variant_type must be defined):
 
    --variant_type   (-a)   variant type (snp or indel) [default snp]
    --inputDir       (-d)   input directory path containing bam and vcf files
    --genome         (-g)   genome fasta file name (default genome.fa)
-   --tumour_name    (-tn)  Toumour sample name [ list of space separated  sample names ]
-   --normal_name    (-nn)  Normal sample name [ single sample used as normal for this analysis ]
+   --tumour_name    (-tn)  Toumour sample name [ list of space separated sample names for which (co-located bam/cram, index and bas files are present for each sample)]
+   --normal_name    (-nn)  Normal sample name [ single sample used as normal for this analysis for which (co-located bam/cram, index and bas files are present) ]
    --outDir         (-o)   Output folder
    --vcfExtension   (-e)   vcf file extension string after the sample name - INCLUDE's preceding dot (default: .caveman_c.annot.vcf.gz) [ optional if -bo 1 ]
 
   Optional
+   --tumour_bam     (-tb)  tumour bam/cram file(s) space separated list [ optional if -tn is specified]
+                           - if not defined will be deduced from tumour_name
+                           - should be specified in same order as tumour sample names
+   --normal_bam     (-nb)  normal bam/cram file [optional if -nn is specified]
+                           - if not defined will be deduced from --normal_name
+                           - should be specified in same order as tumour sample names
    --infoTags       (-t)   comma separated list of tags to be included in the tsv output, vcf file by default includes all data
                            (default: VD,VW,VT,VC for Vagrent annotations)
    --bedIntervals   (-b)   tab separated file containing list of intervals in the form of <chr><pos> <ref><alt> (e.g 1  14000  A  C)
    --restrict_flag  (-r)   restrict analysis on (possible values 1 : PASS or 0 : ALL) [default 1 ]
-   --chromosome     (-chr) restrict analysis to a chromosome list [space separated chromosome names] , not applicable if augment option is choosen
-   --concat         (-ct) concat per chromosome results to a single vcf  file
-   --augment        (-m)   Augment original indel vcf file [ this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default 0: do not augment)
+   --chromosome     (-chr) restrict analysis to a chromosome list [space separated chromosome names]
+   --concat         (-ct)  concat per chromosome results to a single vcf  file
+   --augment        (-m)   Augment original vcf file (valid for indels)
+                           - this will add additional fields[ MTR, WTR, AMB] to FORMAT column of NORMAL and TUMOUR samples ] (default FALSE: do not augment)
    --map_quality    (-mq)  read mapping quality threshold
    --base_quality   (-bq)  base quality threshold for snp
    --exonerate_pct  (-exp) report alignment over a percentage of the maximum score attainable by each query (exonerate specific parameter) [default 92]
-   --bamExtension   (-be)  Input bam file extension
    --depth          (-dp)  comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --high_depth_bed (-hdr) High Depth Region(HDR) bed file (tabix indexed) to mask high depth regions in the genome
    --id_int_project (-pid) Internal project id [WTSI only]
    --bed_only       (-bo)  Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)
-   --vcf            (-vcf) user defined input vcf file name(s) , if not defined will be deduced from tumour sample name and vcfExtension [please specify in same order as tumour sample names ]
-   --filter_inc     (-finc)   Sam flag values to include when checking reads for read length
-   --filter_exc     (-fexc)   Sam flag values to exclude when checking reads for read length
+   --vcf            (-vcf) user defined input vcf file path(s) [ optional if -tn is specified ]
+                           - if not defined will be deduced from --tumour_name and --vcfExtension
+                           - should be specified in same order as tumour sample names
+   --filter_inc     (-finc)  Sam flag values to include when checking reads for read length
+   --filter_exc     (-fexc)  Sam flag values to exclude when checking reads for read length
    --help           (-h)   Display this help message
    --version        (-v)   provide version information for vaf
 
