@@ -19,7 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
-SOURCE_VCFTOOLS="http://sourceforge.net/projects/vcftools/files/vcftools_0.1.12a.tar.gz/download"
+SOURCE_VCFTOOLS="https://github.com/vcftools/vcftools/releases/download/v0.1.16/vcftools-0.1.16.tar.gz"
 SOURCE_BIOBDHTS="https://github.com/Ensembl/Bio-HTS/archive/2.10.tar.gz"
 SOURCE_HTSLIB="https://github.com/samtools/htslib/releases/download/1.7/htslib-1.7.tar.bz2"
 SOURCE_SAMTOOLS="https://github.com/samtools/samtools/releases/download/1.7/samtools-1.7.tar.bz2"
@@ -186,51 +186,58 @@ else
 
   export HTSLIB=$INST_PATH
 
+  CURR_TOOL="samtools"
+  CURR_SOURCE=$SOURCE_SAMTOOLS
+
   (
   if [[ ",$COMPILE," == *,samtools,* ]] ; then
-    echo "Building samtools ..."
-    if [ -e $SETUP_DIR/samtools.success ]; then
-      echo " previously installed ...";
+    echo -n "Building  $CURR_TOOL..."
+    if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
+        echo " previously installed ...";
     else
-      cd $SETUP_DIR
-      rm -rf samtools
-      get_distro "samtools" $SOURCE_SAMTOOLS
-      mkdir -p samtools
-      tar --strip-components 1 -C samtools -xjf samtools.tar.bz2
-      cd samtools
-      ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
-      make -s -j$CPU all all-htslib
-      make install all all-htslib
-      cd $SETUP_DIR
-      rm -f samtools.tar.bz2
-      touch $SETUP_DIR/samtools.success
+        cd $SETUP_DIR
+        mkdir -p $SETUP_DIR/distro
+        curl -sSL --retry 10 $CURR_SOURCE > distro.tar.gz
+        rm -rf distro/*
+        tar --strip-components 2 -C distro -xzf distro.tar.gz
+        cd $SETUP_DIR/distro
+        ./configure --enable-plugins --enable-libcurl --prefix=$INST_PATH
+        make -s -j$CPU all all-htslib
+        make install all all-htslib
+       cd $SETUP_DIR
+       rm -rf distro/* distro.*
+       touch $SETUP_DIR/$CURR_TOOL.success
     fi
   else
     echo "samtools - No change between vafCorrect versions"
   fi
   ) >>$INIT_DIR/setup.log 2>&1
 
-  echo "Building Bio::DB::HTS ..."
+
+  CURR_TOOL="Bio_DB_HTS"
+  CURR_SOURCE=$SOURCE_BIOBDHTS
+  echo -n "Building  $CURR_TOOL..."
   (
-  if [ -e $SETUP_DIR/biohts.success ]; then
+  if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
     echo " previously installed ...";
   else
-    echo
     cd $SETUP_DIR
-    rm -rf bioDbHts
-    get_distro "bioDbHts" $SOURCE_BIOBDHTS
-    mkdir -p bioDbHts
-    tar --strip-components 1 -C bioDbHts -zxf bioDbHts.tar.gz
-    cd bioDbHts
+    mkdir -p $SETUP_DIR/distro
+    curl -sSL --retry 10 $CURR_SOURCE > distro.tar.gz
+    rm -rf distro/*
+    tar --strip-components 2 -C distro -xzf distro.tar.gz
+    cd $SETUP_DIR/distro
     perl Build.PL --htslib=$HTSLIB --install_base=$INST_PATH
     ./Build
     ./Build test
     ./Build install
     cd $SETUP_DIR
-    rm -f bioDbHts.tar.gz
-    touch $SETUP_DIR/biohts.success
+    rm -rf distro/* distro.*
+    touch $SETUP_DIR/$CURR_TOOL.success
   fi
-  ) >>$INIT_DIR/setup.log 2>&1
+  ) >>$INIT_DIR/$CURR_TOOL.log 2>&1
+
+  done_message "" "Failed to build $CURR_TOOL."
 
   cd $SETUP_DIR
 
@@ -241,15 +248,17 @@ else
   if [ -e $SETUP_DIR/$CURR_TOOL.success ]; then
     echo -n " previously installed ..."
   else
-      set -ex
-      get_distro $CURR_TOOL $CURR_SOURCE
       cd $SETUP_DIR
-      mkdir vcftools
-      tar --strip 1 -C vcftools -zxf $CURR_TOOL.tar.gz
-      cd $CURR_TOOL
-      patch Makefile < $INIT_DIR/patches/vcfToolsInstLocs.diff
-      patch perl/Vcf.pm < $INIT_DIR/patches/vcfToolsProcessLog.diff
-      make -j$CPU PREFIX=$INST_PATH
+      mkdir -p $SETUP_DIR/distro
+      curl -sSL --retry 10 $CURR_SOURCE > distro.tar.gz
+      rm -rf distro/*
+      tar --strip-components 2 -C distro -xzf distro.tar.gz
+      cd $SETUP_DIR/distro
+      ./configure --prefix=$INST_PATH --with-pmdir=lib/perl5
+      make -j$CPU
+      make -j$CPU install
+      cd $SETUP_DIR
+      rm -rf distro/* distro.*
       touch $SETUP_DIR/$CURR_TOOL.success
   fi
   ) >>$INIT_DIR/setup.log 2>&1
