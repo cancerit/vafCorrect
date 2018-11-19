@@ -76,13 +76,13 @@ sub _isValidAbs {
 sub getNormalBam {
      my($self)=shift;
      if (-e $self->{'_nb'}){
-       return $self->_check_file_exists(shift->{'_nb'});
+       return $self->_check_file_exists_bam(shift->{'_nb'});
      }
      if(-e $self->{'_d'}.'/'.$self->getNormalName.'.bam'){
-        return $self->_check_file_exists($self->{'_d'}.'/'.$self->getNormalName.'.bam')
+        return $self->_check_file_exists_bam($self->{'_d'}.'/'.$self->getNormalName.'.bam')
      }
      if( -e $self->{'_d'}.'/'.$self->getNormalName.'.cram'){
-        return $self->_check_file_exists($self->{'_d'}.'/'.$self->getNormalName.'.cram')
+        return $self->_check_file_exists_bam($self->{'_d'}.'/'.$self->getNormalName.'.cram')
      }
 }
 
@@ -92,14 +92,14 @@ sub getVcfFile {
      if ( defined $self->{'_vcf'} && scalar @{$self->{'_vcf'}} > 0){
         foreach my $vcf_file(@{$self->{'_vcf'}}){
             if( -e vcf_file){
-                push (@arr, $self->_check_file_exists($vcf_file));
+                push (@arr, $self->_check_file_exists_vcf($vcf_file));
              }
         }
         return \@arr;
      }
     foreach my $tum_name(@{$self->getTumourName}){
         if( -e $self->{'_d'}.'/'.$tum_name.$self->{'_e'}){
-            push (@arr, $self->_check_file_exists($self->{'_d'}.'/'.$tum_name.$self->{'_e'}) )if ($self->{'_e'});
+            push (@arr, $self->_check_file_exists_vcf($self->{'_d'}.'/'.$tum_name.$self->{'_e'}) )if ($self->{'_e'});
         }
     }
     return \@arr;
@@ -111,7 +111,7 @@ sub getTumourBam {
     if (defined $self->{'_tb'} && scalar @{$self->{'_tb'}} > 0){
        foreach my $tum_file(@{$self->{'_tb'}}){
         if( -e $tum_file){
-            push (@arr, $self->_check_file_exists($tum_file));
+            push (@arr, $self->_check_file_exists_bam($tum_file));
         }
        }
        return \@arr;
@@ -119,10 +119,10 @@ sub getTumourBam {
 
     foreach my $tum_name(@{$self->getTumourName}){
         if( -e $self->{'_d'}.'/'.$tum_name.'.bam'){
-            push (@arr, $self->_check_file_exists($self->{'_d'}.'/'.$tum_name.'.bam') );
+            push (@arr, $self->_check_file_exists_bam($self->{'_d'}.'/'.$tum_name.'.bam') );
 
         }else{
-           push (@arr, $self->_check_file_exists($self->{'_d'}.'/'.$tum_name.'.cram') );
+           push (@arr, $self->_check_file_exists_bam($self->{'_d'}.'/'.$tum_name.'.cram') );
         }
     }
     return \@arr;
@@ -156,12 +156,21 @@ sub getBedIntervals {
     return shift->{'_b'};
 }
 
-sub _check_file_exists {
+sub _check_file_exists_bam {
   my ($self, $file) = @_;
-  die "set_input requires a value for $file" unless(defined $file);
-  die "Does not appear to be valid file: $file" if($file !~ m/\.bam$/ && $file !~ m/\.cram$/ && $file !~ m/\.vcf.gz$/);
-  die "File does not exist : $file" unless(-e $file);
-  die "File appears to be empty : $file" unless(-s _);
+  die "tumour/normal bam requires a value" unless(defined $file);
+  die "Does not appear to be valid BAM/CRAM file name: $file" if($file !~ m/\.bam$/ && $file !~ m/\.cram$/);
+  die "BAM/CRAM file does not exist : $file" unless(-e $file);
+  die "BAM/CRAM file appears to be empty : $file" unless(-s _);
+  return $file;
+}
+
+sub _check_file_exists_vcf {
+  my ($self, $file) = @_;
+  die "-vcf requires a value" unless(defined $file);
+  die "Does not appear to be valid vcf file name: $file" if($file !~ m/\.vcf.gz$/);
+  die "vcf file does not exist : $file" unless(-e $file);
+  die "vcf file appears to be empty : $file" unless(-s _);
   return $file;
 }
 

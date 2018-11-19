@@ -180,8 +180,6 @@ sub _getData {
     my $count=0;
     my $tum_bam = $self->getTumourBam;
     my $vcf_files =  $self->getVcfFile;
-    print Dumper $vcf_files;
-
     foreach my $sample (@{$self->getTumourName}) {
             $self->{'bam'}{$sample}=@$tum_bam[$count];
             if(scalar @$vcf_files >0 ){
@@ -787,7 +785,6 @@ sub get_bam_object {
                                                             -expand_flags => 1);
         $sam->max_pileup_cnt($Sanger::CGP::Vaf::VafConstants::MAX_PILEUP_DEPTH);
         $bam_objects{$sample}=$sam;
-
         $bas_files{$sample}=$files->{$sample}.'.bas';
     }
     return(\%bam_objects,\%bas_files);
