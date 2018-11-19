@@ -89,7 +89,7 @@ sub getNormalBam {
 sub getVcfFile {
     my($self)=shift;
     my @arr;
-     if ( scalar @{$self->{'_vcf'}} > 0){
+     if ( defined $self->{'_vcf'} && scalar @{$self->{'_vcf'}} > 0){
         foreach my $vcf_file(@{$self->{'_vcf'}}){
             if( -e vcf_file){
                 push (@arr, $self->_check_file_exists($vcf_file));
@@ -108,7 +108,7 @@ sub getVcfFile {
 sub getTumourBam {
     my($self)=shift;
     my @arr;
-    if ( scalar @{$self->{'_tb'}} > 0){
+    if (defined $self->{'_tb'} && scalar @{$self->{'_tb'}} > 0){
        foreach my $tum_file(@{$self->{'_tb'}}){
         if( -e $tum_file){
             push (@arr, $self->_check_file_exists($tum_file));
