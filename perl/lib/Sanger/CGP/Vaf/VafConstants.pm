@@ -23,9 +23,10 @@ const our $READ_LENGTH_CUTOFF => 2;
 const our $READ_LENGTH => 100;
 const our $SEP => "/";
 const our $test_mode => 0;
-
+const our $DEFAULT_LIB_SIZE => 200;
 const our $INSERT_SIZE_FACTOR => 1;
 const our $SPANNING_SEQ_DENOMINATOR => 2;
+const our $SPANNING_SEQ => 200;
 # alignment constants RFLAGS is exported by Bio::DB::HTS::Constants
 const our $PROPER_PAIRED => RFLAGS->{'MAP_PAIR'};
 const our $UNMAPPED => RFLAGS->{'UNMAPPED'};
@@ -39,14 +40,27 @@ const our $SECOND_IN_PAIR => RFLAGS->{'SECOND_MATE'};
 const our $SUPP_ALIGNMENT => RFLAGS->{'SUPPLEMENTARY'};
 const our $DUP_READ => RFLAGS->{'DUPLICATE'};
 const our $VENDER_FAIL => RFLAGS->{'QC_FAILED'};
+
 const our @FORMAT_TYPE => qw(MTR WTR AMB UNK VAF);
 const our $NO_READS_READLEN => 50000;
 const our $MAX_PILEUP_DEPTH => '1000000';
-const our $DEFAULT_READLEN_EXCLUDE => RFLAGS->{'UNMAPPED'} + 
-                                        RFLAGS->{'NOT_PRIMARY'} +
-                                        RFLAGS->{'M_UNMAPPED'} + 
+
+
+const our $DEFAULT_READS_EXCLUDE_FETCH_MATE => RFLAGS->{'NOT_PRIMARY'} +
                                         RFLAGS->{'SUPPLEMENTARY'} +
-                                        RFLAGS->{'DUPLICATE'} + 
+                                        RFLAGS->{'UNMAPPED'} +
+                                        RFLAGS->{'QC_FAILED'};
+
+
+
+const our $DEFAULT_FETCH_UNMAPPED =>    RFLAGS->{'NOT_PRIMARY'} +
+                                        RFLAGS->{'SUPPLEMENTARY'} +
+                                        RFLAGS->{'QC_FAILED'};
+
+const our $DEFAULT_READS_EXCLUDE_PILEUP => RFLAGS->{'NOT_PRIMARY'} +
+                                        RFLAGS->{'SUPPLEMENTARY'} +
+                                        RFLAGS->{'DUPLICATE'} +
+                                        RFLAGS->{'UNMAPPED'} +
                                         RFLAGS->{'QC_FAILED'};
                                         
 const our $DEFAULT_READLEN_INCLUDE => RFLAGS->{'MAP_PAIR'} + 
