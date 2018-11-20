@@ -61,7 +61,7 @@ try {
     }
     if ($options->{'a'} eq 'indel') {
         $tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
-  } 
+    }
     my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
     
     my $progress_hash;
@@ -107,9 +107,9 @@ try {
          $vcf_obj->processMergedLocations($data_for_all_samples ,$unique_locations,$variant,$chromosomes->{$chr} ,$bam_objects,$chr,$tags,$info_tag_val);
     }# completed all chromosomes;
 
- # run following steps only if chromosome option is empty or user has selected option to concatenate files.
- if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
-     if($options->{'m'}) {
+        # run following steps only if chromosome option is empty or user has selected option to concatenate files.
+    if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
+      if($options->{'m'}) {
       $log->debug("Completed analysis for all PASS locations, writing non PASS variants");
       my($aug_vcf_fhs,$aug_vcf_names)=$vcf_obj->WriteAugmentedHeader();
       foreach my $sample (keys %$aug_vcf_names){

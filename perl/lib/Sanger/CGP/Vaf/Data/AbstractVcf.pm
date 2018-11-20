@@ -93,7 +93,7 @@ sub getVcfFile {
     my @arr;
      if ( defined $self->{'_vcf'} && scalar @{$self->{'_vcf'}} > 0){
         foreach my $vcf_file(@{$self->{'_vcf'}}){
-            if( -e vcf_file){
+            if( -e $vcf_file){
                 push (@arr, $self->_check_file_exists_vcf($vcf_file));
              }
         }
