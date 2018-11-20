@@ -37,6 +37,7 @@ use List::Util qw(first reduce max min);
 use warnings FATAL => 'all';
 use Capture::Tiny qw(:all);
 
+use Sanger::CGP::Vaf; # exports VERSION
 use Math::Round qw(round);
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
@@ -44,7 +45,6 @@ use Bio::DB::HTS::VCF;
 use Sanger::CGP::Vaf::VafConstants;
 
 use Log::Log4perl;
-Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 use base qw(Sanger::CGP::Vaf::Process::AbstractVariant);
@@ -101,7 +101,7 @@ return $g_pu;
 
 }
 
-=head2 formatVarinat
+=head2 storeResults
 get hash containing location specific information
 Inputs
 =over 2
@@ -113,7 +113,8 @@ Inputs
 
 
 sub storeResults {
-    my ($self,$store_results,$g_pu,$sample)=@_;
+    my ($self,$g_pu,$sample)=@_;
+    my $store_results={};
     my $results = {'tMTR'=> '.',
                                'tWTR'=> '.',
                                'tUNK'=> '.',
@@ -165,10 +166,10 @@ sub storeResults {
     $results->{'nUNK'}=$g_pu->{'normal_UNK'};
     $results->{'nAMB'}=$g_pu->{'normal_AMB'};
     $results->{'nVAF'}=$g_pu->{'normal_VAF'};
-  $store_results->{$sample}{$self->getLocation}=$results;
+
+    $store_results->{$sample}{$self->getLocation}=$results;
 
   return $store_results;
-
 }
 
 =head2 getVcfFields
@@ -301,8 +302,8 @@ Inputs
 =cut
 
 sub createExonerateInput {
-    my($self,$bam,$bam_header,$depth,$g_pu)=@_;
-    $g_pu=$self->_getRange($bam_header,$g_pu,$depth);
+    my($self, $bam, $chr_len, $depth,$g_pu)=@_;
+    $g_pu=$self->_getRange($chr_len, $g_pu,$depth);
     my($ref_seq)=$self->_get_dna_segment($bam,$g_pu->{'chr'},$g_pu->{'pos_5p'},$g_pu->{'pos_3p'});
 
     my($alt_seq)=$self->_get_alt_seq($bam,$g_pu);
@@ -324,11 +325,10 @@ Inputs
 =cut
 
 sub _getRange {
-  my($self,$bam_header,$g_pu,$max_depth)=@_;
-
+  my($self,$chr_len,$g_pu,$max_depth)=@_;
   return unless($self->getVarType eq 'indel');
-  my ($left_pos,$right_pos,$chr_len,$spanned_region);
-  my $lib_size=$self->{'_libSize'};
+  my $lib_size = $self->{'_lib_size'};
+  my ($left_pos,$right_pos,$spanned_region);
   my $hdr_flag=0;
   if(defined $self->{'_tabix_hdr'}) {
     $hdr_flag=$self->_check_hdr_overlap($g_pu->{'chr'},$g_pu->{'start'},$g_pu->{'end'},$self->{'_tabix_hdr'});
@@ -337,7 +337,6 @@ sub _getRange {
   #if location is in high depth region and has depth >1000 then hdr_flag is true
   if($hdr_flag && $max_depth > 1000){$spanning_seq_denom=4;}
   else {$hdr_flag=0;}
-    $chr_len=$bam_header->{$self->{'_normalName'}}{$g_pu->{'chr'}};
   if(defined $lib_size && defined $chr_len) {
       $spanned_region = round(($lib_size *  $Sanger::CGP::Vaf::VafConstants::INSERT_SIZE_FACTOR )/$spanning_seq_denom);
       #$spanned_region=round($spanned_region);
@@ -353,8 +352,8 @@ sub _getRange {
         $log->logcroak("Library size or chromosome length in not defined");
     }
     if(!defined $lib_size) {
-     $g_pu->{'pos_5p'}=round($left_pos - 200);
-     $g_pu->{'pos_3p'}=round($right_pos + 200);
+     $g_pu->{'pos_5p'}=round($left_pos - $Sanger::CGP::Vaf::VafConstants::SPANNING_SEQ);
+     $g_pu->{'pos_3p'}=round($right_pos + $Sanger::CGP::Vaf::VafConstants::SPANNING_SEQ);
 
     }else{
      $g_pu->{'pos_5p'}=round($left_pos - $lib_size);
@@ -516,7 +515,7 @@ Inputs
 =cut
 
 sub populateHash {
-  my ($self,$g_pu,$sample,$bam_header_data) = @_;
+  my ($self,$g_pu,$sample) = @_;
 
   $g_pu->{'ref_p'} = 0;
     $g_pu->{'ref_n'} = 0;
@@ -535,11 +534,6 @@ sub populateHash {
     $g_pu->{'amb'} = 0;
     $g_pu->{'unk'} = 0;
     $g_pu->{'sample'} = $sample;
-
-    return $g_pu if($self->{'_varType'} eq 'snp');
-
-        $g_pu->{'read_length'}=$bam_header_data->{$sample}{'read_length'};
-        $g_pu->{'lib_size'}=$bam_header_data->{$sample}{'lib_size'};
     # exonerate score is 5 per base , we allow max 4 mismatches * 9 = 36 score units, 4 bases * 5 for readlength = 20 score units to be safe side added another 14 score units
    $g_pu;
 }
@@ -574,7 +568,8 @@ Inputs
 
 sub _fetch_features {
     my ($self,$sam_object,$g_pu,$Reads_FH)=@_;
-    if(($g_pu->{'end'} - $g_pu->{'start'}) < $g_pu->{'lib_size'}){
+    my $lib_size = $self->{'_lib_size'};
+    if(($g_pu->{'end'} - $g_pu->{'start'}) < $lib_size){
         $self->_fetch_reads($sam_object, "$g_pu->{'region'}",$Reads_FH);
         $g_pu->{'long_indel'}=0;
     }
@@ -611,18 +606,13 @@ my $read_counter=0;
         $sam_object->fetch($region, sub {
         my $a = shift;
         my $paired=0;
-        my $flags = $a->flag;
         # \& bitwise comparison
         ##Ignore read if it matches the following flags:
         #Brass-ReadSelection.pm
         return if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED;
-      #return if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
 
-        #if $flags & $READ_PAIRED;
+        return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_FETCH_MATE;
+
         #my $cigar  = $a->cigar_str;;
         my $mseqid = $a->mate_seq_id;
         my $seqid = $a->seq_id;
@@ -664,13 +654,8 @@ sub _fetch_mate_seq {
     my ($read,$mate_seq);
     my $callback= sub {
         my $a = shift;
-        my $flags = $a->flag;
         return if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED;
-      #return if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
+        return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_FETCH_MATE;
 
         if ($readname eq $a->display_name) {
             my $tmp_seq=$a->target->dna();
@@ -704,17 +689,13 @@ my $read_counter=0;
         $sam_object->fetch($region, sub {
         my $a = shift;
         my $paired=0;
-        my $flags = $a->flag;
         # \& bitwise comparison
         ##Ignore read if it matches the following flags:
         #Brass-ReadSelection.pm
         #return if($self->{'_mq'} && ($a->qual < $self->{'_mq'}) ); # no applied
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
-      #return if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
-        return if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
+        return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_FETCH_UNMAPPED;
         # only consider reads from wider range where mate is unmapped
-        if ($flags & $Sanger::CGP::Vaf::VafConstants::UNMAPPED) {
+        if ($a->flag & $Sanger::CGP::Vaf::VafConstants::UNMAPPED) {
             my $qseq = $a->target->dna();
             return if $qseq=~m/[nN]/;
             my $mseqid = $a->mate_seq_id;
@@ -853,9 +834,7 @@ sub _do_exonerate {
 $g_pu=$self->_cleanup_read_ambiguities($g_pu,$read_track_alt,$read_track_ref, $alt_count_p,$alt_count_n,$ref_count_p,$ref_count_n,$read_count_unk);
 
 return $g_pu;
-
-
-    }
+}
 
 
 =head2 _cleaup_read_ambiguities
@@ -936,7 +915,7 @@ sub addNormalCount {
                         $g_pu->{'normal_MTR'}=$g_pu->{'alt_p'} + $g_pu->{'alt_n'};
                         $g_pu->{'normal_WTR'}=$g_pu->{'ref_p'} + $g_pu->{'ref_n'};
                         eval{$VAF=$g_pu->{'normal_MTR'}/($g_pu->{'normal_WTR'}+$g_pu->{'normal_MTR'}); };
-                        $g_pu->{'normal_VAF'}=defined $VAF?sprintf("%.4f",$VAF):'0.00';
+                        $g_pu->{'normal_VAF'}=defined $VAF?sprintf("%.4f",$VAF):'0.0';
                         $g_pu->{'normal_UNK'}=$g_pu->{'unk'};
                         $g_pu->{'normal_AMB'}=$g_pu->{'amb'};
 
@@ -962,15 +941,11 @@ sub getPileup {
                                     foreach my $p (@{$pu}) {
                                         next if($p->is_del || $p->is_refskip);
                                         my $a = $p->alignment;
-                                        my $flags = $a->flag;
                                         # \& bitwise comparison
                                         ##Ignore read if it matches the following flags:
                                         #Brass-ReadSelection.pm
                                         next if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
-                                        next if $flags & $Sanger::CGP::Vaf::VafConstants::NOT_PRIMARY_ALIGN;
-                                        next if $flags & $Sanger::CGP::Vaf::VafConstants::VENDER_FAIL;
-                                        next if $flags & $Sanger::CGP::Vaf::VafConstants::DUP_READ;
-                                        next if $flags & $Sanger::CGP::Vaf::VafConstants::SUPP_ALIGNMENT;
+                                        next if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PILEUP;
 
                                         if($self->{'_bq'}) {
                                             my $fa = Bio::DB::HTS::AlignWrapper->new($a, $bam_object);

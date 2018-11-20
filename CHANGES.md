@@ -1,5 +1,10 @@
 # CHANGES
 
+## v5.4.0
+* Reduced memory footprint to Augment vcf file, it can now run per chromosome
+* SAM flag filters are now controlled by vafConstantas.pm file
+* .bas file now used by default to calculate library size
+
 ## v5.3.9
 
 * Change max reads read when determining read length to 50k
