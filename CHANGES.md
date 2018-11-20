@@ -1,12 +1,13 @@
 # CHANGES
 
 ## v5.4.0
-* Reduced memory footprint to Augment vcf file, it can now run per chromosome
+* Reduced memory footprint for augment vcf file
+* Augmentation can now run per chromosome
 * SAM flag filters are now controlled by vafConstantas.pm file
 * .bas file now used by default to calculate library size
+* added support for cram files
 
 ## v5.3.9
-
 * Change max reads read when determining read length to 50k
 * Modify _get_bam_header_data to get the max read length of ALL bam files encountered and therefore to produce the correct lib_size
 * Converted internal SAM flag constants to point to `Bio::DB::HTS` constants (in the future  internal constants could be replaced)
