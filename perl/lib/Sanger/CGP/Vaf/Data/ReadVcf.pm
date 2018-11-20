@@ -41,13 +41,13 @@ use Try::Tiny qw(try catch finally);
 use File::Remove qw(remove);
 use File::Path qw(remove_tree);
 
+use Sanger::CGP::Vaf; # exports VERSION
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
 use Sanger::CGP::Vaf::VafConstants;
 use Sanger::CGP::Vaf::Process::Variant;
 
 use Log::Log4perl;
-Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 use base qw(Sanger::CGP::Vaf::Data::AbstractVcf);
@@ -733,13 +733,13 @@ sub processMergedLocations {
     }# Done with all locations for a chromosome...
     $merged_vcf->close() if defined $merged_vcf;
     # write success file name
-    $log->debug("Completed analysis for: $chr ");
+    $log->debug("Completed analysis for chromosome: $chr ");
     open my $tmp_progress, '>', $self->{'_tmp'}."/${chr}_progress.out" or $log->logcroak("Unable to create file $!");
     close($tmp_progress);
     close $tmp_WFH_VCF;
     close $tmp_WFH_TSV;
     foreach my $sample (keys %$tmp_fh){
-       $log->debug("closing  augmented file handler $chr :  $sample");
+       $log->debug("closing  augmented file handler for chromosome $chr and  Sample: $sample");
        $tmp_fh->{$sample}->close();
     }
     return 0;

@@ -37,6 +37,7 @@ use List::Util qw(first reduce max min);
 use warnings FATAL => 'all';
 use Capture::Tiny qw(:all);
 
+use Sanger::CGP::Vaf; # exports VERSION
 use Math::Round qw(round);
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
@@ -44,7 +45,6 @@ use Bio::DB::HTS::VCF;
 use Sanger::CGP::Vaf::VafConstants;
 
 use Log::Log4perl;
-Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 use base qw(Sanger::CGP::Vaf::Process::AbstractVariant);

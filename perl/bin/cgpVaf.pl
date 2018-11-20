@@ -40,7 +40,7 @@ use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
 
 use Log::Log4perl;
-
+Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 use lib "$Bin/../lib";
 use Sanger::CGP::Vaf::Data::ReadVcf;
 use Sanger::CGP::Vaf::VafConstants;

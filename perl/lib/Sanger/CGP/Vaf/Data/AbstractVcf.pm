@@ -29,9 +29,9 @@ use POSIX qw(ceil);
 use Data::Dumper;
 use Attribute::Abstract;
 use File::Basename;
-
+use FindBin qw($Bin);
+use Sanger::CGP::Vaf; # exports VERSION
 use Sanger::CGP::Vaf::VafConstants;
-
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 1;
@@ -69,7 +69,6 @@ sub _localInit: Abstract;
 
 sub _isValidAbs {
  my $self=shift;
- $log->logcroak("output folder must be specified") unless(defined $self->{'_o'});
  return 1;
 }
 
@@ -78,7 +77,10 @@ sub getNormalBam {
      if (-e $self->{'_nb'}){
        return $self->_check_file_exists_bam(shift->{'_nb'});
      }
-     if(-e $self->{'_d'}.'/'.$self->getNormalName.'.bam'){
+     if( defined $self->{'_be'} && -e $self->{'_d'}.'/'.$self->getNormalName.$self->{'_be'}){
+        return $self->_check_file_exists_bam($self->{'_d'}.'/'.$self->getNormalName.$self->{'_be'});
+     }
+     if( -e $self->{'_d'}.'/'.$self->getNormalName.'.bam'){
         return $self->_check_file_exists_bam($self->{'_d'}.'/'.$self->getNormalName.'.bam')
      }
      if( -e $self->{'_d'}.'/'.$self->getNormalName.'.cram'){
@@ -118,7 +120,10 @@ sub getTumourBam {
     }
 
     foreach my $tum_name(@{$self->getTumourName}){
-        if( -e $self->{'_d'}.'/'.$tum_name.'.bam'){
+        if( defined $self->{'_be'} && -e $self->{'_d'}.'/'.$tum_name.$self->{'_be'}){
+            push (@arr, $self->_check_file_exists_bam($self->{'_d'}.'/'.$tum_name.$self->{'_be'}) );
+        }
+        elsif( -e $self->{'_d'}.'/'.$tum_name.'.bam'){
             push (@arr, $self->_check_file_exists_bam($self->{'_d'}.'/'.$tum_name.'.bam') );
 
         }else{

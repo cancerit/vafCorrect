@@ -29,6 +29,7 @@ use POSIX qw(ceil);
 use Data::Dumper;
 use Attribute::Abstract;
 
+use Sanger::CGP::Vaf; # exports VERSION
 use Sanger::CGP::Vaf::VafConstants;
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
