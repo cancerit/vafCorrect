@@ -209,7 +209,7 @@ else
   touch $SETUP_DIR/$CURR_TOOL.success
 fi
 
-if [ $INST_METHOD -eq 0 ] ; then
+if [ $INST_METHOD -lt 1 ] ; then
   if [[ ",$COMPILE," == *,samtools,* ]] ; then
     echo "Building samtools ..."
     if [ -e $SETUP_DIR/samtools.success ]; then
