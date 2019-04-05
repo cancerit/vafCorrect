@@ -122,7 +122,7 @@ mkdir -p $SETUP_DIR
 
 cd $SETUP_DIR
 
-if [ $INST_METHOD -eq 1 ] ; then
+if [ $INST_METHOD -gt 0 ] ; then
   echo -e "\n\t !!! Not installing additional tools: as requested !!! \n"
 fi
 
