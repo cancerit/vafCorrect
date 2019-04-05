@@ -4,32 +4,27 @@
 | --------------------------------------------- | ----------------------------------------------- |
 | [![Master Badge][travis-master-badge]][travis-repo] | [![Develop Badge][travis-develop-badge]][travis-repo] |
 
-
-<!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
-
-- [vafCorrect](#cgpVaf)
-- [Quick installation](#quick-installation)
-	- [Skipping all external dependencies](#skipping-all-external-dependencies)
-	- [Skipping exonerate install](#skipping-exonerate-install)
-- [INSTALL](#install)
-	- [Dependencies](#package-dependencies)
-- [Creating a release](#creating-a-release)
-	- [Preparation](#preparation)
-	- [Cutting the release](#cutting-the-release)
-- [LICENSE](#License)
-
-<!-- /TOC -->
+* [vafCorrect](#vafcorrect)
+* [Quick installation](#quick-installation)
+	* [Skipping all external dependencies](#skipping-all-external-dependencies)
+	* [Skipping exonerate install](#skipping-exonerate-install)
+* [INSTALL](#install)
+	* [Dependencies](#dependencies)
+* [Creating a release](#creating-a-release)
+	* [Preparation](#preparation)
+	* [Cutting the release](#cutting-the-release)
+* [LICENCE](#licence)
 
 ## vafCorrect
 
-Calculates the Variant Allele Fraction for variants sites in VCF and/or BED file 
+Calculates the Variant Allele Fraction for variants sites in VCF and/or BED file
 This script performs comparative analysis of variant sites in multiple tumour/normal samples in an individual.
-Also facilitates the merging of varinats sites across the samples in a sample group defined by 
+Also facilitates the merging of varinats sites across the samples in a sample group defined by
 set of related samples in an individual and provides unbiased pileup[MNV] and exonerate[Indel] output for each variant site.
 
 ## Quick installation
 
-```
+```bash
 ./setup.sh path_to_install_to
 ```
 
@@ -38,35 +33,39 @@ set of related samples in an individual and provides unbiased pileup[MNV] and ex
 If you want to only install vafCorrect and use existing versions of
 tools from your path run as:
 
-```
+```bash
 ./setup.sh path_to_install_to 1
 ```
+
+`vcftools` and `htslib` still need to install in this instances as they have perl module bindings
+which are required dependencies.
 
 ### Skipping exonerate install
 
 Central install via package manager of 2.2.0 is adequate. To skip just exonerate install run:
 
-```
+```bash
 ./setup.sh path_to_install_to 2
 ```
 
-
-## INSTALL 
+## INSTALL
 
 ### Dependencies
+
 Some of the code included in this package has dependencies on several C packages:
 
- * [Samtools] ( max 0.1.20 until perl bindings are updated)
- * [vcftools]
- * [Bio-HTS] 
- * [Exonerate]
+* [Samtools]
+* [vcftools]
+* [Bio-HTS]
+* [Exonerate]
 
- `setup.sh` should install these dependencies.  
+`setup.sh` should install these dependencies.
 
-```
+```bash
 ./setup.sh /some/install/location
 ```
-Please be aware that this expects basic C compilation libraries and 
+
+Please be aware that this expects basic C compilation libraries and
 tools to be available, most are listed in `INSTALL`.
 
 ## Creating a release
@@ -77,6 +76,7 @@ tools to be available, most are listed in `INSTALL`.
 * Pull a clean version of the repo and use this for the following steps.
 
 ### Cutting the release
+
 1. Update `perl/lib/Sanger/CGP/Vaf.pm` to the correct version.
 2. Update `CHANGES.md` to show major items.
 3. Run `./perl/prerelease.sh`
@@ -88,7 +88,7 @@ tools to be available, most are listed in `INSTALL`.
 ## LICENCE
 
 ```
-Copyright (c) 2017-2018 Genome Research Ltd.
+Copyright (c) 2017-2019 Genome Research Ltd.
 
 Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 
@@ -119,7 +119,7 @@ identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
 ```
 
 <!-- References -->
-[Samtools]: https://github.com/samtools/samtools 
+[Samtools]: https://github.com/samtools/samtools
 [vcftools]: http://vcftools.sourceforge.net/
 [Bio-HTS]: https://github.com/Ensembl/Bio-DB-HTS
 [Exonerate]: http://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate
