@@ -9,11 +9,13 @@ addons:
      - autoconf
      - build-essential
      - curl
-     - exonerate 
+     - exonerate
      - libncurses5-dev
      - libpstreams-dev
      - libcurl4-openssl-dev
      - zlib1g-dev
+     - libgd-dev
+     - libdb-dev
 
 language: perl
 
