@@ -122,7 +122,7 @@ mkdir -p $SETUP_DIR
 
 cd $SETUP_DIR
 
-if [ $INST_METHOD -eq 1 ] ; then
+if [ $INST_METHOD -gt 0 ] ; then
   echo -e "\n\t !!! Not installing additional tools: as requested !!! \n"
 fi
 
@@ -209,7 +209,7 @@ else
   touch $SETUP_DIR/$CURR_TOOL.success
 fi
 
-if [ $INST_METHOD -eq 0 ] ; then
+if [ $INST_METHOD -lt 2 ] ; then
   if [[ ",$COMPILE," == *,samtools,* ]] ; then
     echo "Building samtools ..."
     if [ -e $SETUP_DIR/samtools.success ]; then

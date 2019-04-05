@@ -1,5 +1,16 @@
 # CHANGES
 
+## v5.4.1
+
+* Remove help text about adding to allowed perl lib paths as not being used
+  * corrected to indicate install skip for deps
+* Changed so that following are installed even when 'skip' is used
+  * htslib/Bio::DB::HTS
+  * vcftools
+* Removed hiding of errors during install
+  * Some failures not surfaced so user needed to know to check `$?` or the setup.log file
+* `Bio::DB::HTS` requires current bioperl.
+
 ## v5.4.0
 * Reduced memory footprint for augment vcf file
 * Augmentation can now run per chromosome
