@@ -65,7 +65,7 @@ sub _localInit {
 
 sub _isValid {
     my $self=shift;
-    $log->logcroak("Input folder must be specified") unless(defined $self->{_d} && -e $self->{_g});
+    $log->logcroak("Input folder must be specified") unless(defined $self->{_d} && -e $self->{_d});
     $log->logcroak("variant type must be specified") unless(defined $self->{_a});
     $log->logcroak("Tumour sample name(s) must be specified") unless(defined $self->{_tn});
     $log->logcroak("Normal sample name must be specified") unless(defined $self->{_nn});
@@ -229,7 +229,7 @@ sub _populateBedHeader {
     my %info_tag;
   my $header_sample;
   my $tumour_count=0;
-    
+
   $info_tag{'Interval'}='BedFile';
     # create header for bed only locations...
     if( defined $self->{'_bo'} and $self->{'_bo'} == 1 ) {
@@ -250,7 +250,7 @@ sub _populateBedHeader {
    my %bed_vcf_info=(key=>'FILTER',ID=>'BD', Description=>"Location from bed file");
      push(@$info_tag_val,\%bed_vcf_info);
      return $info_tag_val;
- } 
+ }
 
 }
 
@@ -287,7 +287,7 @@ sub writeFinalFileHeaders {
         foreach my $tag_name(@$tags){
             push (@$temp_cols,"$sample\_$tag_name");
         }
-    }        
+    }
     print $WFH_TSV  join("\n",@$header)."\n#".join("\t",@$temp_cols)."\n";
     $vcf->close();
     close $WFH_VCF;
@@ -454,9 +454,9 @@ sub _getCustomHeader {
   foreach my $sample(@{$self->{'_tn'}}){
      $tumour_count++;
      $header_sample->{"SAMPLE$tumour_count"}={(key=>'SAMPLE', ID=>"TUMOUR$tumour_count", Description=>"Mutant", SampleName=>$sample)};
- } 
+ }
  $header_sample->{'SAMPLE'}={(key=>'SAMPLE', ID=>"NORMAL", Description=>"Wild type", SampleName=>$self->{'_nn'})};
-    
+
  return ($vcf_filter,$vcf_info,$vcf_format,$header_sample);
 }
 
@@ -583,10 +583,10 @@ sub populateBedLocations {
     my ($self,$data_for_all_samples,$unique_locations,$bed_locations)=@_;
     my $location_counter=0;
       foreach my $location_key (keys %$bed_locations) {
-        # skip location only if it is passed as it will be analysed by default 
+        # skip location only if it is passed as it will be analysed by default
            if(exists $unique_locations->{$location_key} && $unique_locations->{$location_key}=~m/PASS/) {
                $log->debug("Bed location not added to merged location, it is already part of VCF file");
-           }else{           
+           }else{
                foreach my $sample(keys %{$self->{'vcf'}})    {
                     $data_for_all_samples->{$sample}{$location_key}={'INFO'=>undef,'FILTER'=>'NA','RD'=>1 };
                 }
@@ -623,13 +623,13 @@ sub populateBedLocationsFromVCF {
              }
              $unique_locations_bed_only->{$location_key}=$unique_locations->{$location_key};
              $location_counter2++;
-           }else{           
+           }else{
                foreach my $sample(keys %{$self->{'vcf'}})    {
                     $data_for_all_samples_bed_only->{$sample}{$location_key}={'INFO'=>undef,'FILTER'=>'NA','RD'=>1 };
                 }
                 $unique_locations_bed_only->{$location_key}=$bed_locations->{$location_key};
                 $location_counter++;
-            }                
+            }
         }
       $log->debug("Added additional ( $location_counter ) locations from BED file");
       $log->debug("Added additional ( $location_counter2 ) locations from VCF file");
@@ -891,10 +891,10 @@ Inputs
 sub _get_read_length {
     my ($self,$sam)=@_;
     my ($mapped_length,$read_counter);
-    my $iterator  = $sam->features(    -iterator=>1, 
+    my $iterator  = $sam->features(    -iterator=>1,
                                     -type=>"match");
         while (my $a = $iterator->next_seq) {
-            next if(($a->flag & $self->{'_fexc'}) || 
+            next if(($a->flag & $self->{'_fexc'}) ||
                 (($a->flag & $self->{'_finc'}) != $self->{'_finc'}));
              my $qseq=$a->qseq;
              if(defined $qseq) {
@@ -1038,7 +1038,7 @@ sub _getVCFObject {
         }
     }
     $vcf->add_columns(@{$self->{'allSamples'}});
-  
+
   my $header_info=@{$vcf->get_header_line(key=>'INFO')}[0];
     return $vcf,$header_info;
 }
@@ -1064,7 +1064,7 @@ sub _get_tab_sep_header {
     my $info_data=@{$vcf->get_header_line(key=>'INFO')}[0];
     my @user_info_fields=split(",",$self->{'_t'});
         foreach my $key (sort keys %{$info_data}){
-            next if ($key eq 'VT' || $key eq 'VC' || $key eq 'VD' || $key eq 'VW'); 
+            next if ($key eq 'VT' || $key eq 'VC' || $key eq 'VD' || $key eq 'VW');
             next if (!grep(/^$key$/, @user_info_fields));
             push(@{$out->{'cols'}},$key);
             push @header,'##'.$key. "\t" .$info_data->{$key}{'Description'};
@@ -1147,7 +1147,7 @@ sub _writeOutput {
     # write to VCF at very end.....
     print $WFH_VCF $vcf->format_line($out);
     my ($line)=$self->_parse_info_line($vcf,$vcf->format_line($out),$original_vcf_info,$header_info);
-            
+
     # write to TSV at very end.....
     print $WFH_TSV $self->getNormalName."\t".join("\t",@$line)."\n";
     return 1;
@@ -1192,12 +1192,12 @@ sub _parse_info_line {
     }else{
        push(@$record,'-');
     }
-   
+
     foreach my $info_key (sort keys %{$header_info}) {
       next if ($info_key eq 'VT' || $info_key eq 'VC' || $info_key eq 'VD' || $info_key eq 'VW');
       next if(!grep(/^$info_key$/, @user_info_fields))
       ;
-      
+
       if(exists $original_vcf_info->{$info_key}){
         my($record)=$self->_parse_field($info_key,$original_vcf_info->{$info_key},$header_info->{$info_key}{'Type'},$record);
       }else{
