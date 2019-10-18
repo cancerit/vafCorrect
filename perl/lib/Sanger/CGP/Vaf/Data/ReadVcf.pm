@@ -95,15 +95,13 @@ sub getChromosomes {
         $self->getBedChromosomes(\%data_chrs);
     }
 
-    my %chromosomes;
     my %filtered_chr;
     open my $fai_fh , '<', $self->{'_g'}.'.fai';
     while (<$fai_fh>) {
         next if ($_=~/^#/);
         my($chr,$len)=(split "\t", $_)[0,1];
-        %chromosomes{$chr}=$len;
         if(exists $data_chr{$chr}){
-         %filtered_chr{$chr}=$len;
+            %filtered_chr{$chr}=$len;
         }
     }
     return \%filtered_chr;
