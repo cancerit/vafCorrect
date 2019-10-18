@@ -52,7 +52,7 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 use base qw(Sanger::CGP::Vaf::Data::AbstractVcf);
 
-const my $SORT_N_BGZIP => q{(grep '^#' %s ; grep -v '^#' %s | sort -k1,1 -k2,2n -k4,5 )| bgzip -c >%s };
+const my $SORT_N_BGZIP => q{(grep '^#' %s ; grep -v '^#' %s | sort -k1,1 -k2,2n -k4,4 -k5,5 )| bgzip -c >%s };
 const my $TABIX_FILE => q{tabix -f -p vcf %s};
 const my $VALIDATE_VCF => q{vcf-validator -u %s};
 
