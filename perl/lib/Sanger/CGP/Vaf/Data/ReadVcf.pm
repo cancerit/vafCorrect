@@ -76,29 +76,62 @@ sub _isValid {
 
 
 =head2 getChromosomes
-get chromosome names and length from genome file
-Inputs
+
+get chromosome names and length from genome file, filtered by either user specification or
+available data in VCF/BED inputs
+
 =over 2
 =back
 =cut
 
 sub getChromosomes {
     my($self,$chr_list)=@_;
-    my %user_chr = map { $_ => 1 } @$chr_list;
-    my $chromosomes;
-    my $filtered_chr;
+    my %data_chr;
+    if($chr_list && scalar @{$chr_list}) {
+        %data_chr = map { $_ => 1 } @$chr_list;
+    }
+    else {
+        $self->getVcfChromosomes(\%data_chrs);
+        $self->getBedChromosomes(\%data_chrs);
+    }
+
+    my %chromosomes;
+    my %filtered_chr;
     open my $fai_fh , '<', $self->{'_g'}.'.fai';
     while (<$fai_fh>) {
         next if ($_=~/^#/);
         my($chr,$len)=(split "\t", $_)[0,1];
-        $chromosomes->{$chr}=$len;
-        if(exists $user_chr{$chr}){
-         $filtered_chr->{$chr}=$len;
+        %chromosomes{$chr}=$len;
+        if(exists $data_chr{$chr}){
+         %filtered_chr{$chr}=$len;
         }
     }
-    if(@$chr_list > 0){
-    return $filtered_chr;
-    }else{return $chromosomes;}
+    return \%filtered_chr;
+}
+
+sub getVcfChromosomes {
+    my ($self, $store) = @_;
+    foreach my $sample (keys %{$self->{'vcf'}}) {
+        if(-e $self->{'vcf'}{$sample}) {
+            my $vcf = Vcf->new(file => $self->{'vcf'}{$sample});
+            foreach my $chr($vcf->get_chromosomes()) {
+                $store->{$chr} = 1;
+            }
+        }
+    }
+    return 1;
+}
+
+sub getBedChromosomes {
+    my ($self, $store) = @_;
+    return 1 unless(defined $self->{'_b'});
+    open my $BEDIN, '<', $self->{'_b'} or $log->logcroak(sprintf q{Can't open %s : %s}, $self->{'_b'}, $!);
+    while(my $l = <$BEDIN>) {
+        next if($l =~ m/^#/);
+        my ($chr) = split /\t/;
+        $store->{$chr} = 1;
+    }
+    return 1;
 }
 
 
@@ -542,7 +575,7 @@ sub getBedHash {
     my($self,$chr)=@_;
     my $bed_locations=undef;
     return if(!defined $self->{'_b'});
-  open my $bedFH, '<', $self->{'_b'} || $log->logcroak("unable to open file $!");
+  open my $bedFH, '<', $self->{'_b'} || $log->logcroak(sprintf q{Can't open %s : %s}, $self->{'_b'}, $!);
   my $bed_name=$self->_trim_file_path($self->{'_b'});
   while(<$bedFH>) {
         chomp;
@@ -661,8 +694,8 @@ sub processMergedLocations {
     my $count=0;
     my $total_locations=keys %$unique_locations;
 
-    open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak("Unable to create file $!");
-    open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak("Unable to create file $!");
+    open my $tmp_WFH_VCF, '>', "$self->{'_tmp'}/tmp_$chr.vcf" or $log->logcroak(sprintf q{Can't create %s : %s}, $self->{'_b'}, $!);
+    open my $tmp_WFH_TSV, '>', "$self->{'_tmp'}/tmp_$chr.tsv" or $log->logcroak(sprintf q{Can't create %s : %s}, $self->{'_b'}, $!);
 
     my $tmp_fh;
     if ($self->{'_m'}){
@@ -734,7 +767,7 @@ sub processMergedLocations {
     $merged_vcf->close() if defined $merged_vcf;
     # write success file name
     $log->info("Completed analysis for chromosome: $chr ");
-    open my $tmp_progress, '>', $self->{'_tmp'}."/${chr}_progress.out" or $log->logcroak("Unable to create file $!");
+    open my $tmp_progress, '>', $self->{'_tmp'}."/${chr}_progress.out" or $log->logcroak(sprintf q{Can't create %s : %s}, $self->{'_tmp'}."/${chr}_progress.out", $!);
     close($tmp_progress);
     close $tmp_WFH_VCF;
     close $tmp_WFH_TSV;
@@ -757,10 +790,10 @@ sub _get_tmp_fh {
     my($self,$chr)=@_;
     my $tmp_fh;
     foreach my $sample (@{$self->getTumourName}) {
-        open my $tmp_aug_fh, '>', "$self->{'_tmp'}/${sample}_tmp_${chr}.vcf" or $log->logcroak("Unable to create file $!");
+        open my $tmp_aug_fh, '>', "$self->{'_tmp'}/${sample}_tmp_${chr}.vcf" or $log->logcroak(sprintf q{Can't create %s : %s}, "$self->{'_tmp'}/${sample}_tmp_${chr}.vcf", $!);
         $tmp_fh->{$sample} = $tmp_aug_fh;
         if($self->{'_b'}){
-            open my $tmp_aug_fh, '>', "$self->{'_tmp'}/${sample}_tmp_${chr}.bed" or $log->logcroak("Unable to create file $!");
+            open my $tmp_aug_fh, '>', "$self->{'_tmp'}/${sample}_tmp_${chr}.bed" or $log->logcroak(sprintf q{Can't create %s : %s}, "$self->{'_tmp'}/${sample}_tmp_${chr}.bed", $!);
             $tmp_fh->{"$sample\_bed"} = $tmp_aug_fh;
         }
     }
@@ -862,7 +895,7 @@ Inputs
 
 sub _get_lib_size_from_bas {
   my ($self,$bas_file)=@_;
-    open(my $bas,'<',$bas_file) || $log->logcroak("unable to open file $!");
+    open(my $bas,'<',$bas_file) || $log->logcroak(sprintf q{Can't open %s : %s}, $bas_file, $!);
     my $index_mi=undef;
     my $index_sd=undef;
     my $lib_size=0;
@@ -929,7 +962,7 @@ sub WriteAugmentedHeader {
             $tmp_file=~s/(\.vcf|\.gz)//g;
             my $aug_vcf=$self->getOutputDir.'/'.$tmp_file.$self->{'_oe'};
             $aug_vcf_name->{$sample}=$aug_vcf;
-            open(my $tmp_vcf,'>',$aug_vcf)|| $log->logcroak("unable to open file $!");
+            open(my $tmp_vcf,'>',$aug_vcf)|| $log->logcroak(sprintf q{Can't create %s : %s}, $aug_vcf, $!);
             $log->debug("Augmenting vcf file:".$self->getOutputDir."/$tmp_file".$self->{'_oe'});
             # oprn original VCF for a sample
             my $vcf_aug = Vcf->new(file => $augment_vcf->{$sample});
@@ -1317,7 +1350,7 @@ sub _writeFinalVcf {
         my ($aug_gz,$aug_tabix)=$self->gzipAndIndexVcf($aug_vcf_name->{$sample});
         # remove raw vcf file after tabix indexing
     if ((-e $aug_gz) && (-e $aug_tabix)) {
-        unlink $aug_vcf_name->{$sample} or $log->error("Could not unlink".$aug_vcf_name->{$sample}.':'.$!) if(-e $aug_vcf_name->{$sample});
+        unlink $aug_vcf_name->{$sample} or $log->error("Could not unlink ".$aug_vcf_name->{$sample}.':'.$!) if(-e $aug_vcf_name->{$sample});
     }
         return;
 }

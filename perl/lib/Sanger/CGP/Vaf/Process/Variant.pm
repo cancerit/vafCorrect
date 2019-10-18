@@ -308,7 +308,7 @@ sub createExonerateInput {
 
     my($alt_seq)=$self->_get_alt_seq($bam,$g_pu);
     $g_pu=$self->_get_ref_5p_pos($ref_seq,$alt_seq,$g_pu);
-    open (my $ref_n_alt_FH,'>'.$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref")|| $log->logcroak("unable to open file $!");;
+    open (my $ref_n_alt_FH,'>'.$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref")|| $log->logcroak(sprintf q{Can't create %s : %s}, $self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref", $!);
     print $ref_n_alt_FH ">alt\n$alt_seq\n>ref\n$ref_seq\n";
     close($ref_n_alt_FH);
     return($g_pu);
@@ -550,7 +550,7 @@ Inputs
 
 sub getIndelResults {
     my($self,$bam,$g_pu)=@_;
-    open (my $Reads_FH, '>',$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads") || $log->logcroak("unable to open file $!");
+    open (my $Reads_FH, '>',$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads") || $log->logcroak(sprintf q{Can't create %s : %s}, $self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads", $!);
     $g_pu=$self->_fetch_features($bam,$g_pu,$Reads_FH);
     $g_pu=$self->_do_exonerate($self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref",$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads",$g_pu);
     return $g_pu;
@@ -613,7 +613,6 @@ my $read_counter=0;
 
         return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_FETCH_MATE;
 
-        #my $cigar  = $a->cigar_str;;
         my $mseqid = $a->mate_seq_id;
         my $seqid = $a->seq_id;
         #target gives read seq as it comes from sequencing machine i.e softclipped bases included
