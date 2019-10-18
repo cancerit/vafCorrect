@@ -1,22 +1,22 @@
 package Sanger::CGP::Vaf::Data::AbstractVcf;
-                                                                                     
+
 ##########LICENCE############################################################
 # Copyright (c) 2016 Genome Research Ltd.
-# 
+#
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
-# 
+#
 # This file is part of cgpVAF.
-# 
+#
 # cgpVAF is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##############################################################
@@ -54,15 +54,15 @@ Inputs
 =item options - user provided options to get file extension, input dir path , tag values and bed file
 =back
 =cut
- 
+
 sub _init {
     my ($self,$options) = @_;
     $self->{'options'}=$options;
     foreach my $k (keys %$options) {
         if(defined $options->{$k}) { # allows 0 and " "  string
-            $self->{"_$k"}=$options->{$k};        
+            $self->{"_$k"}=$options->{$k};
         }
-    }    
+    }
 }
 
 sub _localInit: Abstract;
@@ -75,7 +75,7 @@ sub _isValidAbs {
 sub getNormalBam {
      my($self)=shift;
      if (-e $self->{'_nb'}){
-       return $self->_check_file_exists_bam(shift->{'_nb'});
+       return $self->_check_file_exists_bam($self->{'_nb'});
      }
      if( defined $self->{'_be'} && -e $self->{'_d'}.'/'.$self->getNormalName.$self->{'_be'}){
         return $self->_check_file_exists_bam($self->{'_d'}.'/'.$self->getNormalName.$self->{'_be'});
@@ -211,7 +211,7 @@ __END__
 
 =head1 NAME
 
-Sanger::CGP::Vaf::Process::AbstractVcf - Abstract base class for the variant allele fraction analysis 
+Sanger::CGP::Vaf::Process::AbstractVcf - Abstract base class for the variant allele fraction analysis
 
 =head1 DESCRIPTION
 
