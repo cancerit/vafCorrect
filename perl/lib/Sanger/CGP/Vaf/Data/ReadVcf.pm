@@ -101,7 +101,7 @@ sub getChromosomes {
         next if ($_=~/^#/);
         my($chr,$len)=(split "\t", $_)[0,1];
         if(exists $data_chrs{$chr}){
-            %filtered_chr{$chr}=$len;
+            $filtered_chr{$chr}=$len;
         }
     }
     return \%filtered_chr;
