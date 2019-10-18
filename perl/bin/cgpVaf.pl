@@ -40,6 +40,7 @@ use Try::Tiny qw(try catch finally);
 use Capture::Tiny qw(:all);
 
 use Log::Log4perl;
+use Log::Log4perl::Level;
 Log::Log4perl->init("$Bin/../config/log4perl.vaf.conf");
 use lib "$Bin/../lib";
 use Sanger::CGP::Vaf::Data::ReadVcf;
@@ -47,25 +48,18 @@ use Sanger::CGP::Vaf::VafConstants;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-my $store_results;
-
-my $debug = 0;
-
 my $tags=$Sanger::CGP::Vaf::VafConstants::SNP_TAGS;
 
 try {
     my ($options) = option_builder();
-    if ($options->{'dbg'}){
-        $log->debug("================Using Parameters===========================");
-      $log->debug(Dumper($options));
-    }
+    $log->debug("================Using Parameters===========================");
+    $log->debug(Dumper($options));
     if ($options->{'a'} eq 'indel') {
         $tags=$Sanger::CGP::Vaf::VafConstants::INDEL_TAGS;
     }
     my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
-    
-    my $progress_hash;
-    # progress checked before the processing starts , speed ups concatenation step 
+
+    # progress checked before the processing starts , speed ups concatenation step
     my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
     $chromosomes=$vcf_obj->getProgress($chromosomes);
 
@@ -92,54 +86,49 @@ try {
         'mq'            => $vcf_obj->{'_mq'},
         'bq'            => $vcf_obj->{'_bq'},
         'exp'           => $vcf_obj->{'_exp'},
-        );
+    );
 
     foreach my $chr(keys %$chromosomes) {
         my($data_for_all_samples,$unique_locations)=$vcf_obj->getMergedLocations($chr, $vcf_file_obj);
         if(defined $options->{'b'} ){
-          my ($bed_locations)=$vcf_obj->getBedHash($chr);
+            my ($bed_locations)=$vcf_obj->getBedHash($chr);
             if( $options->{'bo'} == 1 && (defined $data_for_all_samples) ) {
                 ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocationsFromVCF($data_for_all_samples,$unique_locations,$bed_locations);
             }else{
-              ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples,$unique_locations,$bed_locations);
+                ($data_for_all_samples,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples,$unique_locations,$bed_locations);
             }
         }
-         $vcf_obj->processMergedLocations($data_for_all_samples ,$unique_locations,$variant,$chromosomes->{$chr} ,$bam_objects,$chr,$tags,$info_tag_val);
+        $vcf_obj->processMergedLocations($data_for_all_samples ,$unique_locations,$variant,$chromosomes->{$chr} ,$bam_objects,$chr,$tags,$info_tag_val);
     }# completed all chromosomes;
 
-        # run following steps only if chromosome option is empty or user has selected option to concatenate files.
+    # run following steps only if chromosome option is empty or user has selected option to concatenate files.
     if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
-      if($options->{'m'}) {
-      $log->debug("Completed analysis for all PASS locations, writing non PASS variants");
-      my($aug_vcf_fhs,$aug_vcf_names)=$vcf_obj->WriteAugmentedHeader();
-      foreach my $sample (keys %$aug_vcf_names){
-        if(-e $aug_vcf_names->{$sample}.'.gz') {
-          $log->logcroak("Output file : $aug_vcf_names->{$sample}.gz exists , skipping concatenation step");
+        if($options->{'m'}) {
+            $log->info("Completed analysis for all PASS locations, writing non PASS variants");
+            my($aug_vcf_fhs,$aug_vcf_names)=$vcf_obj->WriteAugmentedHeader();
+            foreach my $sample (keys %$aug_vcf_names){
+            if(-e $aug_vcf_names->{$sample}.'.gz') {
+            $log->logcroak("Output file : $aug_vcf_names->{$sample}.gz exists , skipping concatenation step");
+            }
+            $vcf_obj->catFiles($options->{'tmp'},'vcf',$sample,$aug_vcf_names->{$sample});
+            $log->info("Compressing and Validating augmented VCF file for sample: $sample");
+            my($aug_gz,$aug_tabix)=$vcf_obj->gzipAndIndexVcf($aug_vcf_names->{$sample});
+            }
         }
-        $vcf_obj->catFiles($options->{'tmp'},'vcf',$sample,$aug_vcf_names->{$sample});
-        $log->debug("Compressing and Validating augmented VCF file for sample: $sample");
-        my($aug_gz,$aug_tabix)=$vcf_obj->gzipAndIndexVcf($aug_vcf_names->{$sample});
-      }
-    }
 
-    my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
+        my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
 
-    if($outfile_name_no_ext){
-        $vcf_obj->catFiles($options->{'tmp'},'vcf',undef,$outfile_name_no_ext);
-        $vcf_obj->catFiles($options->{'tmp'},'tsv',undef,$outfile_name_no_ext);
-        $log->debug("Compressing and Validating VCF file");
-        my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
-        if ((-e $outfile_gz) && (-e $outfile_tabix) && !$options->{'dbg'} ) {
-        my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
+        if($outfile_name_no_ext){
+            $vcf_obj->catFiles($options->{'tmp'},'vcf',undef,$outfile_name_no_ext);
+            $vcf_obj->catFiles($options->{'tmp'},'tsv',undef,$outfile_name_no_ext);
+            $log->info("Compressing and Validating VCF file");
+            my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
+            if ((-e $outfile_gz) && (-e $outfile_tabix) && !$options->{'dbg'} ) {
+            my($cleaned)=$vcf_obj->check_and_cleanup_dir($options->{'tmp'});
+            }
         }
     }
-    if ($options->{'dbg'}){
-        $log->debug("==============================Parameters used===================");
-        $log->debug(Dumper($options));
-    }
- }
 }
-
 catch {
   croak "\n\n".$_."\n\n" if($_);
 };
@@ -180,7 +169,7 @@ sub option_builder {
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
                 'finc|filter_inc=i' => \$options{'finc'},
                 'fexc|filter_exc=i' => \$options{'fexc'},
-                'dbg|debug' => \$options{'dbg'},
+                'dbg|debug' => sub { $log->level($TRACE) },
                 'v|version'  => \$options{'v'}
     );
 
@@ -191,6 +180,7 @@ sub option_builder {
         print "$version\n";
         exit;
     }
+
     pod2usage(q{'-g' genome must be defined}) unless (defined $options{'g'});
     pod2usage(q{'-d' input directory path must be defined}) unless (defined $options{'d'});
     pod2usage(q{'-a' variant type must be defined}) unless (defined $options{'a'});
@@ -239,7 +229,7 @@ sub option_builder {
     if(!defined $options{'r'}) {
         $options{'r'}= 1;
     }
-        
+
     if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
         $options{'dp'}='NR,PR';
     }
@@ -330,5 +320,5 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -tb -nb -b -t -c -r -m -ao -mq -pid -bo
       perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn sampleb -tn samplea samplec -chr 2
       # concatenate per chromosome output to single vcf
       perl cgpVaf.pl -d tmpvcfdir -o testout -a indel -g genome.fa -e .caveman_c.annot.vcf.gz -nn sampleb -tn samplea samplec -ct 1
-      
+
 =cut

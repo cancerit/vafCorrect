@@ -120,7 +120,7 @@ sub getProgress {
       {
         $unprocessed_chr->{$chr}=$user_chr->{$chr};
       }else{
-        $log->debug("Skipping analysis -- progress file exists for chr: $chr")
+        $log->info("Skipping analysis -- progress file exists for chr: $chr")
       }
     }
     # if not a concatenation step then process user defined chromosome
@@ -158,7 +158,7 @@ my ($self)=@_;
         }
     }
     if($self->{'_bo'} and ($self->{'_bo'} == 0)) {
-        $log->debug("WARNING!!! more than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
+        $log->warn("More than one normal sample detected for this group".$self->_print_hash($vcf_normal_sample)) if scalar keys %$vcf_normal_sample > 1;
         $self->_checkNormal($vcf_normal_sample);
     }
 
@@ -202,10 +202,10 @@ sub _checkNormal {
     my($self,$vcf_normal)=@_;
     foreach my $key (keys %$vcf_normal) {
         if($key eq $self->getNormalName) {
-            $log->debug("User provided normal sample matches with VCF normal");
+            $log->info("User provided normal sample matches with VCF normal");
         }
         else{
-            $log->debug("User provided normal sample doesn't matche with normal samples defined in VCF header");
+            $log->warn("User provided normal sample doesn't match with normal samples defined in VCF header");
         }
     }
 }
@@ -271,8 +271,8 @@ sub writeFinalFileHeaders {
     # return if no VCF file found  ...
     return if((!defined $self->{'vcf'} && !defined $self->{'_b'}) || (-e "$outfile_name.vcf.gz"));
     my ($vcf)=$self->_getVCFObject($info_tag_val);
-    $log->debug("VCF outfile:$outfile_name.vcf");
-    $log->debug("TSV outfile:$outfile_name.tsv");
+    $log->info("VCF outfile:$outfile_name.vcf");
+    $log->info("TSV outfile:$outfile_name.tsv");
     open($WFH_VCF, '>',"$outfile_name.vcf");
     open($WFH_TSV, '>',"$outfile_name.tsv");
     print $WFH_VCF $vcf->format_header();
@@ -550,7 +550,7 @@ sub getBedHash {
         #1  14000  A  C
         next if($fields[0] ne $chr);
         if (@fields < 3) {
-            $log->debug("Not a valid bed location".$_);
+            $log->warn("Not a valid bed location".$_);
             next;
         }
         my $location_key=join(":",split("\t",$_));
@@ -585,7 +585,7 @@ sub populateBedLocations {
       foreach my $location_key (keys %$bed_locations) {
         # skip location only if it is passed as it will be analysed by default
            if(exists $unique_locations->{$location_key} && $unique_locations->{$location_key}=~m/PASS/) {
-               $log->debug("Bed location not added to merged location, it is already part of VCF file");
+               $log->info("Bed location not added to merged location, it is already part of VCF file");
            }else{
                foreach my $sample(keys %{$self->{'vcf'}})    {
                     $data_for_all_samples->{$sample}{$location_key}={'INFO'=>undef,'FILTER'=>'NA','RD'=>1 };
@@ -594,7 +594,7 @@ sub populateBedLocations {
                 $location_counter++;
             }
         }
-      $log->debug(" Added additional ( $location_counter ) locations from BED file");
+      $log->info("Added additional ( $location_counter ) locations from BED file");
       return ($data_for_all_samples,$unique_locations);
 }
 
@@ -631,8 +631,8 @@ sub populateBedLocationsFromVCF {
                 $location_counter++;
             }
         }
-      $log->debug("Added additional ( $location_counter ) locations from BED file");
-      $log->debug("Added additional ( $location_counter2 ) locations from VCF file");
+      $log->info("Added additional ( $location_counter ) locations from BED file");
+      $log->info("Added additional ( $location_counter2 ) locations from VCF file");
 
       return ($data_for_all_samples_bed_only,$unique_locations_bed_only);
 }
@@ -728,12 +728,12 @@ sub processMergedLocations {
        $depth=0;
        $mutant_depth=0;
         if($count % 100 == 0) {
-            $log->debug("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
+            $log->info("Completed:".$count." of total: ".$total_locations." varinats on Chr:".$g_pu->{'chr'});
         }
     }# Done with all locations for a chromosome...
     $merged_vcf->close() if defined $merged_vcf;
     # write success file name
-    $log->debug("Completed analysis for chromosome: $chr ");
+    $log->info("Completed analysis for chromosome: $chr ");
     open my $tmp_progress, '>', $self->{'_tmp'}."/${chr}_progress.out" or $log->logcroak("Unable to create file $!");
     close($tmp_progress);
     close $tmp_WFH_VCF;
@@ -847,7 +847,7 @@ sub _get_lib_size_from_bam {
         my($mapped_length)=$self->_get_read_length($bam_object);
         my $read_len=reduce{ $mapped_length->{$a} > $mapped_length->{$b} ? $a : $b } keys %$mapped_length;
         $lib_size=$read_len*2;
-        $log->debug("No insert size tag in header or no BAS file found using lib size (read_len x 2):$lib_size");
+        $log->warn("No insert size tag in header or no BAS file found using lib size (read_len x 2): $lib_size");
       }
     return $lib_size;
 }
@@ -1020,7 +1020,7 @@ sub _getVCFObject {
         }
     }
     else {
-        $log->debug("No data in info Field");
+        $log->warn("No data in info Field");
     }
 
     if(!defined $self->{'vcf'}) {
@@ -1262,12 +1262,12 @@ Inputs
 =cut
 
 sub writeResults {
- my ($self, $aug_vcf_fh, $store_results,$aug_vcf_name)= @_;
-            foreach my $sample (keys %{$self->{'vcf'}}) {
-                    $self->_writeFinalVcf($self->{'vcf'}{$sample},$aug_vcf_fh,$sample,$store_results,$aug_vcf_name);
-                    $aug_vcf_fh->{$sample}->close();
-                }
- $log->debug("Completed writing VCF file");
+    my ($self, $aug_vcf_fh, $store_results,$aug_vcf_name)= @_;
+    foreach my $sample (keys %{$self->{'vcf'}}) {
+        $self->_writeFinalVcf($self->{'vcf'}{$sample},$aug_vcf_fh,$sample,$store_results,$aug_vcf_name);
+        $aug_vcf_fh->{$sample}->close();
+    }
+    $log->info("Completed writing VCF file");
 }
 
 =head2 _writeFinalVcf
@@ -1317,7 +1317,7 @@ sub _writeFinalVcf {
         my ($aug_gz,$aug_tabix)=$self->gzipAndIndexVcf($aug_vcf_name->{$sample});
         # remove raw vcf file after tabix indexing
     if ((-e $aug_gz) && (-e $aug_tabix)) {
-        unlink $aug_vcf_name->{$sample} or $log->warn("Could not unlink".$aug_vcf_name->{$sample}.':'.$!) if(-e $aug_vcf_name->{$sample});
+        unlink $aug_vcf_name->{$sample} or $log->error("Could not unlink".$aug_vcf_name->{$sample}.':'.$!) if(-e $aug_vcf_name->{$sample});
     }
         return;
 }
@@ -1437,11 +1437,11 @@ sub catFiles {
 sub cleanTempdir {
     my ($self,$dir)=@_;
     my $num;
-    $log->debug("Unable to find cleanup dir:$dir") if(! -d $dir && $dir!~/^./);
+    $log->error("Unable to find cleanup dir:$dir") if(! -d $dir && $dir!~/^./);
     eval{
         ($num)=remove(\1,"$dir");
     };
-    $log->debug("Unable to remove cleanup dir:$dir") if(-d $dir);
+    $log->error("Unable to remove cleanup dir:$dir") if(-d $dir);
     $log->debug("Dir: $dir cleaned successfully");
     return $num;
 }
@@ -1475,7 +1475,7 @@ sub clear_path {
   $dir_count++;
   if((scalar @dirs) > 0) {
     my $curr_path = shift @dirs;
-    opendir my $CLEAN, $curr_path or $log->debug("Path does not exist $curr_path");
+    opendir my $CLEAN, $curr_path or $log->error("Path does not exist $curr_path");
     while(my $thing = readdir $CLEAN) {
       next if($thing =~ m/^\.{1,2}$/);
       next if($thing =~ m/^\.nfs/);
@@ -1486,11 +1486,11 @@ sub clear_path {
         $dir_count++;
       }
       else {
-        unlink $full_path or $log->debug("Unable to delete $full_path");
+        unlink $full_path or $log->error("Unable to delete $full_path");
         $file_count++;
       }
     }
-    remove_tree($root_path) or $log->debug("Unable to remove $root_path");
+    remove_tree($root_path) or $log->error("Unable to remove $root_path");
     closedir $CLEAN;
   }
   return ($dir_count, $file_count);

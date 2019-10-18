@@ -774,7 +774,13 @@ sub _do_exonerate {
 
    }
     my ($exonerate_output, $stderr, $exit) = capture {system("$cmd")};
-    if ($exit) { $log->logcroak("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
+    if ($exit) {
+        $log->error("Exonerate STDOUT: $exonerate_output");
+        $log->error("Exonerate STDERR: $stderr");
+        $log->error("Exonerate CMD: $cmd");
+        $log->logcroak("Exonerate EXIT: $exit");
+    }
+
     #----- parse exonerate output ------
     LINE:foreach my $line((split("\n", $exonerate_output))) {
     my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand,$mismatch,$match_score)=(split ' ', $line);
