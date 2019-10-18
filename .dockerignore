@@ -1,0 +1,11 @@
+/LICENCE
+/README.md
+/INSTALL.md
+/CHANGES.md
+/.gitignore
+/.git
+/.travis.yml
+/examples
+/docs.tar.gz
+/setup.sh
+/prerelease.sh
