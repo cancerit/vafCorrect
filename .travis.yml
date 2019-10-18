@@ -12,4 +12,4 @@ script:
  - echo 'Build and check docker image'
  - docker build -t vafcorrect .
  - docker images | grep -c vafcorrect
- - docker run -t --rm vafcorrect cgpVaf.pl version
+ - docker run -t --rm vafcorrect cgpVaf.pl -version
