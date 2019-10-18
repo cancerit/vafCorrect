@@ -86,9 +86,9 @@ available data in VCF/BED inputs
 
 sub getChromosomes {
     my($self,$chr_list)=@_;
-    my %data_chr;
+    my %data_chrs;
     if($chr_list && scalar @{$chr_list}) {
-        %data_chr = map { $_ => 1 } @$chr_list;
+        %data_chrs = map { $_ => 1 } @$chr_list;
     }
     else {
         $self->getVcfChromosomes(\%data_chrs);
@@ -100,7 +100,7 @@ sub getChromosomes {
     while (<$fai_fh>) {
         next if ($_=~/^#/);
         my($chr,$len)=(split "\t", $_)[0,1];
-        if(exists $data_chr{$chr}){
+        if(exists $data_chrs{$chr}){
             %filtered_chr{$chr}=$len;
         }
     }
