@@ -109,10 +109,10 @@ sub getChromosomes {
 
 sub getVcfChromosomes {
     my ($self, $store) = @_;
-    foreach my $sample (keys %{$self->{'vcf'}}) {
-        if(-e $self->{'vcf'}{$sample}) {
-            my $vcf = Vcf->new(file => $self->{'vcf'}{$sample});
-            foreach my $chr($vcf->get_chromosomes()) {
+    foreach my $vf(@{$self->{'_vcf'}}) {
+        if(-e $vf) {
+            my $vcf = Vcf->new(file => $vf);
+            foreach my $chr(@{$vcf->get_chromosomes()}) {
                 $store->{$chr} = 1;
             }
         }
