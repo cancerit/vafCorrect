@@ -90,9 +90,11 @@ sub getChromosomes {
     if($chr_list && scalar @{$chr_list}) {
         %data_chrs = map { $_ => 1 } @$chr_list;
     }
+    elsif(defined $self->{'_b'}) {
+        $self->getBedChromosomes(\%data_chrs);
+    }
     else {
         $self->getVcfChromosomes(\%data_chrs);
-        $self->getBedChromosomes(\%data_chrs);
     }
 
     my %filtered_chr;
@@ -109,7 +111,8 @@ sub getChromosomes {
 
 sub getVcfChromosomes {
     my ($self, $store) = @_;
-    foreach my $vf(@{$self->{'_vcf'}}) {
+    #foreach my $vf(@{$self->{'_vcf'}}) {
+    foreach my $vf(@{$self->getVcfFile()}) {
         if(-e $vf) {
             my $vcf = Vcf->new(file => $vf);
             foreach my $chr(@{$vcf->get_chromosomes()}) {
@@ -122,7 +125,6 @@ sub getVcfChromosomes {
 
 sub getBedChromosomes {
     my ($self, $store) = @_;
-    return 1 unless(defined $self->{'_b'});
     open my $BEDIN, '<', $self->{'_b'} or $log->logcroak(sprintf q{Can't open %s : %s}, $self->{'_b'}, $!);
     while(my $l = <$BEDIN>) {
         next if($l =~ m/^#/);
