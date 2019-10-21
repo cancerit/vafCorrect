@@ -78,7 +78,7 @@ sub _isValid {
 =head2 getChromosomes
 
 get chromosome names and length from genome file, filtered by either user specification or
-available data in VCF/BED inputs
+available data in VCF/BED inputs, also return number of contigs found.
 
 =over 2
 =back
@@ -98,15 +98,17 @@ sub getChromosomes {
     }
 
     my %filtered_chr;
+    my $chr_count = 0;
     open my $fai_fh , '<', $self->{'_g'}.'.fai';
     while (<$fai_fh>) {
         next if ($_=~/^#/);
         my($chr,$len)=(split "\t", $_)[0,1];
         if(exists $data_chrs{$chr}){
             $filtered_chr{$chr}=$len;
+            $chr_count++;
         }
     }
-    return \%filtered_chr;
+    return (\%filtered_chr, $chr_count);
 }
 
 sub getVcfChromosomes {

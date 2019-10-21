@@ -60,7 +60,8 @@ try {
     my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
 
     # progress checked before the processing starts , speed ups concatenation step
-    my ($chromosomes)=$vcf_obj->getChromosomes($options->{'chr'});
+    my ($chromosomes, $chr_count)=$vcf_obj->getChromosomes($options->{'chr'});
+    $log->logcroak("It appears that no data has been detected for processing, please check command line params.") if($chr_count == 0);
     $chromosomes=$vcf_obj->getProgress($chromosomes);
 
     # this is called only once to add allSample names to vcf object
@@ -252,7 +253,7 @@ sub option_builder {
         $options{'oe'}='.vaf.vcf';
     }
     if($options{'m'} && lc($options{'a'}) eq 'snp' ) {
-        $log->logcroak("Warning: VCF augment option is only supported for indels");
+        $log->logcroak("VCF augment option is only supported for indels");
     }
   if(!defined $options{'hdr'} && lc($options{'a'}) eq 'indel') {
      warn "-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run";
