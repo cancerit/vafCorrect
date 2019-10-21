@@ -104,7 +104,7 @@ try {
     }# completed all chromosomes;
 
     # run following steps only if chromosome option is empty or user has selected option to concatenate files.
-    if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
+    if($options->{'ct'}) {
         if($options->{'m'}) {
             $log->info('Completed analysis for all PASS locations, writing non PASS variants');
             my($aug_vcf_fhs,$aug_vcf_names)=$vcf_obj->WriteAugmentedHeader();
@@ -228,11 +228,6 @@ sub option_builder {
 
     if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
         $options{'dp'}='NR,PR';
-    }
-
-    if($options{'ct'}) {
-        $log->debug('Concatenation option selected, chromosome option will be set to all chromosomes');
-        $options{'chr'}=[];
     }
 
     if($options{'m'} && lc($options{'a'}) eq 'snp' ) {
