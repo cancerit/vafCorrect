@@ -61,7 +61,7 @@ try {
 
     # progress checked before the processing starts , speed ups concatenation step
     my ($chromosomes, $chr_count)=$vcf_obj->getChromosomes($options->{'chr'});
-    $log->logcroak("It appears that no data has been detected for processing, please check command line params.") if($chr_count == 0);
+    $log->logcroak('It appears that no data has been detected for processing, please check command line params.') if($chr_count == 0);
     $chromosomes=$vcf_obj->getProgress($chromosomes);
 
     # this is called only once to add allSample names to vcf object
@@ -87,6 +87,7 @@ try {
         'mq'            => $vcf_obj->{'_mq'},
         'bq'            => $vcf_obj->{'_bq'},
         'exp'           => $vcf_obj->{'_exp'},
+        'emb'           => $vcf_obj->{'_emb'},
     );
 
     foreach my $chr(keys %$chromosomes) {
@@ -105,14 +106,14 @@ try {
     # run following steps only if chromosome option is empty or user has selected option to concatenate files.
     if($options->{'ct'} || @{$options->{'chr'}} == 0 ) {
         if($options->{'m'}) {
-            $log->info("Completed analysis for all PASS locations, writing non PASS variants");
+            $log->info('Completed analysis for all PASS locations, writing non PASS variants');
             my($aug_vcf_fhs,$aug_vcf_names)=$vcf_obj->WriteAugmentedHeader();
             foreach my $sample (keys %$aug_vcf_names){
             if(-e $aug_vcf_names->{$sample}.'.gz') {
-            $log->logcroak("Output file : $aug_vcf_names->{$sample}.gz exists , skipping concatenation step");
+            $log->logcroak(sprintf 'Output file : %s.gz exists , skipping concatenation step', $aug_vcf_names->{$sample});
             }
             $vcf_obj->catFiles($options->{'tmp'},'vcf',$sample,$aug_vcf_names->{$sample});
-            $log->info("Compressing and Validating augmented VCF file for sample: $sample");
+            $log->info('Compressing and Validating augmented VCF file for sample: '.$sample);
             my($aug_gz,$aug_tabix)=$vcf_obj->gzipAndIndexVcf($aug_vcf_names->{$sample});
             }
         }
@@ -138,7 +139,16 @@ catch {
 
 sub option_builder {
         my ($factory) = @_;
-        my %options;
+        my %options = ( 'emb' => 6000,
+                        'exp' => 92,
+                        'oe' => '.vaf.vcf',
+                        's' => undef,
+                        't' => 'VD,VW,VT,VC',
+                        'be' => '.bam',
+                        'finc' => $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_INCLUDE,
+                        'fexc' => $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PILEUP,
+                        'bo' => 0,
+         );
         &GetOptions (
                 'h|help'    => \$options{'h'},
                 't|infoTags=s' => \$options{'t'},
@@ -170,6 +180,7 @@ sub option_builder {
                 'vcf|vcf_files=s{,}' => \@{$options{'vcf'}},
                 'finc|filter_inc=i' => \$options{'finc'},
                 'fexc|filter_exc=i' => \$options{'fexc'},
+                'emb|exonerate_mb=i' => \$options{'emb'},
                 'dbg|debug' => sub { $log->level($TRACE) },
                 'v|version'  => \$options{'v'}
     );
@@ -191,15 +202,6 @@ sub option_builder {
     pod2usage(q{'-b' bed file must be specified }) unless (defined $options{'b'} || defined $options{'e'} || defined $options{'vcf'});
     pod2usage(q{'-o' Output folder must be provided}) unless (defined $options{'o'});
 
-    if(!defined($options{'finc'})){
-        $options{'finc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READLEN_INCLUDE;
-    }
-
-    if(!defined($options{'fexc'})){
-        $options{'fexc'} = $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PILEUP;
-    }
-
-    if(!defined $options{'bo'}) { $options{'bo'}=0;}
     $options{'d'}=~s/\/$//g;
     mkpath($options{'o'});
     if(!defined $options{'tmp'}) {
@@ -209,26 +211,19 @@ sub option_builder {
         $options{'tmp'}=$options{'o'}.'/tmpvaf_'.$tn_name;
     }
     if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {
-        warn "Analysing:".$options{'a'}."\n";
+        $log->info(sprintf 'Analysing: %s', $options{'a'};
     }
     else{
-        $log->logcroak("Not a valid variant type [should be either [snp or indel]");
+        $log->logcroak('Not a valid variant type [should be either [snp or indel]');
         exit(0);
     }
-     # use annotation tags to output in tsv
-    if(!defined $options{'t'}) {
-        $options{'t'}="VD,VW,VT,VC";
-    }
-    # input alignment file extension
-    if(!defined $options{'be'}) {
-        $options{'be'}=".bam";
-    }
+
     # use PASS flag if bed only is set
     if($options{'bo'}==1) {
-        $options{'r'}= 0;
+        $options{'r'} = 0;
     }
     if(!defined $options{'r'}) {
-        $options{'r'}= 1;
+        $options{'r'} = 1;
     }
 
     if($options{'a'} eq 'indel' && !defined $options{'dp'}) {
@@ -236,27 +231,15 @@ sub option_builder {
     }
 
     if($options{'ct'}) {
-        $log->debug("Concatenation option selected, chromosome option will be set to all chromosomes");
+        $log->debug('Concatenation option selected, chromosome option will be set to all chromosomes');
         $options{'chr'}=[];
     }
 
-    if(!defined $options{'s'}) {
-        #analyse single sample no merge step
-        $options{'s'}=undef;
-    }
-    if(!defined $options{'exp'}) {
-    #default exonerate percentage
-        $options{'exp'}=92;
-    }
-    if(!defined $options{'oe'}) {
-        # augment vcf extension
-        $options{'oe'}='.vaf.vcf';
-    }
     if($options{'m'} && lc($options{'a'}) eq 'snp' ) {
-        $log->logcroak("VCF augment option is only supported for indels");
+        $log->logcroak('VCF augment option is only supported for indels');
     }
   if(!defined $options{'hdr'} && lc($options{'a'}) eq 'indel') {
-     warn "-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run";
+     $log->warn('-hdr high depth reagions file not provided for indel analysis, high depth regions will take longer to run');
     }
  \%options;
 }
@@ -300,7 +283,8 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -tb -nb -b -t -c -r -m -ao -mq -pid -bo
    --output_vcfExtension  (-oe)    Extension for augmented VCF, see --augment [vaf.vcf]
    --map_quality          (-mq)    read mapping quality threshold
    --base_quality         (-bq)    base quality threshold for snp
-   --exonerate_pct        (-exp)   report alignment over a percentage of the maximum score attainable by each query (exonerate parameter) [default 92]
+   --exonerate_pct        (-exp)   report alignment over a percentage of the maximum score attainable by each query (exonerate/indel parameter) [default 92]
+   --exonerate_mb         (-emb)   Max memory to alow Exonerate to use (indel) [default: 6000]
    --depth                (-dp)    comma separated list of field(s) as specified in FORMAT field representing total depth at given location
    --high_depth_bed       (-hdr)   High Depth Region(HDR) bed file (tabix indexed) to mask high depth regions in the genome
    --bed_only             (-bo)    Only analyse bed intervals in the file (default 0: analyse vcf and bed interval)

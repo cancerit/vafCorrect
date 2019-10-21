@@ -755,14 +755,14 @@ sub _do_exonerate {
   # using exhaustive OFF as it is fast and gives identical answer
 
   my $cmd="exonerate -E 0 -S 0".
-    "   --percent $self->{'_exp'} --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
+    "   --percent $self->{'_exp'} --fsmmemory $self->{'_emb'} --verbose 0 --showalignment no  --wordjump 3".
     " --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
     " --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS %em {%Ps}\n' ";
     #for testing only
     if($test_mode)
     {
       my $cmd2="exonerate -E 0 -S 0".
-        "  --percent $self->{'_exp'} --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
+        "  --percent $self->{'_exp'} --fsmmemory $self->{'_emb'} --verbose 0 --showalignment yes --wordjump 3".
         " --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
         " --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
         print "$cmd2\n";
