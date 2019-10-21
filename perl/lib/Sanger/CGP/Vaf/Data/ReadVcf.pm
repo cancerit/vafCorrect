@@ -87,7 +87,7 @@ available data in VCF/BED inputs, also return number of contigs found.
 sub getChromosomes {
     my($self,$chr_list)=@_;
     my %data_chrs;
-    if($chr_list && scalar @{$chr_list}) {
+    if($chr_list && scalar @{$chr_list} > 0) {
         %data_chrs = map { $_ => 1 } @$chr_list;
     }
     elsif(defined $self->{'_b'}) {
