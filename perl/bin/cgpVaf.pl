@@ -211,7 +211,7 @@ sub option_builder {
         $options{'tmp'}=$options{'o'}.'/tmpvaf_'.$tn_name;
     }
     if(defined $options{'a'} and ( (lc($options{'a'}) eq 'indel') || (lc($options{'a'}) eq 'snp') ) ) {
-        $log->info(sprintf 'Analysing: %s', $options{'a'};
+        $log->info(sprintf 'Analysing: %s', $options{'a'});
     }
     else{
         $log->logcroak('Not a valid variant type [should be either [snp or indel]');
