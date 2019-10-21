@@ -605,7 +605,6 @@ my ($mate_info,%mapped_length);
 my $read_counter=0;
         $sam_object->fetch($region, sub {
         my $a = shift;
-        my $paired=0;
         # \& bitwise comparison
         ##Ignore read if it matches the following flags:
         #Brass-ReadSelection.pm
@@ -617,7 +616,7 @@ my $read_counter=0;
         my $seqid = $a->seq_id;
         #target gives read seq as it comes from sequencing machine i.e softclipped bases included
         my $qseq = $a->target->dna();
-        return if $qseq =~m/[nN]/;
+        return if(index(uc($qseq), 'N') != -1);
         my $name=$a->display_name;
         #my $strand = $a->strand;
         my $mstart = $a->mate_start;
@@ -658,7 +657,7 @@ sub _fetch_mate_seq {
 
         if ($readname eq $a->display_name) {
             my $tmp_seq=$a->target->dna();
-            return if $tmp_seq=~m/[nN]/;
+            return if(index(uc($tmp_seq), 'N') != -1);
             $read=$a->display_name;
             $mate_seq=$tmp_seq;
             return;
@@ -687,7 +686,6 @@ my ($mate_info,%mapped_length);
 my $read_counter=0;
         $sam_object->fetch($region, sub {
         my $a = shift;
-        my $paired=0;
         # \& bitwise comparison
         ##Ignore read if it matches the following flags:
         #Brass-ReadSelection.pm
@@ -696,7 +694,7 @@ my $read_counter=0;
         # only consider reads from wider range where mate is unmapped
         if ($a->flag & $Sanger::CGP::Vaf::VafConstants::UNMAPPED) {
             my $qseq = $a->target->dna();
-            return if $qseq=~m/[nN]/;
+            return if(index(uc($qseq), 'N') != -1);
             my $mseqid = $a->mate_seq_id;
             my $seqid = $a->seq_id;
             #target gives read seq as it comes from sequencing machine
@@ -952,17 +950,15 @@ sub getPileup {
                                         next if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
                                         next if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PILEUP;
 
-                                        if($self->{'_bq'}) {
+                                        if(defined $self->{'_bq'}) {
                                             my $fa = Bio::DB::HTS::AlignWrapper->new($a, $bam_object);
-                                            my $qual = ($fa->qscore)[$p->qpos];
-                                            next if($qual <= $self->{'_bq'});
+                                            next if(($fa->qscore)[$p->qpos] <= $self->{'_bq'});
                                         }
                                         # get the base at this pos
-                                        #my $refbase = $bam_object->segment($seqid,$pos,$pos)->dna;
                                         my $qbase  = substr($a->qseq, $p->qpos, 1);
+                                        next if uc($qbase) eq 'N'; #This is single base testing
                                         my $strand = $a->strand;
-                                        next if $qbase =~/[nN]/; #in case of insertion ....
-                                        #$g_pu->{'depth'}++; # commented as for paired end it is calculated twice
+
                                         my $key;
                                         if(($refbase eq $qbase) && $strand > 0) {
                                             $g_pu->{'ref_p'}++;
