@@ -52,7 +52,7 @@ FROM ubuntu:16.04
 
 LABEL maintainer="cgphelp@sanger.ac.uk"\
       uk.ac.sanger.cgp="Cancer, Ageing and Somatic Mutation, Wellcome Sanger Institute" \
-      version="???" \
+      version="5.6.0" \
       description="vafCorrect"
 
 ENV OPT /opt/wtsi-cgp
@@ -80,6 +80,8 @@ unattended-upgrades && \
 unattended-upgrade -d -v && \
 apt-get remove -yq unattended-upgrades && \
 apt-get autoremove -yq
+
+#RUN apt-get install -yq libdevel-nytprof-perl
 
 RUN mkdir -p $OPT
 COPY --from=builder $OPT $OPT

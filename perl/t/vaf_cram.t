@@ -55,7 +55,7 @@ const my $test_reads => $test_data."/"."temp.reads";
 
 const my @test_samples => qw(samplea samplec);
 const my @all_samples => qw(sampleb samplea samplec);
-const my $normal_sample => 'sampleb'; 
+const my $normal_sample => 'sampleb';
 const my $test_bam1 => "$Bin/testData/samplea.cram";
 const my $test_bam2 => "$Bin/testData/samplec.cram";
 const my $test_bam3 => "$Bin/testData/sampleb.cram";
@@ -97,7 +97,7 @@ my $options={
 
 my (%data_for_all_samples);
     my $info={'VT'=>'Sub','VC' =>'intronic'};
-    
+
     $data_for_all_samples{'samplea'}{'1:16901544:C:T'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ;TI;HSD', 'RD'=>0};
     $data_for_all_samples{'samplea'}{'1:16901564:G:A'}={'INFO'=>$info,'FILTER'=>'UM;MN;TI;HSD', 'RD'=>0};
     $data_for_all_samples{'samplea'}{'1:16902712:T:C'}={'INFO'=>$info,'FILTER'=>'UM;MN;MQ', 'RD'=>0};
@@ -106,7 +106,7 @@ my (%data_for_all_samples);
     $data_for_all_samples{'samplec'}{'1:2212488:A:G'}={'INFO'=>$info,'FILTER'=>'PASS', 'RD'=>0};
     #bed locations
     my $bed_info={'VT' => '-','VC' => '-'};
-                                                            
+
 const my $normal_bam => $options->{'d'}.'/'.$normal_sample.'.cram';
 
 const my @chr => qw(1);
@@ -117,7 +117,7 @@ subtest 'AbstractVcf' => sub {
     is_deeply($vcf_obj->getTumourName,\@test_samples,'AbstractVcf:getTumourName');
     #is_deeply($vcf_obj->getAllSampleNames,\@all_samples,'AbstractVcf:getAllSampleNames');
     is_deeply($vcf_obj->getNormalBam,$normal_bam,'AbstractVcf:getNormalBam');
-    undef $vcf_obj;    
+    undef $vcf_obj;
 };
 
 
@@ -153,7 +153,7 @@ subtest 'ReadVcf' => sub {
     my($bam_objects,$bas_files)=$vcf_obj->get_bam_object;
     my($lib_size)=$vcf_obj->get_lib_n_read_read_length($bam_objects,$bas_files);
     #create variant object
-    my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
+    my $variant=Sanger::CGP::Vaf::Process::Variant->new(
         'location'         => undef,
         'varLine'         => undef,
         'varType'         => $vcf_obj->{'_a'},
@@ -168,13 +168,12 @@ subtest 'ReadVcf' => sub {
         'passedOnly'  => $vcf_obj->{'_r'},
         'tmp'                    => $options->{'tmp'},
     'tabix_hdr'   => defined  $vcf_obj->{'_hdr'}?Bio::DB::HTS::Tabix->new(filename => $vcf_obj->{'_hdr'}):undef,
-        
+
         );
 
-    #diag(Dumper $vcf_obj->getChromosomes(\@chr));
     my $exp_chr->{'1'}='16914540';
-    is_deeply($vcf_obj->getChromosomes(\@chr), $exp_chr, 'ReadVcf:getChromosomes');
-    my ($chromosomes)=$vcf_obj->getChromosomes(\@chr);
+    my ($chromosomes, $chr_count)=$vcf_obj->getChromosomes(\@chr);
+    is_deeply($chromosomes, $exp_chr, 'ReadVcf:getChromosomes');
     $chromosomes=$vcf_obj->getProgress($chromosomes);
     my ($data_for_all_samples_res,$unique_locations)=$vcf_obj->getMergedLocations($test_chr,$vcf_file_obj);
     is_deeply($unique_locations,$expected_unique_locations,'ReadVcf:getMergedLocations_unique_locations');
@@ -184,12 +183,12 @@ subtest 'ReadVcf' => sub {
     if(defined $options->{'b'} ){
         my($bed_locations)=$vcf_obj->getBedHash($test_chr);
         if( $options->{'bo'} == 1 && (defined $data_for_all_samples_res) ) {
-                ($data_for_all_samples_res, $unique_locations)=$vcf_obj->filterBedLocationsFromVCF($data_for_all_samples_res, $unique_locations, $bed_locations);    
+                ($data_for_all_samples_res, $unique_locations)=$vcf_obj->filterBedLocationsFromVCF($data_for_all_samples_res, $unique_locations, $bed_locations);
             }else{
                  ($data_for_all_samples_res,$unique_locations)=$vcf_obj->populateBedLocations($data_for_all_samples_res,$unique_locations,$bed_locations);
             }
     }
-        
+
     $vcf_obj->processMergedLocations($data_for_all_samples_res,$unique_locations,$variant,$chromosomes->{$test_chr},$bam_objects,$test_chr,$tags,$info_tag_val);
     # if augment option is not provided - results will go in tmp files ...
     my($outfile_name_no_ext)=$vcf_obj->writeFinalFileHeaders($info_tag_val,$tags);
@@ -197,14 +196,14 @@ subtest 'ReadVcf' => sub {
 
     $vcf_obj->catFiles($options->{'tmp'},'vcf', undef,  $outfile_name_no_ext);
     $vcf_obj->catFiles($options->{'tmp'},'tsv', undef, $outfile_name_no_ext);
-    my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");    
-    
-    
-    # test 
+    my($outfile_gz,$outfile_tabix)=$vcf_obj->gzipAndIndexVcf("$outfile_name_no_ext.vcf");
+
+
+    # test
     #my $expected_ref_seq=qw(CACCAGCAACTACCTCAGCCAGTCAGCTCCGTTCTACCTCTGTCATCTCAGATGAGAAGAGCAGGCCAGTATCTCTGGCCTTACCTGAAATATCTTAAGGCCGTAATTTACATTTTAGGCATGAATGATTTTCTAAAACCCACGATCAGAGTTTCTCTGGGAATCGGCGTCTGGCTTAGGAACACATTCATTTGTTTGACAAATACCTTCCCAAAACTATTTTAAAACACAGCTGCTGGGCGGGACGCAGTGGCTCACACCTGTAATCCCAGGACTTTGGGTGGCCGAGGCGGGTGAATCACTTGAGGTCAGCAGTTCAAGACCAGCTTGGCCAACATAGTGAAATCCTGTCTCTACTAAAAATACAAAAATTAGCCGGGTGTGGCAGTGCATGCCTATAATCCCAGCTACTCAGGAGGCTGAGGCAGGAGAATCGTTTGAACCTGGGAGGCGGAGGTTGCAGTGAGCCGAGATTGCACCACTGCACTCCAGCCTGGGCGACAGAACAAGACTCTGTCTCAAAAAAGTAAATAAATAAATAAATAAATAAAGCTTCATATCAGCATTTCCTTTTTGGGAACTATACTATTCATCTGAATTAGCATATATATATATATGGGGCCGGACACAGCGGCTCACACCTGTAATCTCAAAACTTTGGAAGGCCAAAACAGGTGGTTCACCGGAGGTCAGGTGTTTTGAGACATGTCTGGCCAACGTGGTGAAACCCCATCTCTACTAAAAATACCAAAATTAGCCAGGCGTGGTGGTACGCCGCACCTGTAATCCCAGCTACTCAGGATGCTGAGGCAGGAGAATCGCTTGAACCCGGGAGGCAAAGATTGCAGTGAGCCGAGATCACGCCATTGCACTCCAGCAGGGGTGACAGACTGAGACTCCATCTCAAAAAAGAAGTCTACCACATTTTACTCTGAGACAAGGAAATGTCCACAGGGAAGTGGCCACACACAGAAGTTAACCTAAAAGACAATGAATTCAGAGGACGGACATGAACAAATGTGCAATTTAAAACACAGGCCAGGTGCAGTGGCAACCCCTATAATCCCAGAGCTTTGGGAGGCCAAGGCGGGCTCATCACATGAGGTCAGGACCAGCCTGGCCAACATGGTGAAACCCCATCTCTACTAAAAGTACAAAAATTAGCCAGGCGTGGTGGCACATGCCTGAAATCCCAGCTACTCGGG);
     #my $expected_reconstructed_alt_seq=qw(CACCAGCAACTACCTCAGCCAGTCAGCTCCGTTCTACCTCTGTCATCTCAGATGAGAAGAGCAGGCCAGTATCTCTGGCCTTACCTGAAATATCTTAAGGCCGTAATTTACATTTTAGGCATGAATGATTTTCTAAAACCCACGATCAGAGTTTCTCTGGGAATCGGCGTCTGGCTTAGGAACACATTCATTTGTTTGACAAATACCTTCCCAAAACTATTTTAAAACACAGCTGCTGGGCGGGACGCAGTGGCTCACACCTGTAATCCCAGGACTTTGGGTGGCCGAGGCGGGTGAATCACTTGAGGTCAGCAGTTCAAGACCAGCTTGGCCAACATAGTGAAATCCTGTCTCTACTAAAAATACAAAAATTAGCCGGGTGTGGCAGTGCATGCCTATAATCCCAGCTACTCAGGAGGCTGAGGCAGGAGAATCGTTTGAACCTGGGAGGCGGAGGTTGCAGTGAGCCGAGATTGCACCACTGCACTCCAGCCTGGGCGACAGAACAAGACTCTGTCTCAAAAAAGTAAATAAATAAATAAATAAATAAAGCTTCATATCAGCATTTCCTTTTTGGGAACTATACTATTCATCTGAATTAGCATATATATATATGGGGCCGGACACAGCGGCTCACACCTGTAATCTCAAAACTTTGGAAGGCCAAAACAGGTGGTTCACCGGAGGTCAGGTGTTTTGAGACATGTCTGGCCAACGTGGTGAAACCCCATCTCTACTAAAAATACCAAAATTAGCCAGGCGTGGTGGTACGCCGCACCTGTAATCCCAGCTACTCAGGATGCTGAGGCAGGAGAATCGCTTGAACCCGGGAGGCAAAGATTGCAGTGAGCCGAGATCACGCCATTGCACTCCAGCAGGGGTGACAGACTGAGACTCCATCTCAAAAAAGAAGTCTACCACATTTTACTCTGAGACAAGGAAATGTCCACAGGGAAGTGGCCACACACAGAAGTTAACCTAAAAGACAATGAATTCAGAGGACGGACATGAACAAATGTGCAATTTAAAACACAGGCCAGGTGCAGTGGCAACCCCTATAATCCCAGAGCTTTGGGAGGCCAAGGCGGGCTCATCACATGAGGTCAGGACCAGCCTGGCCAACATGGTGAAACCCCATCTCTACTAAAAGTACAAAAATTAGCCAGGCGTGGTGGCACATGCCTGAAATCCCAGCTACTCGGG);
     #my $resulted_ref_seq = Sanger::CGP::VcfCompare::VcfMergeAndPileup::_get_dna_segment($expected_obj->{'samplec'},$g_pu_new->{'chr'},$g_pu_new->{'pos_5p'},$g_pu_new->{'pos_3p'});
-    
+
 };
 
 # test individula subsroutines .....
@@ -213,7 +212,7 @@ subtest 'ReadVcf' => sub {
 
 
  subtest 'ReadVcf_processMergedLocations' => sub {
- 
+
      my $expected_g_pu={
    'chr' => '1',
    'region' => '1:16902712-16902712',
@@ -232,7 +231,7 @@ subtest 'ReadVcf' => sub {
     #lib size information only applicable for indels....
     my($lib_size)=$vcf_obj->get_lib_n_read_read_length($bam_objects,$bas_files);
     #create variant object
-    my $variant=Sanger::CGP::Vaf::Process::Variant->new( 
+    my $variant=Sanger::CGP::Vaf::Process::Variant->new(
         'location'         => undef,
         'varLine'         => undef,
         'varType'         => $vcf_obj->{'_a'},
@@ -256,7 +255,7 @@ subtest 'ReadVcf' => sub {
 
 subtest 'CleanTestResults' => sub {
       my $vcf_obj = Sanger::CGP::Vaf::Data::ReadVcf->new($options);
-  my($cleaned1) = $vcf_obj->cleanTempdir($options->{'tmp'}); 
+  my($cleaned1) = $vcf_obj->cleanTempdir($options->{'tmp'});
         is_deeply($cleaned1,$options->{'tmp'},'CleanTestResults:tmpdir');
         my($cleaned2) = $vcf_obj->cleanTempdir($test_output);
         is_deeply($cleaned2,$test_output,'CleanTestResults:testOutdir');

@@ -308,7 +308,7 @@ sub createExonerateInput {
 
     my($alt_seq)=$self->_get_alt_seq($bam,$g_pu);
     $g_pu=$self->_get_ref_5p_pos($ref_seq,$alt_seq,$g_pu);
-    open (my $ref_n_alt_FH,'>'.$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref")|| $log->logcroak("unable to open file $!");;
+    open (my $ref_n_alt_FH,'>'.$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref")|| $log->logcroak(sprintf q{Can't create %s : %s}, $self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref", $!);
     print $ref_n_alt_FH ">alt\n$alt_seq\n>ref\n$ref_seq\n";
     close($ref_n_alt_FH);
     return($g_pu);
@@ -550,7 +550,7 @@ Inputs
 
 sub getIndelResults {
     my($self,$bam,$g_pu)=@_;
-    open (my $Reads_FH, '>',$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads") || $log->logcroak("unable to open file $!");
+    open (my $Reads_FH, '>',$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads") || $log->logcroak(sprintf q{Can't create %s : %s}, $self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads", $!);
     $g_pu=$self->_fetch_features($bam,$g_pu,$Reads_FH);
     $g_pu=$self->_do_exonerate($self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.ref",$self->{'_tmp'}."/$g_pu->{'just_chr'}_temp.reads",$g_pu);
     return $g_pu;
@@ -605,7 +605,6 @@ my ($mate_info,%mapped_length);
 my $read_counter=0;
         $sam_object->fetch($region, sub {
         my $a = shift;
-        my $paired=0;
         # \& bitwise comparison
         ##Ignore read if it matches the following flags:
         #Brass-ReadSelection.pm
@@ -613,12 +612,11 @@ my $read_counter=0;
 
         return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_FETCH_MATE;
 
-        #my $cigar  = $a->cigar_str;;
         my $mseqid = $a->mate_seq_id;
         my $seqid = $a->seq_id;
         #target gives read seq as it comes from sequencing machine i.e softclipped bases included
         my $qseq = $a->target->dna();
-        return if $qseq =~m/[nN]/;
+        return if(index(uc($qseq), 'N') != -1);
         my $name=$a->display_name;
         #my $strand = $a->strand;
         my $mstart = $a->mate_start;
@@ -659,7 +657,7 @@ sub _fetch_mate_seq {
 
         if ($readname eq $a->display_name) {
             my $tmp_seq=$a->target->dna();
-            return if $tmp_seq=~m/[nN]/;
+            return if(index(uc($tmp_seq), 'N') != -1);
             $read=$a->display_name;
             $mate_seq=$tmp_seq;
             return;
@@ -688,7 +686,6 @@ my ($mate_info,%mapped_length);
 my $read_counter=0;
         $sam_object->fetch($region, sub {
         my $a = shift;
-        my $paired=0;
         # \& bitwise comparison
         ##Ignore read if it matches the following flags:
         #Brass-ReadSelection.pm
@@ -697,7 +694,7 @@ my $read_counter=0;
         # only consider reads from wider range where mate is unmapped
         if ($a->flag & $Sanger::CGP::Vaf::VafConstants::UNMAPPED) {
             my $qseq = $a->target->dna();
-            return if $qseq=~m/[nN]/;
+            return if(index(uc($qseq), 'N') != -1);
             my $mseqid = $a->mate_seq_id;
             my $seqid = $a->seq_id;
             #target gives read seq as it comes from sequencing machine
@@ -746,7 +743,6 @@ sub _do_exonerate {
     my $read_track_alt;
     my $read_track_ref;
     my $amb_reads;
-    my $test_mode=0;
 
     #print Dumper $g_pu;
  # -E | --exhaustive <boolean>
@@ -756,25 +752,18 @@ sub _do_exonerate {
   # using exhaustive OFF as it is fast and gives identical answer
 
   my $cmd="exonerate -E 0 -S 0".
-    "   --percent $self->{'_exp'} --fsmmemory 12000 --verbose 0 --showalignment no  --wordjump 3".
+    "   --percent $self->{'_exp'} --fsmmemory $self->{'_emb'} --verbose 0 --showalignment no  --wordjump 3".
     " --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
     " --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS %em {%Ps}\n' ";
-    #for testing only
-    if($test_mode)
-    {
-      my $cmd2="exonerate -E 0 -S 0".
-        "  --percent $self->{'_exp'} --fsmmemory 12000 --verbose 0 --showalignment yes --wordjump 3".
-        " --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
-        " --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
-        print "$cmd2\n";
-        my ($exonerate_output1, $stderr1, $exit1) = capture {$self->system_bash("$cmd2")};
-     open (my $tfh1, '>','exonerate_results_Alignment'.$g_pu->{'sample'}.'.out');
-     print $tfh1 $exonerate_output1;
-    #    my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd")};
 
-   }
     my ($exonerate_output, $stderr, $exit) = capture {system("$cmd")};
-    if ($exit) { $log->logcroak("exonerate log: EXIT:$exit EROOR:$stderr CMD:$cmd"); }
+    if ($exit) {
+        $log->error("Exonerate STDOUT: $exonerate_output");
+        $log->error("Exonerate STDERR: $stderr");
+        $log->error("Exonerate CMD: $cmd");
+        $log->logcroak("Exonerate EXIT: $exit");
+    }
+
     #----- parse exonerate output ------
     LINE:foreach my $line((split("\n", $exonerate_output))) {
     my ($read,$target,$match_len,$t_strand,$t_start,$t_end,$q_strand,$mismatch,$match_score)=(split ' ', $line);
@@ -947,17 +936,17 @@ sub getPileup {
                                         next if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
                                         next if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PILEUP;
 
-                                        if($self->{'_bq'}) {
-                                            my $fa = Bio::DB::HTS::AlignWrapper->new($a, $bam_object);
-                                            my $qual = ($fa->qscore)[$p->qpos];
-                                            next if($qual <= $self->{'_bq'});
-                                        }
                                         # get the base at this pos
-                                        #my $refbase = $bam_object->segment($seqid,$pos,$pos)->dna;
                                         my $qbase  = substr($a->qseq, $p->qpos, 1);
+                                        next if uc($qbase) eq 'N'; #This is single base testing
+
+                                        if(defined $self->{'_bq'}) {
+                                            my $fa = Bio::DB::HTS::AlignWrapper->new($a, $bam_object);
+                                            next if(($fa->qscore)[$p->qpos] <= $self->{'_bq'});
+                                        }
+
                                         my $strand = $a->strand;
-                                        next if $qbase =~/[nN]/; #in case of insertion ....
-                                        #$g_pu->{'depth'}++; # commented as for paired end it is calculated twice
+
                                         my $key;
                                         if(($refbase eq $qbase) && $strand > 0) {
                                             $g_pu->{'ref_p'}++;
