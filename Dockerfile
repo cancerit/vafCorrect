@@ -81,6 +81,8 @@ unattended-upgrade -d -v && \
 apt-get remove -yq unattended-upgrades && \
 apt-get autoremove -yq
 
+#RUN apt-get install -yq libdevel-nytprof-perl
+
 RUN mkdir -p $OPT
 COPY --from=builder $OPT $OPT
 
