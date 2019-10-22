@@ -293,8 +293,8 @@ cgpVaf.pl [-h] -d -a -g -tn -nn -e  -o [ -tb -nb -b -t -c -r -m -ao -mq -pid -bo
                                    - should be specified in same order as tumour sample names
    --filter_inc           (-finc)  Sam flag values to include when checking reads for read length
    --filter_exc           (-fexc)  Sam flag values to exclude when checking reads for read length
+   --id_int_project       (-pid)   Internal project id [WTSI only]
 
-    --id_int_project       (-pid)   Internal project id [WTSI only]
    --help                 (-h)     Display this help message
    --version              (-v)     provide version information for vaf
 
