@@ -950,13 +950,15 @@ sub getPileup {
                                         next if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
                                         next if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_PILEUP;
 
+                                        # get the base at this pos
+                                        my $qbase  = substr($a->qseq, $p->qpos, 1);
+                                        next if uc($qbase) eq 'N'; #This is single base testing
+
                                         if(defined $self->{'_bq'}) {
                                             my $fa = Bio::DB::HTS::AlignWrapper->new($a, $bam_object);
                                             next if(($fa->qscore)[$p->qpos] <= $self->{'_bq'});
                                         }
-                                        # get the base at this pos
-                                        my $qbase  = substr($a->qseq, $p->qpos, 1);
-                                        next if uc($qbase) eq 'N'; #This is single base testing
+
                                         my $strand = $a->strand;
 
                                         my $key;
