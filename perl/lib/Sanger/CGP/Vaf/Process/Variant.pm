@@ -743,7 +743,6 @@ sub _do_exonerate {
     my $read_track_alt;
     my $read_track_ref;
     my $amb_reads;
-    my $test_mode=0;
 
     #print Dumper $g_pu;
  # -E | --exhaustive <boolean>
@@ -756,20 +755,7 @@ sub _do_exonerate {
     "   --percent $self->{'_exp'} --fsmmemory $self->{'_emb'} --verbose 0 --showalignment no  --wordjump 3".
     " --querytype dna --targettype dna --query $temp_read_file  --target $ref_seq_file".
     " --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS %em {%Ps}\n' ";
-    #for testing only
-    if($test_mode)
-    {
-      my $cmd2="exonerate -E 0 -S 0".
-        "  --percent $self->{'_exp'} --fsmmemory $self->{'_emb'} --verbose 0 --showalignment yes --wordjump 3".
-        " --querytype dna --targettype dna --query $temp_read_file   --target $ref_seq_file".
-        " --showvulgar 0 --bestn 1 --ryo '%qi %ti %qal %tS %tab %tae %qS\n' ";
-        print "$cmd2\n";
-        my ($exonerate_output1, $stderr1, $exit1) = capture {$self->system_bash("$cmd2")};
-     open (my $tfh1, '>','exonerate_results_Alignment'.$g_pu->{'sample'}.'.out');
-     print $tfh1 $exonerate_output1;
-    #    my ($exonerate_output2, $stderr2, $exit2) = capture {system("$cmd")};
 
-   }
     my ($exonerate_output, $stderr, $exit) = capture {system("$cmd")};
     if ($exit) {
         $log->error("Exonerate STDOUT: $exonerate_output");
