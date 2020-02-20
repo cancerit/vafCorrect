@@ -2,7 +2,7 @@
 
 package Sanger::CGP::Vaf::Process::Variant;
 ##########LICENCE############################################################
-# Copyright (c) 2016 Genome Research Ltd.
+# Copyright (c) 2020 Genome Research Ltd.
 #
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 #

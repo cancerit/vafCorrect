@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##########LICENCE##########
-# Copyright (c) 2016-2017 Genome Research Ltd.
+# Copyright (c) 2016-2020 Genome Research Ltd.
 # 
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 # 

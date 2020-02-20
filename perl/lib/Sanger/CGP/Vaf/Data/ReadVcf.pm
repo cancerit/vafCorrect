@@ -2,7 +2,7 @@
 
 package Sanger::CGP::Vaf::Data::ReadVcf;
 ##########LICENCE############################################################
-# Copyright (c) 2016 Genome Research Ltd.
+# Copyright (c) 2020 Genome Research Ltd.
 #
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 #
@@ -130,7 +130,7 @@ sub getBedChromosomes {
     open my $BEDIN, '<', $self->{'_b'} or $log->logcroak(sprintf q{Can't open %s : %s}, $self->{'_b'}, $!);
     while(my $l = <$BEDIN>) {
         next if($l =~ m/^#/);
-        my ($chr) = split /\t/;
+        my ($chr) = split /\t/, $l;
         $store->{$chr} = 1;
     }
     return 1;
