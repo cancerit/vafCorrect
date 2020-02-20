@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ##########LICENCE##########
-# Copyright (c) 2014-2016
+# Copyright (c) 2014-2020
 #
 # This file is part of cgpVaf
 # cgpVaf is free software: you can redistribute it and/or modify it under
