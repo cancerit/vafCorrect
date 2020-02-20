@@ -1,12 +1,17 @@
 # CHANGES
 
+## 5.6.1 
+
+* Ensure line read rather than $_ are used in split
+* Update license years
+
 ## 5.6.0
 
-Releases multiple fixes listed in [milestone 1](https://github.com/cancerit/vafCorrect/milestone/1)
+* Releases multiple fixes listed in [milestone 1](https://github.com/cancerit/vafCorrect/milestone/1)
 
 ## 5.5.0
 
-Adds docker build - please use this in preference to other methods.  Should be functional with singularity.
+* Adds docker build - please use this in preference to other methods.  Should be functional with singularity.
 
 ## 5.4.1
 
