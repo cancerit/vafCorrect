@@ -36,6 +36,7 @@ use FindBin qw($Bin);
 use List::Util qw(first reduce max min);
 use warnings FATAL => 'all';
 use Capture::Tiny qw(:all);
+use Const::Fast qw(const);
 
 use Sanger::CGP::Vaf; # exports VERSION
 use Math::Round qw(round);
@@ -600,8 +601,8 @@ Inputs
 
 sub _fetch_reads {
 my ($self,$sam_object,$region,$Reads_FH)=@_;
-    my ($mate_info,%mapped_length);
-    my $read_counter=0;
+    my $mate_info;
+    my $read_counter=1;
     $sam_object->fetch($region, sub {
         my $a = shift;
         # \& bitwise comparison
@@ -609,27 +610,55 @@ my ($self,$sam_object,$region,$Reads_FH)=@_;
         #Brass-ReadSelection.pm
         return if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
         return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_FETCH_MATE;
+        #target gives read seq as it comes from sequencing machine i.e softclipped bases included
         my $qseq = $a->target->dna();
         return if(index(uc($qseq), 'N') != -1);
 
         my $mseqid = $a->mate_seq_id;
         my $seqid = $a->seq_id;
-        #target gives read seq as it comes from sequencing machine i.e softclipped bases included
-
         my $name=$a->display_name;
         my $mstart = $a->mate_start;
-        my $start = $a->start;
-        $read_counter++;
-        print  $Reads_FH ">$name\_$read_counter\n$qseq\n";
+        printf $Reads_FH ">%s\_%d\n%s\n", $name, $read_counter++, $qseq;
         # fetch mate only if on another chromosome
-        if(defined $mseqid and defined $seqid and ($seqid ne $mseqid)) {
-            $mate_info->{$name}="$mseqid:$mstart-$mstart";
+        if(defined $mseqid && defined $seqid && ($seqid ne $mseqid)) {
+            push @{$mate_info->{$mseqid}->{$mstart}}, $name;
         }
     });
-    #added separately as it was pulling only one read
-    foreach my $key (keys %$mate_info) {
-        $self->_fetch_mate_seq($sam_object,$mate_info->{$key},$key,$Reads_FH);
+
+    my $mate_sets = $self->_collapse_mate_locs($mate_info);
+    for my $mate_set(@{$mate_sets}) {
+        $self->_fetch_mate_seq($sam_object, $mate_set, $Reads_FH);
     }
+}
+
+=head2 _collapse_mate_locs
+
+Collapses reads into ranges to reduce calls to fetch
+
+=cut
+
+sub _collapse_mate_locs {
+    my ($self, $mate_info) = @_;
+    my @read_sets;
+    # move to constant
+    const my $MATE_BUFFER => 1_000;
+    for my $seqid(keys %{$mate_info}) {
+        for my $mstart(sort {$a<=>$b} keys %{$mate_info->{$seqid}} ) {
+            my %mnames = map {$_ => 1 } @{$mate_info->{$seqid}->{$mstart}};
+            if(@read_sets == 0 || $read_sets[-1]->{'seqid'} ne $seqid) {
+                push @read_sets, {'seqid' => $seqid, 'low' => $mstart, 'high' => $mstart, 'reads' => \%mnames};
+                next;
+            }
+            if($mstart - $MATE_BUFFER <= $read_sets[-1]->{'high'}) {
+                $read_sets[-1]->{'high'} = $mstart;
+                my %new = (%{$read_sets[-1]->{'reads'}}, %mnames);
+                $read_sets[-1]->{'reads'} = \%new;
+                next;
+            }
+            push @read_sets, {'seqid' => $seqid, 'low' => $mstart, 'high' => $mstart, 'reads' => \%mnames};
+        }
+    }
+    return \@read_sets;
 }
 
 =head2 _fetch_mate_seq
@@ -637,32 +666,31 @@ get mate sequence
 Inputs
 =over 2
 =item sam_object - Bio::DB sam object
-=item region - postion to get reads
-=item readname - mate readname
+=item read_set - $ref{'seqid'}{'low'}{'high'}[readnames]
 =item Reads_FH - file handler to store read sequence
 =back
 =cut
 
 sub _fetch_mate_seq {
-    my ($self,$sam_object,$region,$readname,$Reads_FH)=@_;
-    my ($read,$mate_seq);
+    my ($self,$sam_object,$read_set,$Reads_FH)=@_;
+    my %name_and_seq;
     my $callback= sub {
         my $a = shift;
         return if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
         return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_FETCH_MATE;
+        return unless(exists $read_set->{'reads'}->{$a->display_name});
 
-        if ($readname eq $a->display_name) {
-            my $tmp_seq=$a->target->dna();
-            return if(index(uc($tmp_seq), 'N') != -1);
-            $read=$a->display_name;
-            $mate_seq=$tmp_seq;
-            return;
-        }
+        my $tmp_seq=$a->target->dna();
+        return if(index(uc($tmp_seq), 'N') != -1);
+        $name_and_seq{$a->display_name} = $tmp_seq;
+        return;
     };
 
+    my $region = sprintf '%s:%d-%d', $read_set->{'seqid'}, $read_set->{'low'}, $read_set->{'high'};
     $sam_object->fetch($region,$callback);
-    if($read){
-        print  $Reads_FH ">$read\_0\n$mate_seq\n";
+
+    for my $read(sort keys %name_and_seq) {
+        printf $Reads_FH ">%s\_0\n%s\n", $read, $name_and_seq{$read};
     }
 }
 
@@ -677,10 +705,10 @@ Inputs
 =cut
 
 sub _fetch_unmapped_reads {
-my ($self,$sam_object,$region,$Reads_FH)=@_;
-my ($mate_info,%mapped_length);
-my $read_counter=0;
-        $sam_object->fetch($region, sub {
+    my ($self,$sam_object,$region,$Reads_FH)=@_;
+    my $mate_info;
+    my $read_counter=1;
+    $sam_object->fetch($region, sub {
         my $a = shift;
         # \& bitwise comparison
         ##Ignore read if it matches the following flags:
@@ -689,35 +717,28 @@ my $read_counter=0;
         return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_FETCH_UNMAPPED;
         # only consider reads from wider range where mate is unmapped
         if ($a->flag & $Sanger::CGP::Vaf::VafConstants::UNMAPPED) {
+            #target gives read seq as it comes from sequencing machine
             my $qseq = $a->target->dna();
             return if(index(uc($qseq), 'N') != -1);
+
             my $mseqid = $a->mate_seq_id;
             my $seqid = $a->seq_id;
-            #target gives read seq as it comes from sequencing machine
-
             my $name=$a->display_name;
-            #my $strand = $a->strand;
             my $mstart = $a->mate_start;
-            my $start = $a->start;
-            $read_counter++;
-            print  $Reads_FH ">$name\_$read_counter\n$qseq\n";
+            printf $Reads_FH ">%s\_%d\n%s\n", $name, $read_counter++, $qseq;
             # fetch mate only if on another chromosome
-            if(defined $mseqid and defined $seqid and ($seqid ne $mseqid)) {
-                    $mate_info->{$name}="$mseqid:$mstart-$mstart";
+            if(defined $mseqid && defined $seqid && ($seqid ne $mseqid)) {
+                push @{$mate_info->{$mseqid}->{$mstart}}, $name;
             }
-    }
+        }
 
     });
-    #added separately as it was pulling only one read
-    foreach my $key (keys %$mate_info)
-    {
-        $self->_fetch_mate_seq($sam_object,$mate_info->{$key},$key, $Reads_FH);
+
+    my $mate_sets = $self->_collapse_mate_locs($mate_info);
+    for my $mate_set(@{$mate_sets}) {
+        $self->_fetch_mate_seq($sam_object, $mate_set, $Reads_FH);
     }
 }
-
-
-
-
 
 =head2 _do_exonerate
 parse exonerate output
