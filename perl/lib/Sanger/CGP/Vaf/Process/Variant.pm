@@ -600,42 +600,38 @@ Inputs
 
 sub _fetch_reads {
 my ($self,$sam_object,$region,$Reads_FH)=@_;
-
-my ($mate_info,%mapped_length);
-my $read_counter=0;
-        $sam_object->fetch($region, sub {
+    my ($mate_info,%mapped_length);
+    my $read_counter=0;
+    $sam_object->fetch($region, sub {
         my $a = shift;
         # \& bitwise comparison
         ##Ignore read if it matches the following flags:
         #Brass-ReadSelection.pm
         return if($self->{'_mq'} && ($a->qual <= $self->{'_mq'}) );
-
         return if $a->flag & $Sanger::CGP::Vaf::VafConstants::DEFAULT_READS_EXCLUDE_FETCH_MATE;
+        my $qseq = $a->target->dna();
+        return if(index(uc($qseq), 'N') != -1);
 
         my $mseqid = $a->mate_seq_id;
         my $seqid = $a->seq_id;
         #target gives read seq as it comes from sequencing machine i.e softclipped bases included
-        my $qseq = $a->target->dna();
-        return if(index(uc($qseq), 'N') != -1);
+
         my $name=$a->display_name;
-        #my $strand = $a->strand;
         my $mstart = $a->mate_start;
         my $start = $a->start;
         $read_counter++;
         print  $Reads_FH ">$name\_$read_counter\n$qseq\n";
-    # fetch mate only if on another chromosome
+        # fetch mate only if on another chromosome
         if(defined $mseqid and defined $seqid and ($seqid ne $mseqid)) {
-        #if(defined $mseqid and defined $seqid ) {
             $mate_info->{$name}="$mseqid:$mstart-$mstart";
         }
-
     });
     #added separately as it was pulling only one read
-    foreach my $key (keys %$mate_info)
-    {
+    foreach my $key (keys %$mate_info) {
         $self->_fetch_mate_seq($sam_object,$mate_info->{$key},$key,$Reads_FH);
     }
 }
+
 =head2 _fetch_mate_seq
 get mate sequence
 Inputs
