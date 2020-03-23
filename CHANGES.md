@@ -1,6 +1,12 @@
 # CHANGES
 
-## 5.6.1 
+## 5.7.0
+
+* Switch to low level HTS API to speed up fetch calls.
+* Collate mate read calls into single fetch for overlapping ranges.
+* ~46% faster - see [#68](https://github.com/cancerit/vafCorrect/pull/68).
+
+## 5.6.1
 
 * Ensure line read rather than $_ are used in split
 * Update license years
