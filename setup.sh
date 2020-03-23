@@ -58,7 +58,7 @@ if [[ ($# -lt 1) ]] ; then
   echo "Please provide an installation path and optional value to prevent install of dependencies, e.g."
   echo "  ./setup.sh /opt/myBundle"
   echo "OR to skip install of samtools, vcftools and exonerate:"
-  echo "  ./setup.sh 1"
+  echo "  ./setup.sh /opt/myBundle 1"
   exit 0
 fi
 
