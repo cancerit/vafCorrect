@@ -4,16 +4,16 @@
 | --------------------------------------------- | ----------------------------------------------- |
 | [![Master Badge][travis-master-badge]][travis-repo] | [![Develop Badge][travis-develop-badge]][travis-repo] |
 
-- [vafCorrect](#vafcorrect)
-- [Quick installation](#quick-installation)
-  - [Skipping all external dependencies](#skipping-all-external-dependencies)
-  - [Skipping exonerate install](#skipping-exonerate-install)
-- [INSTALL](#install)
-  - [Dependencies](#dependencies)
-- [Creating a release](#creating-a-release)
-  - [Preparation](#preparation)
-  - [Cutting the release](#cutting-the-release)
-- [LICENCE](#licence)
+* [vafCorrect](#vafcorrect)
+* [Quick installation](#quick-installation)
+  * [Skipping all external dependencies](#skipping-all-external-dependencies)
+  * [Skipping exonerate install](#skipping-exonerate-install)
+* [INSTALL](#install)
+  * [Dependencies](#dependencies)
+* [Creating a release](#creating-a-release)
+  * [Preparation](#preparation)
+  * [Cutting the release](#cutting-the-release)
+* [LICENCE](#licence)
 
 ## vafCorrect
 
@@ -77,7 +77,7 @@ tools to be available, most are listed in `INSTALL`.
 
 ### Cutting the release
 
-1. Update `perl/lib/Sanger/CGP/Vaf.pm` to the correct version.
+1. Update `perl/lib/Sanger/CGP/Vaf.pm` and the label in `Dockerfile` to the correct version.
 2. Update `CHANGES.md` to show major items.
 3. Run `./perl/prerelease.sh`
 4. Check all tests and coverage reports are acceptable.

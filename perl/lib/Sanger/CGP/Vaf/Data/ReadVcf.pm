@@ -706,7 +706,6 @@ sub processMergedLocations {
     my($merged_vcf,$header_info)=$self->_getVCFObject($info_tag_val);
     print "Analysing $chr\n";
     foreach my $location (sort keys %$unique_locations) {
-        #next unless($location=~/114911505/);
         $count++;
         $variant->setLocation($location);
         $variant->setVarLine($unique_locations->{$location});
