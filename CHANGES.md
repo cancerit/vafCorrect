@@ -1,5 +1,13 @@
 # CHANGES
 
+## 5.7.2
+
+* OS and Bio::DB::HTS updates
+
+## 5.7.1
+
+* Fixed bug that prevented vcf+bed locations being possible
+
 ## 5.7.0
 
 * Switch to low level HTS API to speed up fetch calls.
