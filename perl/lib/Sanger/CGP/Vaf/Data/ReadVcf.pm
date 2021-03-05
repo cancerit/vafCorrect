@@ -174,8 +174,8 @@ sub getVcfHeaderData {
 my ($self)=@_;
     $self->_getData();
     my $tumour_count=0;
-    my $info_tag_val=undef;
-    my $vcf_normal_sample=undef;
+    my $info_tag_val=[];
+    my $vcf_normal_sample=[];
     my $vcf_file_obj=undef;
     foreach my $sample (keys %{$self->{'vcf'}}) {
         $tumour_count++;
@@ -183,7 +183,8 @@ my ($self)=@_;
             my $vcf = Vcf->new(file => $self->{'vcf'}{$sample});
             $vcf->parse_header();
             $vcf->recalc_ac_an(0);
-            ($info_tag_val,$vcf_normal_sample)=$self->_getOriginalHeader($vcf,$info_tag_val,$vcf_normal_sample,$tumour_count,$sample);
+            # mutates passed refs, don't pass/or assign
+            $self->_getOriginalHeader($vcf,$info_tag_val,$vcf_normal_sample,$tumour_count,$sample);
             $vcf->close();
             $vcf_file_obj->{$sample}=$vcf;
         }
@@ -198,9 +199,10 @@ my ($self)=@_;
     }
 
     if($self->{'_b'}) {
-        $info_tag_val=$self->_populateBedHeader($info_tag_val);
+        # mutates passed ref
+        $self->_populateBedHeader($info_tag_val);
     }
-        return ($info_tag_val,$vcf_file_obj);
+    return ($info_tag_val,$vcf_file_obj);
 }
 
 =head2 _getData
@@ -262,14 +264,14 @@ sub _populateBedHeader {
     my $bed_file=$self->{'_b'};
     my $bed_name=$self->_trim_file_path($bed_file);
     my %info_tag;
-  my $header_sample;
-  my $tumour_count=0;
+    my $header_sample;
+    my $tumour_count=0;
 
-  $info_tag{'Interval'}='BedFile';
+    $info_tag{'Interval'}='BedFile';
     # create header for bed only locations...
     if( defined $self->{'_bo'} and $self->{'_bo'} == 1 ) {
         my ($vcf_filter,$vcf_info,$vcf_format,$sample_header)=$self->_getCustomHeader();
-            foreach my $key (sort keys %$vcf_info) {
+        foreach my $key (sort keys %$vcf_info) {
             push(@$info_tag_val,$vcf_info->{$key});
         }
         foreach my $key (sort keys %$vcf_format) {
@@ -281,12 +283,11 @@ sub _populateBedHeader {
         foreach my $key (sort keys %$sample_header) {
             push(@$info_tag_val,$sample_header->{$key});
         }
- # Add sample names for bedonly data:
-   my %bed_vcf_info=(key=>'FILTER',ID=>'BD', Description=>"Location from bed file");
-     push(@$info_tag_val,\%bed_vcf_info);
-     return $info_tag_val;
- }
-
+        # Add sample names for bedonly data:
+        my %bed_vcf_info=(key=>'FILTER',ID=>'BD', Description=>"Location from bed file");
+        push(@$info_tag_val,\%bed_vcf_info);
+    }
+    # this is mutating a reference, do not return values or assign them
 }
 
 =head2 writeFinalFileHeaders
@@ -427,7 +428,8 @@ sub _getOriginalHeader {
             push(@$info_tag_val,$sample_header_line->{$key});
         }
     }
-  return($info_tag_val,$normal_sample);
+  # this mutates passed references, do not return them
+  return;
 }
 
 
