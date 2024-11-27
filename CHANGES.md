@@ -1,5 +1,10 @@
 # CHANGES
 
+## 5.7.3
+
+* Exit with a clearer error message when file does not pass the minimum read threshold
+* Update Dockerfile and setup.sh
+
 ## 5.7.2
 
 * OS and Bio::DB::HTS updates

@@ -134,7 +134,7 @@ else
   for i in "${perlmods[@]}" ; do
     echo "Installing build prerequisite $i..."
       set -x
-      $INIT_DIR/perl/bin/cpanm -v --mirror http://cpan.metacpan.org --notest -l $INST_PATH $i
+      cpanm -v --mirror http://cpan.metacpan.org --notest -l $INST_PATH $i
       set +x
       echo; echo
   done
@@ -268,7 +268,7 @@ if ! ( perl -MExtUtils::MakeMaker -e 1 >/dev/null 2>&1); then
 fi
 
 set -x
-perl $INIT_DIR/perl/bin/cpanm -v --mirror http://cpan.metacpan.org --notest -l $INST_PATH --installdeps . < /dev/null
+cpanm -v --mirror http://cpan.metacpan.org --notest -l $INST_PATH --installdeps . < /dev/null
 set +x
 
 echo -n "Installing cgpVaf ..."
