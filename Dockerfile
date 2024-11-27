@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 as builder
+FROM ubuntu:24.04 as builder
 
 USER  root
 
@@ -28,6 +28,9 @@ RUN apt-get install -yq --no-install-recommends libgnutls28-dev
 RUN apt-get install -yq --no-install-recommends libgd-dev
 RUN apt-get install -yq --no-install-recommends libdb-dev
 RUN apt-get install -yq --no-install-recommends g++
+RUN apt-get install -yq --no-install-recommends libssl-dev
+RUN apt-get install -yq --no-install-recommends xz-utils
+RUN apt-get install -yq --no-install-recommends libxml2
 
 RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8

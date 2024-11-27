@@ -942,6 +942,9 @@ sub _get_read_length {
                 }
             }
          }
+
+    die "A minimum of " . $Sanger::CGP::Vaf::VafConstants::NO_READS_READLEN
+        . " reads is expected, but the input file only has $read_counter.\n";
 }
 
 
