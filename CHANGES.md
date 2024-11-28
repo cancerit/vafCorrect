@@ -1,5 +1,9 @@
 # CHANGES
 
+## 5.7.4
+
+* Fix Dockerfile
+
 ## 5.7.3
 
 * Exit with a clearer error message when file does not pass the minimum read threshold
