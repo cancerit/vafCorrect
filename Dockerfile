@@ -51,7 +51,7 @@ RUN bash build/opt-build.sh $OPT
 COPY . .
 RUN bash build/opt-build-local.sh $OPT
 
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 LABEL maintainer="cgphelp@sanger.ac.uk"\
       uk.ac.sanger.cgp="Cancer, Ageing and Somatic Mutation, Wellcome Sanger Institute" \
@@ -75,9 +75,11 @@ psmisc \
 time \
 zlib1g \
 liblzma5 \
-libncurses5 \
+libncurses6 \
 exonerate \
 openssl \
+adduser \
+libdeflate0 \
 unattended-upgrades && \
 unattended-upgrade -d -v && \
 apt-get remove -yq unattended-upgrades && \
@@ -89,7 +91,7 @@ RUN mkdir -p $OPT
 COPY --from=builder $OPT $OPT
 
 ## USER CONFIGURATION
-RUN adduser --disabled-password --gecos '' ubuntu && chsh -s /bin/bash && mkdir -p /home/ubuntu
+RUN chsh -s /bin/bash && mkdir -p /home/ubuntu
 
 USER    ubuntu
 WORKDIR /home/ubuntu
